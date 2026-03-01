@@ -1,0 +1,308 @@
+📌 PROJECT NAME: GreenScrapHub – Scrap Pickup & Delivery System
+
+Built with:
+
+Backend: Node.js (ESM) + Express + MySQL
+
+Frontend (coming later): React Native App for Customer, Rider, Agent
+
+Admin Panel: Will be added later
+
+Authentication: Login via phone number
+
+Roles:
+
+admin
+
+agent
+
+rider
+
+customer
+
+📌 CURRENT MODULES COMPLETED
+✅ 1. Auth Module
+
+Phone + password login
+
+auth/me endpoint
+
+JWT token-based auth
+
+Works for all roles
+
+✅ 2. User Table Structure
+id
+full_name
+phone (unique)
+email (nullable)
+password_hash
+role (admin/agent/rider/customer)
+agent_id (nullable – used only for riders)
+created_at
+updated_at
+
+✅ 3. Agent Module
+
+Agents are scrap collection business owners.
+
+✓ Create Agent
+
+When admin creates an agent:
+
+A new user is created with role agent
+
+An agent profile is created
+
+✓ List Agents
+Agent Table Structure
+id
+owner_user_id (FK → users.id)
+name (company name)
+email
+phone
+address_line
+city
+state
+country
+postal_code
+commission_type (percentage / flat)
+commission_value
+is_active
+created_at
+updated_at
+
+✅ 4. Rider Module
+
+Riders are assigned under agents.
+
+Rules:
+
+Admin can create rider under any agent
+
+Agent can only create riders under themselves
+
+Riders get:
+
+A user record
+
+A rider profile
+
+Rider Table Structure
+id
+user_id
+agent_id
+vehicle_type
+vehicle_number
+rating_avg
+total_completed
+is_online
+created_at
+
+📌 5. Customer Module
+
+Customers are people who request scrap pickups.
+
+✓ Customer registration by admin or agent
+
+Creates a user with role customer
+
+Customer profile is created
+
+Customer Table Structure:
+id
+user_id
+address_line (future)
+area
+created_at
+
+📌 6. CATEGORY MODULE (future ready)
+
+Admin creates scrap categories:
+
+Examples:
+
+Metals
+
+Plastics
+
+Electronics
+
+Papers
+
+Fields:
+
+id
+name
+icon_path
+is_active
+created_at
+
+
+Image upload supported via multer.
+
+📌 7. SCRAP ITEMS MODULE (future ready)
+
+Each category contains multiple scrap items.
+
+Fields:
+
+id
+category_id
+name
+price_min
+price_max
+unit (kg/pc/ton/etc.)
+image_path
+is_active
+created_at
+
+
+API supports:
+
+Create item
+
+List items
+
+List by category
+
+📌 8. Upload System
+
+Using multer with folders:
+
+/uploads/categories
+/uploads/items
+
+📌 CURRENT API ROUTES DONE
+/api/v1/auth
+
+POST /login
+
+GET /me
+
+/api/v1/admin/agents
+
+POST / → create agent
+
+GET / → list agents
+
+/api/v1/admin/riders
+
+POST / → create rider
+
+GET / → list riders
+(admin sees all, agent sees their own)
+
+/api/v1/admin/customers
+
+POST / → create customer
+
+/api/v1/categories
+
+POST / → create category (with file upload)
+
+GET / → list categories
+
+/api/v1/items
+
+POST / → create item (with file upload)
+
+GET / → list all items
+
+GET /category/:id → items by category
+
+📌 BASE URL & POSTMAN CONFIG
+
+Base URL:
+
+http://localhost:4000
+
+
+Token:
+
+auth_token = ""
+
+
+Postman collection is prepared (ready to import).
+
+📌 NEXT MODULES (TODO LIST)
+
+You can ask for any of these next:
+
+🚀 1. Pickup Request Module
+
+Customers request scrap pickup.
+
+Pickup includes:
+
+Items list
+
+Estimated weight
+
+Pickup address
+
+Preferred time slot
+
+Auto-assign rider (nearest)
+
+Agent approval
+
+🚀 2. Pickup Status Workflow
+
+Statuses:
+
+pending
+
+assigned
+
+rider_accepted
+
+on_the_way
+
+collected
+
+delivered_to_agent
+
+completed
+
+cancelled
+
+🚀 3. Rider Live Tracking
+
+Update rider location
+
+Track in real time
+
+Map integration
+
+🚀 4. Agent Dashboard APIs
+
+Todays pickups
+
+Rider performance
+
+Earnings
+
+🚀 5. Admin Dashboard APIs
+
+Total pickups
+
+Earnings summary
+
+Category usage stats
+
+🚀 6. Wallet & Commission
+
+Rider earnings
+
+Agent commission
+
+Automatic calculation
+
+🚀 7. Notifications
+
+SMS/Push
+
+Pickup assigned
+
+Rider on the way

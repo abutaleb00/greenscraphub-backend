@@ -1,0 +1,416 @@
+-- =========================================================
+-- GreenScrapHub – Initial Database Schema
+-- =========================================================
+
+CREATE DATABASE IF NOT EXISTS greenscraphub
+  DEFAULT CHARACTER SET utf8mb4
+  DEFAULT COLLATE utf8mb4_unicode_ci;
+
+USE greenscraphub;
+
+-- ---------------------------------------------------------
+-- 1. ROLES & USERS
+-- ---------------------------------------------------------
+
+CREATE TABLE roles (
+  id          TINYINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name        VARCHAR(50) NOT NULL UNIQUE,  -- 'admin', 'agent', 'rider', 'customer'
+  description VARCHAR(255) NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE users (
+  id             BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  role_id        TINYINT UNSIGNED NOT NULL,
+  full_name      VARCHAR(150) NOT NULL,
+  email          VARCHAR(150) NULL UNIQUE,
+  phone          VARCHAR(30)  NULL UNIQUE,
+  password_hash  VARCHAR(255) NULL,
+  country_code   VARCHAR(10)  NULL,
+  is_active      TINYINT(1) NOT NULL DEFAULT 1,
+  last_login_at  DATETIME NULL,
+  created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_users_role
+    FOREIGN KEY (role_id) REFERENCES roles(id)
+) ENGINE=InnoDB;
+
+-- ---------------------------------------------------------
+-- 2. AGENTS (FRANCHISE / PARTNER)
+-- ---------------------------------------------------------
+
+CREATE TABLE agents (
+  id                BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  owner_user_id     BIGINT UNSIGNED NOT NULL,  -- linked to users (role = agent)
+  name              VARCHAR(150) NOT NULL,     -- "RagmanHeroes Uttara"
+  code              VARCHAR(50)  NOT NULL UNIQUE,  -- short code per agent
+  email             VARCHAR(150) NULL,
+  phone             VARCHAR(30)  NULL,
+  address_line      VARCHAR(255) NULL,
+  city              VARCHAR(100) NULL,
+  state             VARCHAR(100) NULL,
+  country           VARCHAR(100) NULL,
+  postal_code       VARCHAR(20)  NULL,
+  commission_type   ENUM('percentage','flat') DEFAULT 'percentage',
+  commission_value  DECIMAL(10,2) DEFAULT 0.00,    -- default rider commission setting
+  is_active         TINYINT(1) NOT NULL DEFAULT 1,
+  created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_agents_owner
+    FOREIGN KEY (owner_user_id) REFERENCES users(id)
+) ENGINE=InnoDB;
+
+-- ---------------------------------------------------------
+-- 3. CUSTOMERS & ADDRESSES
+-- ---------------------------------------------------------
+
+CREATE TABLE customers (
+  id              BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id         BIGINT UNSIGNED NOT NULL,
+  default_address_id BIGINT UNSIGNED NULL,
+  referral_code   VARCHAR(50) NULL UNIQUE,
+  referred_by     BIGINT UNSIGNED NULL, -- another customer.id or NULL
+  created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_customers_user
+    FOREIGN KEY (user_id) REFERENCES users(id)
+) ENGINE=InnoDB;
+
+CREATE TABLE customer_addresses (
+  id           BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  customer_id  BIGINT UNSIGNED NOT NULL,
+  label        VARCHAR(100) NULL,        -- "Home", "Office"
+  address_line VARCHAR(255) NOT NULL,
+  area         VARCHAR(150) NULL,
+  city         VARCHAR(150) NULL,
+  state        VARCHAR(150) NULL,
+  country      VARCHAR(150) NULL,
+  postal_code  VARCHAR(20)  NULL,
+  latitude     DECIMAL(10,7) NULL,
+  longitude    DECIMAL(10,7) NULL,
+  is_default   TINYINT(1) NOT NULL DEFAULT 0,
+  created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_customer_addresses_customer
+    FOREIGN KEY (customer_id) REFERENCES customers(id)
+) ENGINE=InnoDB;
+
+-- Once addresses exist, set customers.default_address_id via an update & FK:
+ALTER TABLE customers
+  ADD CONSTRAINT fk_customers_default_address
+    FOREIGN KEY (default_address_id) REFERENCES customer_addresses(id);
+
+-- ---------------------------------------------------------
+-- 4. RIDERS (UNDER AGENTS)
+-- ---------------------------------------------------------
+
+CREATE TABLE riders (
+  id                 BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id            BIGINT UNSIGNED NOT NULL,   -- linked to users (role = rider)
+  agent_id           BIGINT UNSIGNED NOT NULL,   -- each rider belongs to an agent
+  vehicle_type       VARCHAR(50) NULL,           -- bike, van, cycle, etc.
+  vehicle_number     VARCHAR(50) NULL,
+  national_id        VARCHAR(100) NULL,
+  emergency_contact  VARCHAR(50)  NULL,
+  rating_avg         DECIMAL(3,2) DEFAULT 0.00,
+  total_completed    INT UNSIGNED DEFAULT 0,
+  is_online          TINYINT(1) NOT NULL DEFAULT 0,
+  is_verified        TINYINT(1) NOT NULL DEFAULT 0,
+  is_active          TINYINT(1) NOT NULL DEFAULT 1,
+  created_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_riders_user
+    FOREIGN KEY (user_id) REFERENCES users(id),
+  CONSTRAINT fk_riders_agent
+    FOREIGN KEY (agent_id) REFERENCES agents(id)
+) ENGINE=InnoDB;
+
+-- Optional: rider live location snapshots (for tracking, history)
+CREATE TABLE rider_locations (
+  id          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  rider_id    BIGINT UNSIGNED NOT NULL,
+  latitude    DECIMAL(10,7) NOT NULL,
+  longitude   DECIMAL(10,7) NOT NULL,
+  recorded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_rider_locations_rider
+    FOREIGN KEY (rider_id) REFERENCES riders(id)
+) ENGINE=InnoDB;
+
+-- ---------------------------------------------------------
+-- 5. SCRAP CATEGORIES & ITEMS WITH PRICE RANGE
+-- ---------------------------------------------------------
+
+CREATE TABLE scrap_categories (
+  id          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name        VARCHAR(150) NOT NULL,
+  description VARCHAR(255) NULL,
+  icon        VARCHAR(255) NULL,   -- icon URL or key
+  display_order INT UNSIGNED DEFAULT 0,
+  is_active   TINYINT(1) NOT NULL DEFAULT 1,
+  created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+CREATE TABLE scrap_items (
+  id               BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  category_id      BIGINT UNSIGNED NOT NULL,
+  name             VARCHAR(150) NOT NULL,
+  description      VARCHAR(255) NULL,
+  unit             VARCHAR(50)  NOT NULL DEFAULT 'kg',  -- kg, piece, bundle
+  min_price_per_unit DECIMAL(10,2) NOT NULL,  -- lower bound shown to customer
+  max_price_per_unit DECIMAL(10,2) NOT NULL,  -- upper bound shown to customer
+  image_url    VARCHAR(255) NULL,
+  is_active        TINYINT(1) NOT NULL DEFAULT 1,
+  created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_scrap_items_category
+    FOREIGN KEY (category_id) REFERENCES scrap_categories(id),
+  CONSTRAINT chk_price_range CHECK (min_price_per_unit <= max_price_per_unit)
+) ENGINE=InnoDB;
+
+-- Optional: track price history per item (admin analytics)
+CREATE TABLE scrap_price_history (
+  id                 BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  scrap_item_id      BIGINT UNSIGNED NOT NULL,
+  old_min_price      DECIMAL(10,2) NOT NULL,
+  old_max_price      DECIMAL(10,2) NOT NULL,
+  new_min_price      DECIMAL(10,2) NOT NULL,
+  new_max_price      DECIMAL(10,2) NOT NULL,
+  changed_by_user_id BIGINT UNSIGNED NULL,
+  changed_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_scrap_price_history_item
+    FOREIGN KEY (scrap_item_id) REFERENCES scrap_items(id),
+  CONSTRAINT fk_scrap_price_history_user
+    FOREIGN KEY (changed_by_user_id) REFERENCES users(id)
+) ENGINE=InnoDB;
+
+-- ---------------------------------------------------------
+-- 6. PICKUPS / ORDERS & ITEMS
+-- ---------------------------------------------------------
+-- Pricing logic:
+--   - Estimation uses scrap_items.min/max_price_per_unit for customer
+--   - Rider sets final_rate_per_unit + actual_weight + extra_charges - discount
+
+CREATE TABLE pickups (
+  id                    BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  booking_code          VARCHAR(50) NOT NULL UNIQUE,  -- e.g. GSH-2025-000001
+  customer_id           BIGINT UNSIGNED NOT NULL,
+  customer_address_id   BIGINT UNSIGNED NULL,
+  agent_id              BIGINT UNSIGNED NULL,   -- derived from rider.agent_id, for reporting
+  rider_id              BIGINT UNSIGNED NULL,
+  status                ENUM(
+                         'pending',          -- created, waiting for assignment
+                         'assigned',         -- rider assigned
+                         'rider_on_way',
+                         'arrived',
+                         'weighing',
+                         'completed',
+                         'cancelled'
+                       ) NOT NULL DEFAULT 'pending',
+  payment_status        ENUM('unpaid','paid','partially_paid','refunded')
+                       NOT NULL DEFAULT 'unpaid',
+  payment_method        ENUM('cash','wallet','bank','mobile_banking','mixed')
+                       NULL,
+  scheduled_date        DATE NULL,
+  scheduled_time_slot   VARCHAR(50) NULL,   -- "10:00–12:00", etc.
+  pickup_latitude       DECIMAL(10,7) NULL,
+  pickup_longitude      DECIMAL(10,7) NULL,
+  customer_note         VARCHAR(255) NULL,
+  admin_note            VARCHAR(255) NULL,
+
+  -- Estimation at booking time (based on price range)
+  estimated_min_amount  DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  estimated_max_amount  DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+
+  -- Final invoice fields (set by rider / admin)
+  base_amount           DECIMAL(10,2) NOT NULL DEFAULT 0.00,  -- sum of item final_amount
+  extra_charges         DECIMAL(10,2) NOT NULL DEFAULT 0.00,  -- additional/extra charge (e.g. heavy lifting, long distance)
+  discount_amount       DECIMAL(10,2) NOT NULL DEFAULT 0.00,  -- discount given to customer
+  net_payable_amount    DECIMAL(10,2) NOT NULL DEFAULT 0.00,  -- base_amount + extra_charges - discount_amount
+  wallet_credit_amount  DECIMAL(10,2) NOT NULL DEFAULT 0.00,  -- amount credited to customer wallet
+  cash_paid_to_customer DECIMAL(10,2) NOT NULL DEFAULT 0.00,  -- if rider pays cash on spot
+  rider_collected_cash  DECIMAL(10,2) NOT NULL DEFAULT 0.00,  -- for reconciliation
+  agent_commission_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  rider_commission_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+
+  invoice_number        VARCHAR(50) NULL UNIQUE,
+  proof_image_before    VARCHAR(255) NULL,
+  proof_image_after     VARCHAR(255) NULL,
+
+  created_at            DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at            DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  assigned_at           DATETIME NULL,
+  rider_arrived_at      DATETIME NULL,
+  weighing_started_at   DATETIME NULL,
+  completed_at          DATETIME NULL,
+  cancelled_at          DATETIME NULL,
+  cancelled_by_user_id  BIGINT UNSIGNED NULL,
+
+  CONSTRAINT fk_pickups_customer
+    FOREIGN KEY (customer_id) REFERENCES customers(id),
+  CONSTRAINT fk_pickups_customer_address
+    FOREIGN KEY (customer_address_id) REFERENCES customer_addresses(id),
+  CONSTRAINT fk_pickups_agent
+    FOREIGN KEY (agent_id) REFERENCES agents(id),
+  CONSTRAINT fk_pickups_rider
+    FOREIGN KEY (rider_id) REFERENCES riders(id),
+  CONSTRAINT fk_pickups_cancelled_by
+    FOREIGN KEY (cancelled_by_user_id) REFERENCES users(id)
+) ENGINE=InnoDB;
+
+CREATE TABLE pickup_items (
+  id                     BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  pickup_id              BIGINT UNSIGNED NOT NULL,
+  scrap_item_id          BIGINT UNSIGNED NOT NULL,
+
+  photo_url              VARCHAR(255) NULL,    -- item-specific photo
+
+  -- Estimation (customer view)
+  estimated_weight       DECIMAL(10,3) NOT NULL DEFAULT 0.000,
+  estimated_min_amount   DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  estimated_max_amount   DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+
+  -- Final values (rider sets these after weighing)
+  actual_weight          DECIMAL(10,3) NOT NULL DEFAULT 0.000,
+  final_rate_per_unit    DECIMAL(10,2) NOT NULL DEFAULT 0.00,  -- within the global range but can be adjusted
+  final_amount           DECIMAL(10,2) NOT NULL DEFAULT 0.00,  -- actual_weight * final_rate_per_unit
+
+  created_at             DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at             DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_pickup_items_pickup
+    FOREIGN KEY (pickup_id) REFERENCES pickups(id),
+  CONSTRAINT fk_pickup_items_scrap_item
+    FOREIGN KEY (scrap_item_id) REFERENCES scrap_items(id)
+) ENGINE=InnoDB;
+
+-- For analytics: per-pickup status history (optional)
+CREATE TABLE pickup_status_logs (
+  id          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  pickup_id   BIGINT UNSIGNED NOT NULL,
+  old_status  VARCHAR(50) NULL,
+  new_status  VARCHAR(50) NOT NULL,
+  changed_by  BIGINT UNSIGNED NULL,
+  remark      VARCHAR(255) NULL,
+  changed_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_pickup_status_logs_pickup
+    FOREIGN KEY (pickup_id) REFERENCES pickups(id),
+  CONSTRAINT fk_pickup_status_logs_user
+    FOREIGN KEY (changed_by) REFERENCES users(id)
+) ENGINE=InnoDB;
+
+-- ---------------------------------------------------------
+-- 7. WALLET & TRANSACTIONS (CUSTOMER + RIDER + AGENT)
+-- ---------------------------------------------------------
+
+CREATE TABLE wallet_accounts (
+  id              BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id         BIGINT UNSIGNED NOT NULL,
+  balance         DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+  currency        VARCHAR(10) NOT NULL DEFAULT 'BDT',
+  is_active       TINYINT(1) NOT NULL DEFAULT 1,
+  created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_wallet_accounts_user
+    FOREIGN KEY (user_id) REFERENCES users(id),
+  UNIQUE KEY uq_wallet_user_currency (user_id, currency)
+) ENGINE=InnoDB;
+
+CREATE TABLE wallet_transactions (
+  id              BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  wallet_id       BIGINT UNSIGNED NOT NULL,
+  type            ENUM('credit','debit') NOT NULL,
+  source          ENUM('pickup_wallet_credit','manual_adjustment','payout','refund','other')
+                   NOT NULL,
+  reference_type  VARCHAR(50) NULL,   -- 'pickup', 'payout_request', etc.
+  reference_id    BIGINT UNSIGNED NULL,
+  amount          DECIMAL(12,2) NOT NULL,
+  balance_before  DECIMAL(12,2) NOT NULL,
+  balance_after   DECIMAL(12,2) NOT NULL,
+  description     VARCHAR(255) NULL,
+  status          ENUM('pending','completed','failed')
+                   NOT NULL DEFAULT 'completed',
+  created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_wallet_transactions_wallet
+    FOREIGN KEY (wallet_id) REFERENCES wallet_accounts(id)
+) ENGINE=InnoDB;
+
+-- ---------------------------------------------------------
+-- 8. PAYOUT REQUESTS (CUSTOMER & RIDER WITHDRAWALS)
+-- ---------------------------------------------------------
+
+CREATE TABLE payout_requests (
+  id               BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id          BIGINT UNSIGNED NOT NULL,
+  wallet_id        BIGINT UNSIGNED NOT NULL,
+  amount           DECIMAL(12,2) NOT NULL,
+  method           ENUM('cash','bank','bkash','nagad','rocket','other') NOT NULL,
+  account_details  VARCHAR(255) NULL,      -- JSON or text: account number, bkash number
+  status           ENUM('pending','approved','rejected','paid')
+                   NOT NULL DEFAULT 'pending',
+  admin_note       VARCHAR(255) NULL,
+  requested_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  processed_at     DATETIME NULL,
+  processed_by     BIGINT UNSIGNED NULL,
+  CONSTRAINT fk_payout_requests_user
+    FOREIGN KEY (user_id) REFERENCES users(id),
+  CONSTRAINT fk_payout_requests_wallet
+    FOREIGN KEY (wallet_id) REFERENCES wallet_accounts(id),
+  CONSTRAINT fk_payout_requests_admin
+    FOREIGN KEY (processed_by) REFERENCES users(id)
+) ENGINE=InnoDB;
+
+-- ---------------------------------------------------------
+-- 9. NOTIFICATIONS & DEVICE TOKENS
+-- ---------------------------------------------------------
+
+CREATE TABLE device_tokens (
+  id             BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id        BIGINT UNSIGNED NOT NULL,
+  device_type    ENUM('android','ios','web') NOT NULL,
+  fcm_token      VARCHAR(255) NOT NULL,
+  is_active      TINYINT(1) NOT NULL DEFAULT 1,
+  created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_device_tokens_user
+    FOREIGN KEY (user_id) REFERENCES users(id)
+) ENGINE=InnoDB;
+
+CREATE TABLE notifications (
+  id             BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id        BIGINT UNSIGNED NOT NULL,
+  title          VARCHAR(150) NOT NULL,
+  body           VARCHAR(255) NOT NULL,
+  data           JSON NULL,
+  is_read        TINYINT(1) NOT NULL DEFAULT 0,
+  created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_notifications_user
+    FOREIGN KEY (user_id) REFERENCES users(id)
+) ENGINE=InnoDB;
+
+-- ---------------------------------------------------------
+-- 10. BASIC ANALYTICS SUPPORT (AREA / HEATMAP)
+-- ---------------------------------------------------------
+
+CREATE TABLE pickup_area_stats (
+  id            BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  area          VARCHAR(150) NOT NULL,
+  city          VARCHAR(150) NULL,
+  agent_id      BIGINT UNSIGNED NULL,
+  total_pickups INT UNSIGNED NOT NULL DEFAULT 0,
+  total_weight  DECIMAL(12,3) NOT NULL DEFAULT 0.000,
+  total_amount  DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+  period_date   DATE NOT NULL,   -- daily aggregation
+  created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_pickup_area_stats_agent
+    FOREIGN KEY (agent_id) REFERENCES agents(id),
+  UNIQUE KEY uq_area_period_agent (area, period_date, agent_id)
+) ENGINE=InnoDB;
+
+-- ---------------------------------------------------------
+-- 11. INITIAL SEED DATA
+-- ---------------------------------------------------------
+
+INSERT INTO roles (name, description) VALUES
+  ('admin',    'Platform administrator'),
+  ('agent',    'Agent / Franchise owner'),
+  ('rider',    'RagmanHeroes rider'),
+  ('customer', 'End customer');

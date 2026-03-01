@@ -1,0 +1,117 @@
+greenscraphub-backend/
+├── package.json
+├── .env
+├── .env.example
+├── .gitignore
+├── README.md
+├── src/
+│   ├── app.js                  # Express app bootstrap (middlewares, routes)
+│   ├── server.js               # HTTP server start (port, clustering optional)
+│   │
+│   ├── config/
+│   │   ├── db.js               # MySQL connection pool (mysql2 / sequelize / knex)
+│   │   ├── redis.js            # Redis client (caching, queues, rate limiting)
+│   │   ├── env.js              # Load & validate env variables
+│   │   ├── logger.js           # Winston/Pino logger config
+│   │   └── fcm.js              # Firebase Cloud Messaging setup
+│   │
+│   ├── routes/
+│   │   ├── index.js            # Combine all route modules
+│   │   ├── auth.routes.js
+│   │   ├── user.routes.js
+│   │   ├── agent.routes.js
+│   │   ├── rider.routes.js
+│   │   ├── customer.routes.js
+│   │   ├── scrap.routes.js     # categories, items, price ranges
+│   │   ├── pickup.routes.js    # bookings, status flow, assignment
+│   │   ├── wallet.routes.js    # wallet balance & transactions
+│   │   ├── payout.routes.js    # withdrawals & payouts
+│   │   ├── notification.routes.js
+│   │   ├── analytics.routes.js # reports, charts APIs
+│   │   └── admin.routes.js     # admin-only configs, dashboard stats
+│   │
+│   ├── controllers/
+│   │   ├── auth.controller.js
+│   │   ├── user.controller.js
+│   │   ├── agent.controller.js
+│   │   ├── rider.controller.js
+│   │   ├── customer.controller.js
+│   │   ├── scrap.controller.js
+│   │   ├── pickup.controller.js
+│   │   ├── wallet.controller.js
+│   │   ├── payout.controller.js
+│   │   ├── notification.controller.js
+│   │   └── analytics.controller.js
+│   │
+│   ├── services/               # Business logic lives here
+│   │   ├── auth.service.js
+│   │   ├── user.service.js
+│   │   ├── agent.service.js
+│   │   ├── rider.service.js
+│   │   ├── customer.service.js
+│   │   ├── scrap.service.js
+│   │   ├── pickup.service.js           # pickup workflow, status transitions
+│   │   ├── assignment.service.js       # nearest rider algorithm (distance, rating, load)
+│   │   ├── pricing.service.js          # price range calc + final invoice amount
+│   │   ├── wallet.service.js
+│   │   ├── payout.service.js
+│   │   ├── notification.service.js     # push/SMS/email
+│   │   └── analytics.service.js
+│   │
+│   ├── models/                 # DB access (raw queries / knex / ORM)
+│   │   ├── user.model.js
+│   │   ├── role.model.js
+│   │   ├── agent.model.js
+│   │   ├── rider.model.js
+│   │   ├── customer.model.js
+│   │   ├── scrapCategory.model.js
+│   │   ├── scrapItem.model.js
+│   │   ├── pickup.model.js
+│   │   ├── pickupItem.model.js
+│   │   ├── walletAccount.model.js
+│   │   ├── walletTransaction.model.js
+│   │   ├── payout.model.js
+│   │   ├── notification.model.js
+│   │   ├── deviceToken.model.js
+│   │   ├── riderLocation.model.js
+│   │   └── priceHistory.model.js
+│   │
+│   ├── middlewares/
+│   │   ├── auth.middleware.js          # JWT verify
+│   │   ├── role.middleware.js          # RBAC (admin/agent/rider/customer)
+│   │   ├── agentScope.middleware.js    # filter data by agent_id
+│   │   ├── validate.middleware.js      # Joi/Zod request validation
+│   │   ├── rateLimit.middleware.js
+│   │   └── errorHandler.middleware.js  # centralized error handler
+│   │
+│   ├── utils/
+│   │   ├── crypto.util.js              # password hash, tokens
+│   │   ├── jwt.util.js
+│   │   ├── geo.util.js                 # distance calculation (Haversine)
+│   │   ├── pagination.util.js
+│   │   ├── constants.js                # enums, status constants
+│   │   └── helpers.js
+│   │
+│   ├── jobs/
+│   │   ├── queue.js                    # Bull / custom queue using Redis
+│   │   ├── notification.job.js         # async push/email/SMS
+│   │   ├── payout.job.js               # payout processing
+│   │   └── analytics.job.js            # daily/weekly aggregation
+│   │
+│   ├── integrations/
+│   │   ├── sms/
+│   │   │   └── smsClient.js            # bKash / local SMS gateway
+│   │   ├── payments/
+│   │   │   └── paymentClient.js        # bKash/Nagad/Rocket integration (future)
+│   │   └── storage/
+│   │       └── storageClient.js        # S3/Spaces/Cloudinary for images
+│   │
+│   ├── migrations/
+│   │   └── 001_init_schema.sql         # (the SQL file below)
+│   └── seeders/
+│       └── 001_seed_roles_admin.sql
+│
+└── tests/
+    ├── auth.test.js
+    ├── pickup.test.js
+    └── wallet.test.js

@@ -1,0 +1,7 @@
+**/node_modules
+**/build
+**/build.zip
+**/server.zip
+**/.env
+# Runtime uploads (do not commit)
+uploads/
