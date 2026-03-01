@@ -76,7 +76,6 @@ export const registerRequest = async (req, res, next) => {
       await sendEmailOTP(email, otp);
     }
 
-    // In development, log to console for easy access
     console.log(`[AUTH] OTP for ${phone} is: ${otp}`);
 
     res.status(200).json({
@@ -98,7 +97,6 @@ export const verifyAndRegister = async (req, res, next) => {
     const { phone, otp } = req.body;
     const data = otpStore.get(phone);
 
-    // Validate OTP and Expiry
     if (!data || data.otp !== otp || Date.now() > data.expires) {
       return next(new ApiError(400, "Invalid or expired verification code"));
     }
@@ -107,19 +105,17 @@ export const verifyAndRegister = async (req, res, next) => {
 
     const password_hash = await bcrypt.hash(data.password, 10);
 
-    // 1. Create Base User Record
+    // 1. Create Base User Record (Ensure role is lowercase 'customer')
     const [userResult] = await conn.query(
       "INSERT INTO users (full_name, phone, email, password_hash, role) VALUES (?, ?, ?, ?, 'customer')",
       [data.full_name, data.phone, data.email, password_hash]
     );
     const userId = userResult.insertId;
 
-    // 2. Generate Unique Referral Code for the new Customer
-    // Format: GS + 5 Alphanumeric chars (e.g., GS7K9L2)
+    // 2. Generate Unique Referral Code
     const newUserCode = 'GS' + Math.random().toString(36).substring(2, 7).toUpperCase();
 
-    // 3. Resolve Referrer (Delayed Reward System)
-    // We link them here, but points are only given after their 1st pickup completion
+    // 3. Resolve Referrer
     let referredById = null;
     if (data.referral_code) {
       const [referrer] = await conn.query(
@@ -132,22 +128,21 @@ export const verifyAndRegister = async (req, res, next) => {
     }
 
     // 4. Create Customer Profile
-    // We give a small 'Welcome' bonus of 20 points
     await conn.query(
       "INSERT INTO customers (user_id, referral_code, referred_by, total_points) VALUES (?, ?, ?, ?)",
       [userId, newUserCode, referredById, 20]
     );
 
-    // 5. Initialize Empty Wallet for the new Customer
+    // 5. Initialize Wallet
     await conn.query(
       "INSERT INTO wallet_accounts (user_id, user_type, balance) VALUES (?, 'customer', 0.00)",
       [userId]
     );
 
     await conn.commit();
-    otpStore.delete(phone); // Clear the memory store
+    otpStore.delete(phone);
 
-    // Generate JWT
+    // 6. Generate JWT with ROLE (Critical for fixing 403)
     const token = jwt.sign(
       { id: userId, role: 'customer', full_name: data.full_name },
       process.env.JWT_SECRET,
@@ -164,6 +159,7 @@ export const verifyAndRegister = async (req, res, next) => {
           full_name: data.full_name,
           phone: data.phone,
           email: data.email,
+          role: 'customer',
           referral_code: newUserCode,
           total_points: 20
         }
@@ -185,30 +181,29 @@ export const login = async (req, res, next) => {
   try {
     const { phone, password } = req.body;
 
-    // Find user and include password_hash
     const [rows] = await db.query('SELECT * FROM users WHERE phone = ?', [phone]);
     const user = rows[0];
 
     if (!user) return next(new ApiError(401, 'Invalid phone number or password'));
 
-    // Compare Hash
     const match = await bcrypt.compare(password, user.password_hash);
     if (!match) return next(new ApiError(401, 'Invalid phone number or password'));
 
-    // Generate JWT
+    // Ensure role is correctly pulled and added to JWT (Critical for fixing 403)
+    const userRole = user.role ? user.role.toLowerCase() : 'customer';
+
     const token = jwt.sign(
-      { id: user.id, role: user.role, full_name: user.full_name },
+      { id: user.id, role: userRole, full_name: user.full_name },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
 
-    // Clean user object for response
     delete user.password_hash;
 
     res.json({
       success: true,
       message: "Login successful",
-      data: { token, user }
+      data: { token, user: { ...user, role: userRole } }
     });
   } catch (err) {
     next(err);
@@ -221,17 +216,21 @@ export const login = async (req, res, next) => {
 export const getMe = async (req, res, next) => {
   try {
     const [rows] = await db.query(`
-        SELECT u.id, u.full_name, u.phone, u.email, u.role, u.created_at,
-               c.referral_code, c.total_points, c.id as customer_id
-        FROM users u 
-        LEFT JOIN customers c ON u.id = c.user_id 
-        WHERE u.id = ?`, [req.user.id]);
+            SELECT u.id, u.full_name, u.phone, u.email, u.role, u.created_at,
+                   c.referral_code, c.total_points, c.id as customer_id
+            FROM users u 
+            LEFT JOIN customers c ON u.id = c.user_id 
+            WHERE u.id = ?`, [req.user.id]);
 
     if (!rows.length) return next(new ApiError(404, 'User session invalid or user not found'));
 
+    // Normalize role in response
+    const userData = rows[0];
+    userData.role = userData.role ? userData.role.toLowerCase() : 'customer';
+
     res.json({
       success: true,
-      data: rows[0]
+      data: userData
     });
   } catch (err) {
     next(err);
@@ -245,24 +244,20 @@ export const forgotPasswordRequest = async (req, res, next) => {
   try {
     const { phone } = req.body;
 
-    // 1. Find User
     const [rows] = await db.query('SELECT email, full_name FROM users WHERE phone = ?', [phone]);
     const user = rows[0];
 
     if (!user) return next(new ApiError(404, 'No account found with this phone number'));
     if (!user.email) return next(new ApiError(400, 'No email linked to this account. Please contact support.'));
 
-    // 2. Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // 3. Store in otpStore temporarily
     otpStore.set(`reset_${phone}`, {
       phone,
       otp,
       expires: Date.now() + 300000 // 5 Minutes
     });
 
-    // 4. Send Email
     await sendEmailOTP(user.email, otp);
 
     console.log(`[RESET] OTP for ${phone} is: ${otp}`);
@@ -284,18 +279,14 @@ export const resetPassword = async (req, res, next) => {
     const { phone, otp, new_password } = req.body;
     const data = otpStore.get(`reset_${phone}`);
 
-    // 1. Validate OTP
     if (!data || data.otp !== otp || Date.now() > data.expires) {
       return next(new ApiError(400, "Invalid or expired reset code"));
     }
 
-    // 2. Hash New Password
     const password_hash = await bcrypt.hash(new_password, 10);
 
-    // 3. Update Database
     await db.query('UPDATE users SET password_hash = ? WHERE phone = ?', [password_hash, phone]);
 
-    // 4. Clean up
     otpStore.delete(`reset_${phone}`);
 
     res.status(200).json({

@@ -414,3 +414,26 @@ INSERT INTO roles (name, description) VALUES
   ('agent',    'Agent / Franchise owner'),
   ('rider',    'RagmanHeroes rider'),
   ('customer', 'End customer');
+
+
+mysql -u root -p
+
+DROP DATABASE IF EXISTS greenscraphub_db;
+CREATE DATABASE greenscraphub_db CHARACTER SET utf8 COLLATE utf8_general_ci;
+EXIT;
+
+mysql -u root -p greenscraphub_db < /home/abutaleb/greenscraphub_db.sql
+
+sudo systemctl status mysql
+
+mysql -u root -p
+USE greenscraphub_db;
+SELECT DATABASE();
+
+SHOW TABLES;
+
+# Navigate to the project folder
+cd /var/www/greenscraphub-backend
+
+# Restart the app with the new environment variables
+pm2 restart greenscraphub-api --update-env

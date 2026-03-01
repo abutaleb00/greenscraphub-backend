@@ -8,14 +8,19 @@ import fs from "fs";
  * Helper: Find nearest available rider using Haversine formula
  */
 const getNearestRider = async (conn, lat, lng) => {
-    const [riders] = await conn.query(`
-        SELECT r.id, r.agent_id, 
-        (6371 * acos(cos(radians(?)) * cos(radians(r.current_latitude)) * cos(radians(r.current_longitude) - radians(?)) + sin(radians(?)) * sin(radians(r.current_latitude)))) AS distance 
-        FROM riders r 
-        WHERE r.status = 'active' AND r.is_available = 1
-        ORDER BY distance ASC LIMIT 1
-    `, [lat, lng, lat]);
-    return riders.length ? riders[0] : null;
+    try {
+        const [riders] = await conn.query(`
+            SELECT r.id, r.agent_id, 
+            (6371 * acos(cos(radians(?)) * cos(radians(r.current_latitude)) * cos(radians(r.current_longitude) - radians(?)) + sin(radians(?)) * sin(radians(r.current_latitude)))) AS distance 
+            FROM riders r 
+            WHERE r.status = 'active' AND r.is_available = 1
+            ORDER BY distance ASC LIMIT 1
+        `, [lat, lng, lat]);
+        return riders.length ? riders[0] : null;
+    } catch (err) {
+        console.error("Rider lookup error:", err.message);
+        return null; // Don't crash the request if the distance math fails
+    }
 };
 
 /**
@@ -40,12 +45,13 @@ export const createPickup = async (req, res) => {
         } = req.body;
 
         if (!pickup_address || !latitude || !longitude) {
-            return res.status(400).json({ success: false, message: "Pickup location is mandatory." });
+            return res.status(400).json({ success: false, message: "Location data is required." });
         }
 
-        let parsedItems = JSON.parse(items);
+        // Safety: Parse items if it's a string (from FormData)
+        let parsedItems = typeof items === 'string' ? JSON.parse(items) : items;
 
-        // Ensure Customer Profile
+        // Ensure Customer Profile exists
         let [customer] = await conn.query("SELECT id FROM customers WHERE user_id = ?", [userId]);
         if (!customer.length) {
             const [insert] = await conn.query("INSERT INTO customers (user_id) VALUES (?)", [userId]);
@@ -53,12 +59,12 @@ export const createPickup = async (req, res) => {
         }
         const customerId = customer[0].id;
 
-        // Auto-assign nearest rider
+        // Find nearest rider
         const nearest = await getNearestRider(conn, latitude, longitude);
         const riderId = nearest ? nearest.id : null;
         const agentId = nearest ? nearest.agent_id : null;
 
-        // Financial Calculation
+        // Calculate Estimated Totals
         let totalMin = 0;
         let totalMax = 0;
         let totalWeight = 0;
@@ -74,49 +80,48 @@ export const createPickup = async (req, res) => {
             totalWeight += weight;
         }
 
-        // Create Master Pickup
-        const bookingCode = "PK" + Date.now();
+        const bookingCode = "PK" + Date.now().toString().slice(-8);
+
+        // Insert Master Pickup
         const [pickupResult] = await conn.query(
             `INSERT INTO pickups (
                 booking_code, customer_id, pickup_address, agent_id, rider_id, 
                 status, scheduled_date, scheduled_time_slot, pickup_latitude, 
                 pickup_longitude, customer_note, estimated_min_amount, 
-                estimated_max_amount, pickup_type, created_at
-            ) VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, 'scheduled', NOW())`,
+                estimated_max_amount, created_at
+            ) VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, NOW())`,
             [bookingCode, customerId, pickup_address, agentId, riderId, scheduled_date, scheduled_time_slot, latitude, longitude, customer_note, totalMin, totalMax]
         );
         const pickupId = pickupResult.insertId;
 
-        // Process Items & Photos
+        // Process Photos for items
         const files = req.files || [];
         for (let i = 0; i < parsedItems.length; i++) {
             const fieldName = `item_photos[${i}]`;
             const photoPaths = files
-                .filter(f => f.fieldname === fieldName)
+                .filter(f => f.fieldname === fieldName || f.fieldname === 'item_photos')
                 .map(f => f.path.replace(/\\/g, '/').replace('public/', ''));
 
             await conn.query(
                 `INSERT INTO pickup_items (
                     pickup_id, scrap_item_id, estimated_weight, 
-                    estimated_min_amount, estimated_max_amount, photo_url
-                ) VALUES (?, ?, ?, ?, ?, ?)`,
-                [pickupId, parsedItems[i].scrap_item_id, parsedItems[i].estimated_weight, totalMin, totalMax, JSON.stringify(photoPaths)]
+                    photo_url
+                ) VALUES (?, ?, ?, ?)`,
+                [pickupId, parsedItems[i].scrap_item_id, parsedItems[i].estimated_weight, JSON.stringify(photoPaths)]
             );
         }
 
-        // Update Stats
-        await conn.query(
-            `INSERT INTO pickup_area_stats (area, city, agent_id, total_pickups, total_weight, total_amount, period_date, created_at) 
-             VALUES (?, ?, ?, 1, ?, ?, CURDATE(), NOW())
-             ON DUPLICATE KEY UPDATE total_pickups = total_pickups + 1, total_weight = total_weight + VALUES(total_weight), total_amount = total_amount + VALUES(total_amount)`,
-            [area || "General", city || "Unknown", agentId, totalWeight, totalMax]
-        );
-
         await conn.commit();
-        res.status(201).json({ success: true, message: "Request Live!", data: { booking_code: bookingCode, pickup_id: pickupId } });
+        res.status(201).json({
+            success: true,
+            message: "Request Submitted!",
+            data: { booking_code: bookingCode, pickup_id: pickupId }
+        });
+
     } catch (err) {
         await conn.rollback();
-        res.status(500).json({ success: false, message: err.message });
+        console.error("Pickup Creation Error:", err);
+        res.status(500).json({ success: false, message: "Server error: " + err.message });
     } finally {
         conn.release();
     }
@@ -196,13 +201,11 @@ export const updatePickupStatus = async (req, res) => {
  * Handles balance math and transaction logging for any user role.
  */
 const updateWallet = async (conn, userId, role, amount, type, source, refId, desc) => {
-    // 1. Lock the wallet row to prevent balance race conditions
     let [wallet] = await conn.query(
         "SELECT id, balance FROM wallet_accounts WHERE user_id = ? AND user_type = ? FOR UPDATE",
         [userId, role]
     );
 
-    // Auto-create wallet if it doesn't exist for this user
     if (!wallet.length) {
         const [ins] = await conn.query(
             "INSERT INTO wallet_accounts (user_id, user_type, balance) VALUES (?, ?, 0)",
@@ -214,13 +217,11 @@ const updateWallet = async (conn, userId, role, amount, type, source, refId, des
     const balanceBefore = parseFloat(wallet[0].balance);
     const balanceAfter = type === 'credit' ? balanceBefore + amount : balanceBefore - amount;
 
-    // 2. Update the account balance
     await conn.query(
         "UPDATE wallet_accounts SET balance = ?, updated_at = NOW() WHERE id = ?",
         [balanceAfter, wallet[0].id]
     );
 
-    // 3. Record the movement in wallet_transactions
     await conn.query(
         `INSERT INTO wallet_transactions 
         (wallet_id, type, source, reference_type, reference_id, amount, balance_before, balance_after, description, status) 
@@ -240,7 +241,6 @@ export const completePickup = async (req, res) => {
     try {
         await conn.beginTransaction();
 
-        // 1. Fetch Pickup & Participants (Added referred_by and customer_name)
         const [p] = await conn.query(`
             SELECT p.*, 
                    c.id as customer_id, c.user_id as customer_uid, c.referred_by,
@@ -253,117 +253,67 @@ export const completePickup = async (req, res) => {
             LEFT JOIN agents a ON p.agent_id = a.id
             WHERE p.id = ? FOR UPDATE`, [pickupId]);
 
-        if (!p.length) throw new Error("Pickup request not found.");
+        if (!p.length) throw new Error("Pickup not found.");
         const pickup = p[0];
-
-        if (pickup.status === 'completed') throw new Error("Pickup already finalized.");
+        if (pickup.status === 'completed') throw new Error("Already completed.");
 
         const { items } = req.body;
-
-        // 2. Calculate Final Amounts & Weight
         let netTotal = 0;
-        let totalActualWeight = 0;
+        let totalWeight = 0;
 
         for (const it of items) {
-            const finalAmount = it.actual_weight * it.actual_rate;
-            netTotal += finalAmount;
-            totalActualWeight += parseFloat(it.actual_weight);
+            const amount = it.actual_weight * it.actual_rate;
+            netTotal += amount;
+            totalWeight += parseFloat(it.actual_weight);
 
             await conn.query(
                 `UPDATE pickup_items SET actual_weight = ?, actual_rate_per_unit = ?, final_amount = ? WHERE id = ?`,
-                [it.actual_weight, it.actual_rate, finalAmount, it.id]
+                [it.actual_weight, it.actual_rate, amount, it.id]
             );
         }
 
-        // 3. Logic Constants
-        const riderComm = netTotal * 0.10; // 10%
-        const agentComm = netTotal * 0.05; // 5%
-        const pointsEarned = Math.floor(totalActualWeight); // 1 Pt per 1kg
+        const pointsEarned = Math.floor(totalWeight);
 
-        // 4. Update Wallets
+        // 1. Pay Customer
+        await updateWallet(conn, pickup.customer_uid, 'customer', netTotal, 'credit', 'pickup_payout', pickupId, `Sale payout: ${pickup.booking_code}`);
 
-        // A) Customer Cash Payout
-        await updateWallet(conn, pickup.customer_uid, 'customer', netTotal, 'credit', 'pickup_payout', pickupId, `Cash for scrap sale ${pickup.booking_code}`);
-
-        // B) Standard Loyalty Points (For the Customer)
+        // 2. Loyalty Points
         if (pointsEarned > 0) {
-            await conn.query(
-                "UPDATE customers SET total_points = total_points + ? WHERE id = ?",
-                [pointsEarned, pickup.customer_id]
-            );
-            await conn.query(
-                "INSERT INTO point_transactions (customer_id, amount, type, description, reference_id) VALUES (?, ?, 'bonus', ?, ?)",
-                [pickup.customer_id, pointsEarned, `Earned points for recycling ${totalActualWeight}kg`, pickupId]
-            );
+            await conn.query("UPDATE customers SET total_points = total_points + ? WHERE id = ?", [pointsEarned, pickup.customer_id]);
+            await conn.query("INSERT INTO point_transactions (customer_id, amount, type, description, reference_id) VALUES (?, ?, 'bonus', ?, ?)",
+                [pickup.customer_id, pointsEarned, `Recycled ${totalWeight}kg`, pickupId]);
         }
 
-        // C) 🛡️ Delayed Referral Reward (For the Referrer)
-        // Check if this is the customer's first-ever completed sale
-        const [history] = await conn.query(
-            "SELECT COUNT(*) as total FROM pickups WHERE customer_id = ? AND status = 'completed'",
-            [pickup.customer_id]
-        );
-
+        // 3. Referral Logic (Delayed Reward)
+        const [history] = await conn.query("SELECT COUNT(*) as total FROM pickups WHERE customer_id = ? AND status = 'completed'", [pickup.customer_id]);
         if (history[0].total === 0 && pickup.referred_by) {
-            const referralBonus = 200; // Reward for inviter
-
-            // Award points to referrer
-            await conn.query(
-                "UPDATE customers SET total_points = total_points + ? WHERE id = ?",
-                [referralBonus, pickup.referred_by]
-            );
-
-            // Log Point Transaction for referrer
-            await conn.query(
-                `INSERT INTO point_transactions (customer_id, amount, type, description, reference_id) 
-                 VALUES (?, ?, 'referral', ?, ?)`,
-                [
-                    pickup.referred_by,
-                    referralBonus,
-                    `Referral reward: ${pickup.customer_name} finished their first sale!`,
-                    pickup.customer_id
-                ]
-            );
-
-            // TODO: Trigger Push Notification here to the referrer's user_id
-            console.log(`NOTIFY: Referrer ${pickup.referred_by} earned ${referralBonus} points!`);
+            const bonus = 200;
+            await conn.query("UPDATE customers SET total_points = total_points + ? WHERE id = ?", [bonus, pickup.referred_by]);
+            await conn.query("INSERT INTO point_transactions (customer_id, amount, type, description, reference_id) VALUES (?, ?, 'referral', ?, ?)",
+                [pickup.referred_by, bonus, `Referral reward for ${pickup.customer_name}`, pickup.customer_id]);
         }
 
-        // D) Rider & Agent Commissions
-        if (pickup.rider_uid) {
-            await updateWallet(conn, pickup.rider_uid, 'rider', riderComm, 'credit', 'commission', pickupId, `Commission for ${pickup.booking_code}`);
-        }
-        if (pickup.agent_uid) {
-            await updateWallet(conn, pickup.agent_uid, 'agent', agentComm, 'credit', 'commission', pickupId, `Area commission for ${pickup.booking_code}`);
-        }
-
-        // 5. Finalize Pickup Record
-        const proofImage = req.file ? req.file.path.replace(/\\/g, '/').replace('public/', '') : null;
-
-        await conn.query(
-            `UPDATE pickups SET 
-                status = 'completed', 
-                net_payable_amount = ?, 
-                rider_commission_amount = ?, 
-                agent_commission_amount = ?,
-                payment_status = 'paid',
-                proof_image_after = ?,
-                completed_at = NOW() 
-             WHERE id = ?`,
-            [netTotal, riderComm, agentComm, proofImage, pickupId]
-        );
+        // 4. Update Status
+        const img = req.file ? req.file.path.replace(/\\/g, '/').replace('public/', '') : null;
+        await conn.query(`UPDATE pickups SET status = 'completed', net_payable_amount = ?, proof_image_after = ?, completed_at = NOW() WHERE id = ?`,
+            [netTotal, img, pickupId]);
 
         await conn.commit();
-        res.json({
-            success: true,
-            message: "Pickup finalized. Points and commissions awarded.",
-            data: { payout: netTotal, points: pointsEarned }
-        });
 
+        // 5. Trigger Socket Notification
+        const io = req.app.get('io');
+        if (io) {
+            io.to(`pickup_${pickupId}`).emit('status_updated', {
+                status: 'completed',
+                points: pointsEarned,
+                cash: netTotal
+            });
+        }
+
+        res.json({ success: true, message: "Sale finalized!", data: { payout: netTotal, points: pointsEarned } });
     } catch (err) {
         await conn.rollback();
-        console.error("Finalization Error:", err);
-        res.status(500).json({ success: false, message: "Completion Failed: " + err.message });
+        res.status(500).json({ success: false, message: err.message });
     } finally {
         conn.release();
     }
