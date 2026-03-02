@@ -40,3 +40,34 @@ export const getWalletSummary = async (req, res) => {
         conn.release();
     }
 };
+
+export const getWalletTransactions = async (req, res, next) => {
+    try {
+        const { id: userId } = req.user;
+
+        // Fetch wallet ID first
+        const [wallet] = await db.query(
+            "SELECT id FROM wallet_accounts WHERE user_id = ? AND user_type = 'customer'",
+            [userId]
+        );
+
+        if (!wallet.length) {
+            return res.json({ success: true, data: [] });
+        }
+
+        // Fetch all transactions for this wallet
+        const [transactions] = await db.query(
+            `SELECT * FROM wallet_transactions 
+             WHERE wallet_id = ? 
+             ORDER BY created_at DESC`,
+            [wallet[0].id]
+        );
+
+        res.json({
+            success: true,
+            data: transactions
+        });
+    } catch (err) {
+        next(err);
+    }
+};

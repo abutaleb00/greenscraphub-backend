@@ -24,104 +24,95 @@ const getNearestRider = async (conn, lat, lng) => {
 };
 
 /**
- * 1. CREATE PICKUP REQUEST
+ * CREATE PICKUP REQUEST (With Indexed Image Support)
  */
-export const createPickup = async (req, res) => {
+export const createPickup = async (req, res, next) => {
     const conn = await db.getConnection();
     try {
         await conn.beginTransaction();
         const userId = req.user.id;
 
         const {
-            pickup_address,
-            latitude,
-            longitude,
-            items,
-            scheduled_date,
-            scheduled_time_slot,
-            customer_note,
-            area,
-            city
+            address_id, pickup_address, latitude, longitude,
+            items, scheduled_date, scheduled_time_slot, customer_note
         } = req.body;
 
-        if (!pickup_address || !latitude || !longitude) {
-            return res.status(400).json({ success: false, message: "Location data is required." });
-        }
-
-        // Safety: Parse items if it's a string (from FormData)
-        let parsedItems = typeof items === 'string' ? JSON.parse(items) : items;
-
-        // Ensure Customer Profile exists
-        let [customer] = await conn.query("SELECT id FROM customers WHERE user_id = ?", [userId]);
-        if (!customer.length) {
-            const [insert] = await conn.query("INSERT INTO customers (user_id) VALUES (?)", [userId]);
-            customer = [{ id: insert.insertId }];
-        }
+        // 1. Get Customer ID
+        const [customer] = await conn.query("SELECT id FROM customers WHERE user_id = ?", [userId]);
+        if (!customer.length) return res.status(404).json({ success: false, message: "Customer profile not found" });
         const customerId = customer[0].id;
 
-        // Find nearest rider
-        const nearest = await getNearestRider(conn, latitude, longitude);
-        const riderId = nearest ? nearest.id : null;
-        const agentId = nearest ? nearest.agent_id : null;
+        const parsedItems = typeof items === 'string' ? JSON.parse(items) : items;
+        const bookingCode = "GS" + Date.now().toString().slice(-6);
 
-        // Calculate Estimated Totals
-        let totalMin = 0;
-        let totalMax = 0;
-        let totalWeight = 0;
+        // 2. Insert Master Pickup
+        const [pickupResult] = await conn.query(
+            `INSERT INTO pickups (
+                booking_code, customer_id, customer_address_id, pickup_address, 
+                status, scheduled_date, scheduled_time_slot, pickup_latitude, 
+                pickup_longitude, customer_note, pickup_type, created_at
+            ) VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, 'scheduled', NOW())`,
+            [bookingCode, customerId, address_id, pickup_address, scheduled_date, scheduled_time_slot, latitude, longitude, customer_note]
+        );
+        const pickupId = pickupResult.insertId;
 
-        for (const item of parsedItems) {
+        // 3. Process Items & Map Files
+        const files = req.files || [];
+        let masterTotalMin = 0;
+        let masterTotalMax = 0;
+
+        for (let i = 0; i < parsedItems.length; i++) {
+            const item = parsedItems[i];
+
+            // Get live prices
             const [scrap] = await conn.query(
                 "SELECT min_price_per_unit, max_price_per_unit FROM scrap_items WHERE id = ?",
                 [item.scrap_item_id]
             );
+
             const weight = parseFloat(item.estimated_weight) || 0;
-            totalMin += scrap[0].min_price_per_unit * weight;
-            totalMax += scrap[0].max_price_per_unit * weight;
-            totalWeight += weight;
-        }
+            const itemMin = scrap[0].min_price_per_unit * weight;
+            const itemMax = scrap[0].max_price_per_unit * weight;
+            masterTotalMin += itemMin;
+            masterTotalMax += itemMax;
 
-        const bookingCode = "PK" + Date.now().toString().slice(-8);
-
-        // Insert Master Pickup
-        const [pickupResult] = await conn.query(
-            `INSERT INTO pickups (
-                booking_code, customer_id, pickup_address, agent_id, rider_id, 
-                status, scheduled_date, scheduled_time_slot, pickup_latitude, 
-                pickup_longitude, customer_note, estimated_min_amount, 
-                estimated_max_amount, created_at
-            ) VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, NOW())`,
-            [bookingCode, customerId, pickup_address, agentId, riderId, scheduled_date, scheduled_time_slot, latitude, longitude, customer_note, totalMin, totalMax]
-        );
-        const pickupId = pickupResult.insertId;
-
-        // Process Photos for items
-        const files = req.files || [];
-        for (let i = 0; i < parsedItems.length; i++) {
-            const fieldName = `item_photos[${i}]`;
+            // --- 📸 DYNAMIC FILE MAPPING ---
+            // Matches frontend key: item_photos[0], item_photos[1], etc.
+            const targetField = `item_photos[${i}]`;
             const photoPaths = files
-                .filter(f => f.fieldname === fieldName || f.fieldname === 'item_photos')
-                .map(f => f.path.replace(/\\/g, '/').replace('public/', ''));
+                .filter(f => f.fieldname === targetField)
+                .map(f => `/uploads/pickups/${f.filename}`); // Standard relative path
 
             await conn.query(
                 `INSERT INTO pickup_items (
-                    pickup_id, scrap_item_id, estimated_weight, 
-                    photo_url
-                ) VALUES (?, ?, ?, ?)`,
-                [pickupId, parsedItems[i].scrap_item_id, parsedItems[i].estimated_weight, JSON.stringify(photoPaths)]
+                    pickup_id, scrap_item_id, category_id, item_id, 
+                    estimated_weight, estimated_min_amount, estimated_max_amount, 
+                    photo_url, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+                [
+                    pickupId, item.scrap_item_id, item.category_id, item.item_id,
+                    weight, itemMin, itemMax, JSON.stringify(photoPaths)
+                ]
             );
         }
+
+        // 4. Update Final Totals
+        await conn.query(
+            "UPDATE pickups SET estimated_min_amount = ?, estimated_max_amount = ? WHERE id = ?",
+            [masterTotalMin, masterTotalMax, pickupId]
+        );
 
         await conn.commit();
         res.status(201).json({
             success: true,
-            message: "Request Submitted!",
+            message: "Pickup Created!",
             data: { booking_code: bookingCode, pickup_id: pickupId }
         });
 
     } catch (err) {
         await conn.rollback();
-        console.error("Pickup Creation Error:", err);
-        res.status(500).json({ success: false, message: "Server error: " + err.message });
+        console.error("Pickup Error:", err);
+        res.status(500).json({ success: false, message: err.message });
     } finally {
         conn.release();
     }

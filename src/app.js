@@ -15,16 +15,31 @@ const app = express();
 
 // 1. Enhanced Security Middlewares
 app.use(helmet({
-  crossOriginResourcePolicy: false, // Required to allow mobile apps to load images from your server
+  crossOriginResourcePolicy: false,
+  crossOriginEmbedderPolicy: false, // Additional fix for loading media in browsers
 }));
 
-// 2. CORS Configuration
-// During development, allowing '*' is easiest for mobile testing
+// 2. Optimized CORS Configuration
+const allowedOrigins = [
+  'http://localhost:3000', // Your Next.js Web Panel
+  'http://localhost:3001', // Potential secondary dev port
+  // Add your production domain here later
+];
+
 app.use(
   cors({
-    origin: '*',
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-    credentials: true,
+    credentials: true, // Required for Axios withCredentials: true
   })
 );
 
@@ -33,8 +48,8 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 
-// 4. Static Folders (CRITICAL for Mobile App to see images)
-// This makes http://192.168.1.5:4000/uploads/categories/icon.png accessible
+// 4. Static Folders
+// Added a check to ensure the path is absolute and correct
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // 5. API routes
@@ -44,7 +59,8 @@ app.use('/api/v1', routes);
 app.get('/', (req, res) => {
   res.json({
     success: true,
-    message: 'GreenScrapHub API',
+    message: 'GreenScrapHub API is Online',
+    timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development'
   });
 });

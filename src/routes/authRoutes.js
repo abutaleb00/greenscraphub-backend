@@ -6,7 +6,9 @@ import {
   login,
   getMe,
   forgotPasswordRequest,
-  resetPassword
+  resetPassword,
+  updateProfile,   // New Controller
+  changePassword   // New Controller
 } from '../controllers/authController.js';
 import { auth } from '../middlewares/auth.js';
 
@@ -14,7 +16,6 @@ const router = express.Router();
 
 /**
  * 1. CUSTOMER REGISTRATION - STEP 1 (Request OTP)
- * Captures user data and referral code, then sends OTP.
  */
 router.post(
   '/register',
@@ -42,7 +43,6 @@ router.post(
 
 /**
  * 3. FORGOT PASSWORD - STEP 1 (Request Reset OTP)
- * Sends an OTP to the email linked to the provided phone number.
  */
 router.post(
   '/forgot-password',
@@ -54,7 +54,6 @@ router.post(
 
 /**
  * 4. FORGOT PASSWORD - STEP 2 (Verify & Reset)
- * Validates OTP and updates the password in the database.
  */
 router.post(
   '/reset-password',
@@ -82,5 +81,38 @@ router.post(
  * 6. GET AUTHENTICATED USER
  */
 router.get('/me', auth(), getMe);
+
+/**
+ * 7. UPDATE PROFILE (Role-Aware)
+ * Handles updates for users, customers, and riders profiles.
+ */
+router.patch(
+  '/profile',
+  auth(), // Protect with your existing auth middleware
+  [
+    body('full_name').optional().trim().notEmpty().withMessage('Full name cannot be empty'),
+    body('email').optional().isEmail().withMessage('Invalid email format'),
+    // Customer specific validation
+    body('default_address_id').optional().isNumeric(),
+    // Rider specific validation
+    body('vehicle_type').optional().notEmpty(),
+    body('is_online').optional().isBoolean(),
+  ],
+  updateProfile
+);
+
+/**
+ * 8. CHANGE PASSWORD (Secure)
+ * Dedicated route for logged-in users to update their password.
+ */
+router.post(
+  '/change-password',
+  auth(),
+  [
+    body('currentPassword').notEmpty().withMessage('Current password is required'),
+    body('newPassword').isLength({ min: 6 }).withMessage('New password must be at least 6 characters'),
+  ],
+  changePassword
+);
 
 export default router;

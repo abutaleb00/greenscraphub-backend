@@ -1,54 +1,18 @@
 import express from "express";
-import multer from "multer";
-import path from "path";
-import fs from "fs";
 import { auth } from "../middlewares/auth.js";
+import { uploadPickupPhotos } from "../middlewares/pickupUpload.js";
 import {
-   createPickup,
-   getPickupDetails,
-   listCustomerPickups,
-   agentPickupList,
-   riderPickupList,
-   updatePickupStatus,
-   completePickup,
-   getReceipt
+    createPickup,
+    getPickupDetails,
+    listCustomerPickups,
+    agentPickupList,
+    riderPickupList,
+    updatePickupStatus,
+    completePickup,
+    getReceipt
 } from "../controllers/pickupController.js";
 
 const router = express.Router();
-
-/* ============================================================
-   MULTER CONFIGURATION (Disk Storage)
-   Ensures files are saved physically so we can generate URLs
-============================================================ */
-const storage = multer.diskStorage({
-   destination: (req, file, cb) => {
-      const uploadPath = 'public/uploads/pickups/';
-      // Auto-create directory if it doesn't exist
-      if (!fs.existsSync(uploadPath)) {
-         fs.mkdirSync(uploadPath, { recursive: true });
-      }
-      cb(null, uploadPath);
-   },
-   filename: (req, file, cb) => {
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-      cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-   }
-});
-
-const upload = multer({
-   storage,
-   limits: { fileSize: 10 * 1024 * 1024 }, // Increased to 10MB for high-res proof photos
-   fileFilter: (req, file, cb) => {
-      const filetypes = /jpeg|jpg|png|webp/;
-      const mimetype = filetypes.test(file.mimetype);
-      const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-
-      if (mimetype && extname) {
-         return cb(null, true);
-      }
-      cb(new Error("Error: File upload only supports images (jpeg, jpg, png, webp)"));
-   }
-});
 
 /* ============================================================
    CUSTOMER ROUTES
@@ -57,12 +21,13 @@ const upload = multer({
 /**
  * @route   POST /api/v1/pickups
  * @desc    Create a new pickup request with multiple items and photos
+ * Note: .any() is used to handle dynamic fields like item_photos[0], item_photos[1]
  */
 router.post(
-   "/",
-   auth(["customer"]),
-   upload.any(), // Required for dynamic fields like item_photos[0], item_photos[1]
-   createPickup
+    "/",
+    auth(["customer"]),
+    uploadPickupPhotos.any(), 
+    createPickup
 );
 
 /**
@@ -103,13 +68,13 @@ router.put("/:id/status", auth(["rider", "agent", "admin"]), updatePickupStatus)
 /**
  * @route   POST /api/v1/pickups/:id/complete
  * @desc    Finalize pickup with actual weights, rates, and proof image.
- * This triggers the Universal Payout (Wallet Update) logic.
+ * Uses .single('proof_image') for the rider's final confirmation photo.
  */
 router.post(
-   "/:id/complete",
-   auth(["rider", "admin"]),
-   upload.single('proof_image'), // Rider uploads 1 final proof image
-   completePickup
+    "/:id/complete",
+    auth(["rider", "admin"]),
+    uploadPickupPhotos.single('proof_image'),
+    completePickup
 );
 
 

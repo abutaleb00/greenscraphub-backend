@@ -10,6 +10,7 @@ import adminDashboardRoutes from "./adminDashboardRoutes.js";
 import riderDashboardRoutes from "./riderDashboardRoutes.js";
 import customerDashboardRoutes from "./customerDashboardRoutes.js";
 import payoutRoutes from './payoutRoutes.js';
+import addressRoutes from './addressRoutes.js';
 import pointRoutes from './pointRoutes.js';
 const router = express.Router();
 
@@ -25,9 +26,10 @@ router.use('/scrap', scrapCatalogRoutes);   // Categories + Price Items
 // --- Financial Modules ---
 router.use('/wallet', walletRoutes);       // 💰 NEW: Earnings & Transactions
 router.use('/payouts', payoutRoutes);
-router.use('/point', pointRoutes);
+router.use('/points', pointRoutes);
 // --- Logistics Modules ---
 router.use('/pickups', pickupRoutes);      // 📦 Create, List, Status, Complete
+router.use('/addresses', addressRoutes);      // 📦 Create, List, Status, Complete
 
 // --- Dashboard & Management ---
 router.use('/admin', adminUserRoutes);

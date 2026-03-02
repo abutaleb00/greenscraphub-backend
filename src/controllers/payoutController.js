@@ -67,17 +67,34 @@ export const requestWithdrawal = async (req, res) => {
 
 /**
  * 2. LIST USER PAYOUTS (Personal History)
+ * Updated to handle potential schema mismatches
  */
 export const listUserPayouts = async (req, res) => {
     try {
         const { id: userId, role } = req.user;
+
+        // Log for debugging: Check if these values exist
+        console.log(`[PAYOUT] Fetching for UserID: ${userId}, Role: ${role}`);
+
         const [rows] = await db.query(
-            "SELECT * FROM payout_requests WHERE user_id = ? AND user_type = ? ORDER BY created_at DESC",
-            [userId, role]
+            // Ensure these column names (user_id, user_type) match your SQL exactly
+            "SELECT * FROM payout_requests WHERE user_id = ? ORDER BY created_at DESC",
+            [userId]
         );
-        res.json({ success: true, payouts: rows });
+
+        res.json({ 
+            success: true, 
+            payouts: rows 
+        });
     } catch (err) {
-        res.status(500).json({ success: false, message: "Server error." });
+        // Detailed logging to your terminal so you can see the EXACT SQL error
+        console.error("Database Error in listUserPayouts:", err.message);
+        
+        res.status(500).json({ 
+            success: false, 
+            message: "Failed to load payout history.",
+            error: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
     }
 };
 

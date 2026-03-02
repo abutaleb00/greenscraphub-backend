@@ -5,22 +5,36 @@ import db from "../config/db.js";
 
 const router = express.Router();
 
-// Get points balance and history
+// 1. Get points balance and history (Existing)
 router.get("/history", auth(["customer"]), async (req, res) => {
     try {
         const [customer] = await db.query("SELECT id, total_points FROM customers WHERE user_id = ?", [req.user.id]);
+
+        if (!customer.length) return res.status(404).json({ success: false, message: "Customer not found" });
+
         const [history] = await db.query(
             "SELECT * FROM point_transactions WHERE customer_id = ? ORDER BY created_at DESC",
             [customer[0].id]
         );
-        res.json({ success: true, total_points: customer[0].total_points, history });
+
+        // Ensure keys match frontend expectation: data: { total_points, history }
+        res.json({
+            success: true,
+            data: {
+                total_points: customer[0].total_points,
+                history
+            }
+        });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
 });
 
-// Redeem points to cash
+// 2. Redeem points (Must be POST as it modifies data)
 router.post("/redeem", auth(["customer"]), redeemPoints);
-router.post("/leaderboard", auth(["customer"]), getLeaderboard);
+
+// 3. Leaderboard (Change from POST to GET)
+// Your frontend uses apiClient.get('/points/leaderboard'), so this must be .get
+router.get("/leaderboard", auth(["customer"]), getLeaderboard);
 
 export default router;
