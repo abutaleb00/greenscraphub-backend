@@ -6,6 +6,7 @@ import pool from "../config/db.js";
 export async function createScrapItem({
     category_id,
     name,
+    slug,
     description = null,
     unit = "kg",
     min_price_per_unit,
@@ -17,17 +18,19 @@ export async function createScrapItem({
     INSERT INTO scrap_items (
       category_id,
       name,
+      slug,
       description,
       unit,
       min_price_per_unit,
       max_price_per_unit,
       image_url
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `,
         [
             category_id,
             name,
+            slug,
             description,
             unit,
             min_price_per_unit,
@@ -78,6 +81,7 @@ export async function getScrapItemById(id) {
       i.id,
       i.category_id,
       i.name,
+      i.slug,
       i.description,
       i.unit,
       i.min_price_per_unit,
@@ -88,7 +92,7 @@ export async function getScrapItemById(id) {
       i.updated_at,
       c.name AS category_name
     FROM scrap_items i
-    JOIN scrap_categories c ON i.category_id = c.id
+    LEFT JOIN scrap_categories c ON i.category_id = c.id
     WHERE i.id = ?
     LIMIT 1
     `,
@@ -107,6 +111,7 @@ export async function getScrapItemsByCategory(categoryId, { onlyActive = true } 
       id,
       category_id,
       name,
+      slug,
       description,
       unit,
       min_price_per_unit,
@@ -140,6 +145,7 @@ export async function getAllScrapItems({ includeInactive = false } = {}) {
       i.id,
       i.category_id,
       i.name,
+      i.slug,
       i.description,
       i.unit,
       i.min_price_per_unit,
@@ -150,30 +156,34 @@ export async function getAllScrapItems({ includeInactive = false } = {}) {
       i.updated_at,
       c.name AS category_name
     FROM scrap_items i
-    JOIN scrap_categories c ON i.category_id = c.id
+    LEFT JOIN scrap_categories c ON i.category_id = c.id
   `;
 
     if (!includeInactive) {
         query += ` WHERE i.is_active = 1`;
     }
 
-    query += `
-    ORDER BY c.name ASC, i.name ASC
-  `;
+    query += ` ORDER BY c.name ASC, i.name ASC`;
 
     const [rows] = await pool.query(query);
     return rows;
 }
 
 /* ----------------------------------------------------
-   UPDATE ITEM
+   UPDATE ITEM (Defensive Dynamic Update)
 ---------------------------------------------------- */
 export async function updateScrapItem(id, data) {
     const fields = [];
     const values = [];
 
+    const allowedUpdates = [
+        'category_id', 'name', 'slug', 'description',
+        'unit', 'min_price_per_unit', 'max_price_per_unit',
+        'image_url', 'is_active'
+    ];
+
     for (const [key, value] of Object.entries(data)) {
-        if (value !== undefined) {
+        if (allowedUpdates.includes(key) && value !== undefined) {
             fields.push(`${key} = ?`);
             values.push(value);
         }
@@ -196,17 +206,53 @@ export async function updateScrapItem(id, data) {
 }
 
 /* ----------------------------------------------------
-   SOFT DELETE ITEM
+   TOGGLE ACTIVE STATUS
 ---------------------------------------------------- */
-export async function softDeleteScrapItem(id) {
-    await pool.query(
-        `
-    UPDATE scrap_items
-    SET is_active = 0
-    WHERE id = ?
-    `,
+export async function updateItemStatus(id, isActive) {
+    const [result] = await pool.query(
+        `UPDATE scrap_items SET is_active = ? WHERE id = ?`,
+        [isActive ? 1 : 0, id]
+    );
+    return result.affectedRows > 0;
+}
+
+/* ----------------------------------------------------
+   DELETE ITEM (Hybrid Hard/Soft Delete)
+   - Performs HARD DELETE if no references exist.
+   - Performs SOFT DELETE if linked to pickup history.
+---------------------------------------------------- */
+export async function deleteScrapItem(id) {
+    // 1. Check if the item is linked to any pickup_items
+    const [usage] = await pool.query(
+        `SELECT COUNT(*) as count FROM pickup_items WHERE scrap_item_id = ?`,
         [id]
     );
 
-    return true;
+    if (usage[0].count > 0) {
+        // 2. Perform a SOFT DELETE (Hide from app, keep for history)
+        const [result] = await pool.query(
+            `UPDATE scrap_items SET is_active = 0 WHERE id = ?`,
+            [id]
+        )
+        // Return structured data for the controller
+        return { success: true, type: 'soft', affectedRows: result.affectedRows };
+    } else {
+        // 3. Perform a HARD DELETE (Safe to remove)
+        const [result] = await pool.query(
+            `DELETE FROM scrap_items WHERE id = ?`,
+            [id]
+        );
+        return { success: true, type: 'hard', affectedRows: result.affectedRows };
+    }
+}
+
+/* ----------------------------------------------------
+   SOFT DELETE ITEM (Direct helper if needed)
+---------------------------------------------------- */
+export async function softDeleteScrapItem(id) {
+    const [result] = await pool.query(
+        `UPDATE scrap_items SET is_active = 0 WHERE id = ?`,
+        [id]
+    );
+    return result.affectedRows > 0;
 }

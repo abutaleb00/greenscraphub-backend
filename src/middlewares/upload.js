@@ -1,23 +1,77 @@
-// src/middlewares/upload.js
 import multer from "multer";
 import path from "path";
 import fs from "fs";
 
-// Ensure folder exists
-const categoryDir = "uploads/category-icons";
-if (!fs.existsSync(categoryDir)) {
-    fs.mkdirSync(categoryDir, { recursive: true });
-}
+/**
+ * Helper to ensure upload directories exist
+ * @param {string} dirPath 
+ */
+const ensureDir = (dirPath) => {
+    if (!fs.existsSync(dirPath)) {
+        fs.mkdirSync(dirPath, { recursive: true });
+    }
+};
 
-const storage = multer.diskStorage({
+// 1. Define Directories
+const CATEGORY_DIR = "uploads/category-icons";
+const SCRAP_ITEM_DIR = "uploads/scrap-items";
+
+// Ensure folders are created on initialization
+ensureDir(CATEGORY_DIR);
+ensureDir(SCRAP_ITEM_DIR);
+
+/**
+ * Storage configuration for Category Icons
+ */
+const categoryStorage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, categoryDir);
+        cb(null, CATEGORY_DIR);
     },
     filename: function (req, file, cb) {
         const ext = path.extname(file.originalname);
-        const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);
-        cb(null, "cat-" + unique + ext);
+        const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+        cb(null, `cat-${uniqueSuffix}${ext}`);
     },
 });
 
-export const uploadCategoryIcon = multer({ storage });
+/**
+ * Storage configuration for Scrap Item Images
+ */
+const scrapItemStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, SCRAP_ITEM_DIR);
+    },
+    filename: function (req, file, cb) {
+        const ext = path.extname(file.originalname);
+        const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+        cb(null, `item-${uniqueSuffix}${ext}`);
+    },
+});
+
+/**
+ * File Filter to ensure only images are uploaded
+ */
+const fileFilter = (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|webp/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+
+    if (mimetype && extname) {
+        return cb(null, true);
+    } else {
+        cb(new Error("Only images (jpeg, jpg, png, webp) are allowed!"));
+    }
+};
+
+// Export specific middleware instances
+export const uploadCategoryIcon = multer({
+    storage: categoryStorage,
+    fileFilter,
+    limits: { fileSize: 2 * 1024 * 1024 } // 2MB limit
+});
+
+export const uploadScrapItemImage = multer({
+    storage: scrapItemStorage,
+    fileFilter,
+    limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+});

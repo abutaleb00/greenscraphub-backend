@@ -118,6 +118,33 @@ export const createPickup = async (req, res, next) => {
     }
 };
 
+export const listAllPickupsAdmin = async (req, res, next) => {
+    try {
+        const { status, city, page = 1, limit = 10 } = req.query;
+        const offset = (page - 1) * limit;
+
+        // Base Query
+        let query = `SELECT p.*, u.full_name as customer_name 
+                     FROM pickups p 
+                     JOIN users u ON p.customer_id = u.id`;
+
+        // Dynamic Filtering
+        const params = [];
+        if (status) {
+            query += ` WHERE p.status = ?`;
+            params.push(status);
+        }
+
+        query += ` ORDER BY p.created_at DESC LIMIT ? OFFSET ?`;
+        params.push(parseInt(limit), parseInt(offset));
+
+        const [rows] = await db.query(query, params);
+
+        res.json({ success: true, data: rows, page: parseInt(page) });
+    } catch (err) {
+        next(err);
+    }
+};
 /**
  * 2. LIST PICKUPS (Customer)
  */
@@ -219,6 +246,75 @@ const updateWallet = async (conn, userId, role, amount, type, source, refId, des
         VALUES (?, ?, ?, 'pickup', ?, ?, ?, ?, ?, 'completed')`,
         [wallet[0].id, type, source, refId, amount, balanceBefore, balanceAfter, desc]
     );
+};
+
+export const assignRiderController = async (req, res, next) => {
+    try {
+        const { id: pickupId } = req.params; // The Pickup ID from URL
+        const { rider_id } = req.body;       // The Rider's ID from Body
+        const user = req.user;               // Logged-in user (Admin or Agent)
+
+        if (!rider_id) {
+            throw new ApiError(400, "Rider ID is required for assignment.");
+        }
+
+        // 1. Fetch Rider info using the correct primary key 'id'
+        const [riderRows] = await db.query(
+            `SELECT id, agent_id FROM riders WHERE id = ? LIMIT 1`,
+            [rider_id]
+        );
+
+        if (riderRows.length === 0) {
+            throw new ApiError(404, "Rider not found in the system.");
+        }
+
+        const rider = riderRows[0];
+
+        // 2. Security Check: Agents are restricted to their own staff
+        if (user.role === 'agent') {
+            // Find the agent_id owned by the logged-in user
+            const [agentRows] = await db.query(
+                `SELECT agent_id FROM agents WHERE owner_id = ? LIMIT 1`,
+                [user.id]
+            );
+
+            const agent = agentRows[0];
+
+            if (!agent || rider.agent_id !== agent.agent_id) {
+                throw new ApiError(403, "Access Denied: You can only assign riders registered under your agency.");
+            }
+        }
+
+        // 3. Update the Pickup Record
+        // Note: We use rider.id (the PK from riders table) to update the pickups table
+        const [result] = await db.query(
+            `UPDATE pickups 
+             SET rider_id = ?, 
+                 agent_id = ?, 
+                 status = 'assigned', 
+                 assigned_at = NOW() 
+             WHERE id = ? AND status = 'pending'`,
+            [rider.id, rider.agent_id, pickupId]
+        );
+
+        if (result.affectedRows === 0) {
+            throw new ApiError(400, "Pickup assignment failed. Ensure the pickup is still 'pending'.");
+        }
+
+        res.json({
+            success: true,
+            message: `Pickup successfully assigned to rider #${rider.id}`,
+            data: {
+                pickup_id: pickupId,
+                rider_id: rider.id,
+                agent_id: rider.agent_id,
+                status: 'assigned'
+            }
+        });
+
+    } catch (err) {
+        next(err);
+    }
 };
 
 /**
