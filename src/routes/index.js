@@ -1,41 +1,80 @@
 import express from 'express';
 
+// --- Import Module Routes ---
 import authRoutes from './authRoutes.js';
 import scrapCatalogRoutes from './scrapCatalogRoutes.js';
 import adminUserRoutes from './adminUserRoutes.js';
 import pickupRoutes from './pickupRoutes.js';
-import walletRoutes from './walletRoutes.js'; // 🚀 NEW: Wallet Module
-import agentDashboardRoutes from "./agentDashboardRoutes.js";
+import walletRoutes from './walletRoutes.js';
+import payoutRoutes from './payoutRoutes.js';
+import pointRoutes from './pointRoutes.js';
+import addressRoutes from './addressRoutes.js';
+import geographyRoutes from './geographyRoutes.js';
+
+// --- Import Dashboard Routes ---
 import adminDashboardRoutes from "./adminDashboardRoutes.js";
+import agentDashboardRoutes from "./agentDashboardRoutes.js";
 import riderDashboardRoutes from "./riderDashboardRoutes.js";
 import customerDashboardRoutes from "./customerDashboardRoutes.js";
-import payoutRoutes from './payoutRoutes.js';
-import addressRoutes from './addressRoutes.js';
-import pointRoutes from './pointRoutes.js';
+import systemRoutes from "./systemRoutes.js";
+
 const router = express.Router();
 
-// --- Health Check ---
+/**
+ * @section Health Check
+ * Used by Load Balancers and Uptime Monitors
+ */
 router.get('/health', (req, res) => {
-  res.json({ success: true, message: 'API is working', timestamp: new Date() });
+  res.json({
+    success: true,
+    message: 'GreenScrapHub API is operational',
+    version: '2.0.0',
+    timestamp: new Date()
+  });
 });
 
-// --- Core Modules ---
-router.use('/auth', authRoutes);           // login, register, me
-router.use('/scrap', scrapCatalogRoutes);   // Categories + Price Items
+/**
+ * @section Core Auth & Profile
+ * Path: /api/v1/auth
+ */
+router.use('/auth', authRoutes);
 
-// --- Financial Modules ---
-router.use('/wallet', walletRoutes);       // 💰 NEW: Earnings & Transactions
+/**
+ * @section Scrap Catalog (Categories & Price List)
+ * Path: /api/v1/scrap
+ */
+router.use('/scrap', scrapCatalogRoutes);
+
+/**
+ * @section Financial Circle (Wallets, Payouts, Rewards)
+ * Paths: /api/v1/wallet, /api/v1/payouts, /api/v1/points
+ */
+router.use('/wallet', walletRoutes);
 router.use('/payouts', payoutRoutes);
 router.use('/points', pointRoutes);
-// --- Logistics Modules ---
-router.use('/pickups', pickupRoutes);      // 📦 Create, List, Status, Complete
-router.use('/addresses', addressRoutes);      // 📦 Create, List, Status, Complete
 
-// --- Dashboard & Management ---
-router.use('/admin', adminUserRoutes);
-router.use("/admin", adminDashboardRoutes);
-router.use("/agent", agentDashboardRoutes);
-router.use("/rider", riderDashboardRoutes);
-router.use("/customer", customerDashboardRoutes);
+/**
+ * @section Logistics & Geography
+ * Paths: /api/v1/pickups, /api/v1/addresses, /api/v1/geography
+ */
+router.use('/pickups', pickupRoutes);
+router.use('/addresses', addressRoutes); // User's personal address book
+router.use('/geography', geographyRoutes); // Division/District/Upazila lookup
+
+/**
+ * @section Dashboards & Management
+ * Role-specific data aggregation
+ */
+router.use('/dashboard/admin', adminDashboardRoutes);
+router.use('/dashboard/agent', agentDashboardRoutes);
+router.use('/dashboard/rider', riderDashboardRoutes);
+router.use('/dashboard/customer', customerDashboardRoutes);
+
+/**
+ * @section Admin User Management
+ * Path: /api/v1/management
+ */
+router.use('/management', adminUserRoutes); // Onboarding Agents/Riders
+router.use('/system', systemRoutes);
 
 export default router;

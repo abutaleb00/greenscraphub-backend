@@ -27,120 +27,112 @@ import {
 const router = express.Router();
 
 /* ====================================================
-   PUBLIC CATALOG ROUTES
-   (Accessible by mobile app and guest users)
+    PUBLIC CATALOG ROUTES
+    (Accessible by mobile app and guest users)
 ==================================================== */
 
-// GET → /api/v1/scrap/categories
 router.get("/categories", listPublicCategories);
-
-// GET → items under a category
 router.get("/categories/:categoryId/items", listPublicItemsByCategory);
-
-// GET → item details
 router.get("/items/:itemId", getPublicItemDetail);
 
 
 /* ====================================================
-   ADMIN CATALOG ROUTES
-   (Strictly Protected by auth("admin"))
+    ADMIN CATALOG ROUTES
+    (Strictly Protected by auth(["admin"]))
 ==================================================== */
 
 /* --- ADMIN: CATEGORIES --- */
 
-// LIST: GET → /api/v1/scrap/admin/categories
-router.get("/admin/categories", auth("admin"), listAdminCategories);
+router.get("/admin/categories", auth(["admin"]), listAdminCategories);
+router.get("/admin/categories/:categoryId", auth(["admin"]), getAdminCategoryById);
 
-// DETAIL: GET → /api/v1/scrap/admin/categories/:categoryId
-router.get("/admin/categories/:categoryId", auth("admin"), getAdminCategoryById);
-
-// CREATE: POST → /api/v1/scrap/admin/categories
 router.post(
     "/admin/categories",
-    auth("admin"),
+    auth(["admin"]),
     uploadCategoryIcon.single("icon"),
     [
-        body("name").notEmpty().withMessage("Category name is required"),
+        body("name_en").notEmpty().withMessage("English category name is required"),
+        body("name_bn").notEmpty().withMessage("Bangla category name is required"),
         body("display_order").optional().isInt({ min: 0 })
     ],
     createCategoryAdmin
 );
 
-// UPDATE: PUT → /api/v1/scrap/admin/categories/:categoryId
 router.put(
     "/admin/categories/:categoryId",
-    auth("admin"),
+    auth(["admin"]),
     uploadCategoryIcon.single("icon"),
     [
-        body("name").optional().notEmpty(),
-        body("display_order").optional().isInt({ min: 0 })
+        body("name_en").optional().notEmpty(),
+        body("name_bn").optional().notEmpty(),
+        body("display_order").optional().isInt({ min: 0 }),
+        body("is_active").optional().isBoolean()
     ],
     updateCategoryAdmin
 );
 
-// DELETE: DELETE → /api/v1/scrap/admin/categories/:categoryId
-router.delete("/admin/categories/:categoryId", auth("admin"), deleteCategoryAdmin);
+router.delete("/admin/categories/:categoryId", auth(["admin"]), deleteCategoryAdmin);
 
 
 /* --- ADMIN: ITEMS --- */
 
-// LIST: GET → /api/v1/scrap/admin/items
-router.get("/admin/items", auth("admin"), listAdminItems);
+router.get("/admin/items", auth(["admin"]), listAdminItems);
 
-// CREATE: POST → /api/v1/scrap/admin/items
 router.post(
     "/admin/items",
-    auth("admin"),
+    auth(["admin"]),
     uploadScrapItemImage.single("image"),
     [
         body("category_id")
             .notEmpty().withMessage("category_id is required")
             .isInt({ gt: 0 }).withMessage("category_id must be a positive number"),
 
-        body("name")
-            .notEmpty().withMessage("Item name is required"),
+        body("name_en").notEmpty().withMessage("English item name is required"),
+        body("name_bn").notEmpty().withMessage("Bangla item name is required"),
 
         body("unit")
             .optional()
-            .isIn(["kg", "piece"]).withMessage("unit must be kg or piece"),
+            .isIn(["kg", "piece", "gm", "ton"]).withMessage("Invalid unit"),
 
-        body("min_price_per_unit")
-            .notEmpty().withMessage("min_price_per_unit required")
-            .isFloat({ min: 0 }).withMessage("Must be a valid price"),
+        body("current_min_rate")
+            .notEmpty().withMessage("current_min_rate is required")
+            .isFloat({ min: 0 }).withMessage("Min rate must be a valid positive number"),
 
-        body("max_price_per_unit")
-            .notEmpty().withMessage("max_price_per_unit required")
-            .isFloat({ min: 0 }).withMessage("Must be a valid price"),
+        body("current_max_rate")
+            .notEmpty().withMessage("current_max_rate is required")
+            .isFloat({ min: 0 }).withMessage("Max rate must be a valid positive number"),
     ],
     createItemAdmin
 );
 
-// UPDATE: PUT → /api/v1/scrap/admin/items/:itemId
 router.put(
     "/admin/items/:itemId",
-    auth("admin"),
+    auth(["admin"]),
     uploadScrapItemImage.single("image"),
     [
-        body("name").optional().notEmpty(),
-        body("category_id").optional().isInt(),
-        body("unit").optional().isIn(["kg", "piece"]),
-        body("min_price_per_unit").optional().isFloat({ min: 0 }),
-        body("max_price_per_unit").optional().isFloat({ min: 0 }),
+        body("name_en").optional({ checkFalsy: true }).notEmpty(),
+        body("name_bn").optional({ checkFalsy: true }),
+        // category_id is sent as a string by FormData, we must ensure it's a numeric string
+        body("category_id").optional({ checkFalsy: true }).isNumeric().withMessage("Category ID must be numeric"),
+        body("unit").optional({ checkFalsy: true }).isString(),
+        // Allow numeric strings and convert them
+        body("current_min_rate").optional({ checkFalsy: true }).isNumeric().withMessage("Min rate must be a number"),
+        body("current_max_rate").optional({ checkFalsy: true }).isNumeric().withMessage("Max rate must be a number"),
+        body("is_active").optional().isIn(['0', '1', 0, 1]),
+        body("change_reason").optional({ checkFalsy: true }).isString()
     ],
     updateItemAdmin
 );
 
-// TOGGLE STATUS: PATCH → /api/v1/scrap/admin/items/:itemId/status
 router.patch(
     "/admin/items/:itemId/status",
-    auth("admin"),
+    auth(["admin"]),
     [
-        body("is_active").isBoolean().withMessage("is_active must be a boolean")
+        body("is_active").isBoolean().withMessage("is_active must be a boolean (true/false or 1/0)")
     ],
     toggleItemStatusAdmin
 );
 
-// DELETE: DELETE → /api/v1/scrap/admin/items/:itemId
-router.delete("/admin/items/:itemId", auth("admin"), deleteItemAdmin);
+router.delete("/admin/items/:itemId", auth(["admin"]), deleteItemAdmin);
 
 export default router;

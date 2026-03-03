@@ -2,30 +2,10 @@
 import bcrypt from "bcryptjs";
 import { validationResult } from "express-validator";
 import ApiError from "../utils/ApiError.js";
-
-import {
-    findUserByEmail,
-    findUserByPhone,
-    createUser,
-} from "../models/userModel.js";
-
-import {
-    createAgent,
-    getAgents,
-    getAgentByUserId,
-    getAgentById
-} from "../models/agentModel.js";
-
-import {
-    createRider,
-    getRidersByAgent,
-    getAllRidersWithAgent
-} from "../models/riderModel.js";
-
-import { createCustomer } from "../models/customerModel.js";
+import db from "../config/db.js";
 
 /* --------------------------------------------------
-   VALIDATION HELPER
+    INTERNAL HELPERS
 -------------------------------------------------- */
 function checkValidation(req) {
     const errors = validationResult(req);
@@ -34,226 +14,797 @@ function checkValidation(req) {
     }
 }
 
+/**
+ * Helper: Initialize Wallet for any new user
+ * Essential for the Financial Circle logic
+ */
+const initializeWallet = async (conn, userId) => {
+    await conn.query(
+        "INSERT INTO wallet_accounts (user_id, balance, total_withdrawn, currency) VALUES (?, 0.00, 0.00, 'BDT')",
+        [userId]
+    );
+};
+
 /* --------------------------------------------------
-   ADMIN → CREATE AGENT ACCOUNT
+    ADMIN → CREATE AGENT ACCOUNT
 -------------------------------------------------- */
 export const createAgentAccount = async (req, res, next) => {
+    const conn = await db.getConnection();
     try {
         checkValidation(req);
+        await conn.beginTransaction();
 
         let {
-            full_name,
-            phone,
-            email,
-            password,
-            company_name,
-            area_coverage
+            full_name, phone, email, password,
+            business_name, address_line,
+            latitude, longitude, commission_value
         } = req.body;
 
-        // FIX → convert empty email to null
-        email = email?.trim() === "" ? null : email;
-
-        if (!company_name) {
-            throw new ApiError(400, "company_name is required");
-        }
-
-        // Unique email check only if actual email exists
-        if (email) {
-            const exists = await findUserByEmail(email);
-            if (exists) throw new ApiError(400, "Email already in use");
-        }
-
-        // Unique phone check
-        const phoneExists = await findUserByPhone(phone);
-        if (phoneExists) throw new ApiError(400, "Phone already in use");
+        // 1. Check if user already exists
+        const [exists] = await conn.query(
+            "SELECT id FROM users WHERE phone = ? OR (email IS NOT NULL AND email = ?)",
+            [phone, email]
+        );
+        if (exists.length > 0) throw new ApiError(400, "Phone or Email already registered");
 
         const password_hash = await bcrypt.hash(password, 10);
 
-        // Create user with role=agent
-        const user = await createUser({
-            full_name,
-            phone,
-            email,
-            password_hash,
-            role: "agent",
-        });
+        // 2. Create User (role_id 2 = Agent)
+        const [userResult] = await conn.query(
+            "INSERT INTO users (full_name, phone, email, password_hash, role_id, is_active) VALUES (?, ?, ?, ?, 2, 1)",
+            [full_name, phone, email || null, password_hash]
+        );
+        const userId = userResult.insertId;
 
-        // Create agent business profile
-        const agent = await createAgent({
-            ownerUserId: user.id,
-            company_name,
-            area_coverage: area_coverage || null,
-        });
+        // 3. Create Agent Profile 
+        const agentCode = 'AG-' + Math.random().toString(36).substring(2, 7).toUpperCase();
 
-        return res.status(201).json({
-            success: true,
-            data: { user, agent },
-        });
+        await conn.query(
+            `INSERT INTO agents (
+                owner_user_id, business_name, code, email, 
+                phone, address_line, latitude, longitude, 
+                commission_value, is_active
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+            [userId, business_name, agentCode, email, phone, address_line, latitude, longitude, commission_value]
+        );
+
+        // 4. ALSO Insert into Addresses table (since you provided that schema)
+        await conn.query(
+            `INSERT INTO addresses (
+                user_id, label, address_line, latitude, longitude, is_default
+            ) VALUES (?, 'Business Hub', ?, ?, ?, 1)`,
+            [userId, address_line, latitude, longitude]
+        );
+
+        // 5. Initialize Wallet
+        await initializeWallet(conn, userId);
+
+        await conn.commit();
+        res.status(201).json({ success: true, message: "Agent Hub and Address synchronized" });
 
     } catch (err) {
+        await conn.rollback();
         next(err);
+    } finally {
+        conn.release();
     }
 };
 
-
-/* --------------------------------------------------
-   ADMIN → LIST ALL AGENTS
--------------------------------------------------- */
-export const listAgents = async (req, res, next) => {
+/**
+ * UPDATE AGENT HUB
+ * Synchronizes Users, Agents, and Addresses tables
+ */
+export const updateAgentAccount = async (req, res, next) => {
+    const conn = await db.getConnection();
     try {
-        const agents = await getAgents();
-        return res.json({ success: true, data: agents });
-    } catch (err) {
-        next(err);
-    }
-};
-
-/* --------------------------------------------------
-   ADMIN/AGENT → CREATE RIDER ACCOUNT
--------------------------------------------------- */
-export const createRiderAccount = async (req, res, next) => {
-    try {
-        checkValidation(req);
-
+        const { id } = req.params; // Agent ID
         const {
             full_name,
             phone,
             email,
-            password,
-            agent_id,
-            vehicle_type,
-            vehicle_number
+            business_name,
+            address_line,     // Maps to Agents/Addresses table
+            commission_value,  // Maps to Agents table
+            latitude,
+            longitude,
+            is_active
         } = req.body;
 
-        const requester = req.user;
+        await conn.beginTransaction();
 
-        // Unique email check
-        if (email) {
-            const exists = await findUserByEmail(email);
-            if (exists) throw new ApiError(400, "Email already in use");
+        // 1. Fetch the owner_user_id to link to the other tables
+        const [agentRows] = await conn.query(
+            "SELECT owner_user_id FROM agents WHERE id = ?",
+            [id]
+        );
+
+        if (agentRows.length === 0) {
+            throw new ApiError(404, "Agent profile not found in the nodes.");
         }
 
-        // Unique phone check
-        const phoneExists = await findUserByPhone(phone);
-        if (phoneExists) throw new ApiError(400, "Phone already in use");
+        const ownerUserId = agentRows[0].owner_user_id;
 
-        let finalAgentId = null;
+        // 2. Update Users table (Credentials & Identity)
+        await conn.query(
+            `UPDATE users SET 
+                full_name = COALESCE(?, full_name), 
+                phone = COALESCE(?, phone), 
+                email = COALESCE(?, email),
+                is_active = COALESCE(?, is_active)
+            WHERE id = ?`,
+            [full_name, phone, email, is_active, ownerUserId]
+        );
 
-        if (requester.role === "agent") {
-            // Agent creating rider → assign to their agency
-            const agent = await getAgentByUserId(requester.id);
-            if (!agent) throw new ApiError(400, "Agent profile missing");
+        // 3. Update Agents table (Business Details & Hub Location)
+        await conn.query(
+            `UPDATE agents SET 
+                business_name = COALESCE(?, business_name), 
+                address_line = COALESCE(?, address_line),
+                latitude = COALESCE(?, latitude),
+                longitude = COALESCE(?, longitude),
+                commission_value = COALESCE(?, commission_value),
+                is_active = COALESCE(?, is_active),
+                phone = COALESCE(?, phone),
+                email = COALESCE(?, email)
+            WHERE id = ?`,
+            [business_name, address_line, latitude, longitude, commission_value, is_active, phone, email, id]
+        );
 
-            finalAgentId = agent.agent_id;
+        // 4. Update Addresses table (The Geographic Node)
+        // We update the 'default' business address for this user
+        await conn.query(
+            `UPDATE addresses SET 
+                address_line = COALESCE(?, address_line),
+                latitude = COALESCE(?, latitude),
+                longitude = COALESCE(?, longitude)
+            WHERE user_id = ? AND label = 'Business Hub'`,
+            [address_line, latitude, longitude, ownerUserId]
+        );
 
-        } else if (requester.role === "admin") {
-
-            if (!agent_id) throw new ApiError(400, "agent_id is required for admin");
-
-            const agent = await getAgentById(agent_id);
-            if (!agent) throw new ApiError(404, "Invalid agent_id");
-
-            finalAgentId = agent_id;
-
-        } else {
-            throw new ApiError(403, "Only admin or agent can create riders");
-        }
-
-        const password_hash = await bcrypt.hash(password, 10);
-
-        // 1️⃣ Create the rider user
-        const user = await createUser({
-            full_name,
-            phone,
-            email,
-            password_hash,
-            role: "rider",
-            agent_id: finalAgentId,
-        });
-
-        // 2️⃣ Create rider profile
-        const rider = await createRider({
-            userId: user.id,
-            agentId: finalAgentId,
-            vehicleType: vehicle_type,
-            vehicleNumber: vehicle_number,
-        });
-
-        return res.status(201).json({
+        await conn.commit();
+        res.json({
             success: true,
-            data: { user, rider },
+            message: "Agent Hub, User Identity, and Geographic Node synchronized successfully."
         });
 
     } catch (err) {
+        await conn.rollback();
+        console.error("Critical Agent Update Sync Error:", err);
+        next(err);
+    } finally {
+        conn.release();
+    }
+};
+
+/**
+ * DELETE AGENT (Deactivation)
+ * Synchronizes deactivation across Users and Agents tables
+ */
+export const deleteAgentAccount = async (req, res, next) => {
+    const conn = await db.getConnection();
+    try {
+        const { id } = req.params; // This is the Agent ID
+        await conn.beginTransaction();
+
+        // 1. Fetch the owner_user_id using the correct column name
+        // FIXED: Changed user_id to owner_user_id
+        const [agentRows] = await conn.query(
+            "SELECT owner_user_id FROM agents WHERE id = ?",
+            [id]
+        );
+
+        if (agentRows.length === 0) {
+            throw new ApiError(404, "Agent node not found in the system");
+        }
+
+        const ownerUserId = agentRows[0].owner_user_id;
+
+        // 2. Deactivate the User Account (Identity Node)
+        await conn.query(
+            "UPDATE users SET is_active = 0 WHERE id = ?",
+            [ownerUserId]
+        );
+
+        // 3. Deactivate the Agent Hub (Business Node)
+        await conn.query(
+            "UPDATE agents SET is_active = 0 WHERE id = ?",
+            [id]
+        );
+
+        await conn.commit();
+
+        res.json({
+            success: true,
+            message: "Agent hub and associated user account have been deactivated."
+        });
+
+    } catch (err) {
+        // Rollback ensures that we don't deactivate the agent profile 
+        // without also deactivating the login user (or vice versa).
+        await conn.rollback();
+        console.error("Agent Deactivation Error:", err);
+        next(err);
+    } finally {
+        // Always release the connection back to the pool
+        conn.release();
+    }
+};
+
+/* --------------------------------------------------
+    ADMIN/AGENT → CREATE RIDER ACCOUNT
+-------------------------------------------------- */
+export const createRiderAccount = async (req, res, next) => {
+    const conn = await db.getConnection();
+    try {
+        checkValidation(req);
+        await conn.beginTransaction();
+
+        const { full_name, phone, email, password, agent_id, vehicle_type, vehicle_number } = req.body;
+        const requester = req.user;
+
+        // 1. Role-based Agent ID determination
+        let finalAgentId = null;
+        if (requester.role === "agent") {
+            const [agent] = await conn.query("SELECT id FROM agents WHERE owner_user_id = ?", [requester.id]);
+            if (!agent.length) throw new ApiError(403, "Agent profile not found for requester");
+            finalAgentId = agent[0].id;
+        } else {
+            finalAgentId = agent_id; // Admin provides the ID manually
+        }
+
+        if (!finalAgentId) throw new ApiError(400, "agent_id is required");
+
+        // 2. Create User (Role 3 = Rider)
+        const password_hash = await bcrypt.hash(password, 10);
+        const [userResult] = await conn.query(
+            "INSERT INTO users (full_name, phone, email, password_hash, role_id, agent_id) VALUES (?, ?, ?, ?, 3, ?)",
+            [full_name, phone, email || null, password_hash, finalAgentId]
+        );
+        const userId = userResult.insertId;
+
+        // 3. Create Rider Profile
+        await conn.query(
+            "INSERT INTO riders (user_id, agent_id, vehicle_type, vehicle_number) VALUES (?, ?, ?, ?)",
+            [userId, finalAgentId, vehicle_type || 'Bicycle', vehicle_number || null]
+        );
+
+        // 4. Initialize Wallet
+        await initializeWallet(conn, userId);
+
+        await conn.commit();
+        res.status(201).json({ success: true, message: "Rider account created" });
+
+    } catch (err) {
+        await conn.rollback();
+        next(err);
+    } finally {
+        conn.release();
+    }
+};
+
+/* --------------------------------------------------
+    ADMIN/AGENT → UPDATE RIDER ACCOUNT
+-------------------------------------------------- */
+export const updateRiderAccount = async (req, res, next) => {
+    const conn = await db.getConnection();
+    try {
+        checkValidation(req);
+        const { id } = req.params; // This is the Rider ID (from riders table)
+        const {
+            full_name, phone, email,
+            agent_id, vehicle_type, vehicle_number,
+            is_active
+        } = req.body;
+        const requester = req.user;
+
+        await conn.beginTransaction();
+
+        // 1. Fetch current Rider data to verify ownership
+        const [riderRows] = await conn.query(
+            "SELECT user_id, agent_id FROM riders WHERE id = ?",
+            [id]
+        );
+        if (riderRows.length === 0) throw new ApiError(404, "Rider node not found");
+
+        const riderData = riderRows[0];
+
+        // 2. Authorization Check: Agents can only update THEIR OWN riders
+        if (requester.role === "agent") {
+            const [agent] = await conn.query("SELECT id FROM agents WHERE owner_user_id = ?", [requester.id]);
+            if (!agent.length || agent[0].id !== riderData.agent_id) {
+                throw new ApiError(403, "Unauthorized: You do not manage this rider");
+            }
+        }
+
+        // 3. Update Users Table (Identity & Status)
+        await conn.query(
+            `UPDATE users SET 
+                full_name = COALESCE(?, full_name),
+                phone = COALESCE(?, phone),
+                email = COALESCE(?, email),
+                is_active = COALESCE(?, is_active)
+            WHERE id = ?`,
+            [full_name, phone, email, is_active, riderData.user_id]
+        );
+
+        // 4. Update Riders Table (Logistics Details)
+        // Note: Only Admins are allowed to change a rider's agent_id via agent_id COALESCE
+        const finalAgentId = requester.role === 'admin' ? agent_id : undefined;
+
+        await conn.query(
+            `UPDATE riders SET 
+                agent_id = COALESCE(?, agent_id),
+                vehicle_type = COALESCE(?, vehicle_type),
+                vehicle_number = COALESCE(?, vehicle_number),
+                is_active = COALESCE(?, is_active)
+            WHERE id = ?`,
+            [finalAgentId, vehicle_type, vehicle_number, is_active, id]
+        );
+
+        await conn.commit();
+        res.json({ success: true, message: "Rider node synchronized successfully" });
+
+    } catch (err) {
+        await conn.rollback();
+        next(err);
+    } finally {
+        conn.release();
+    }
+};
+
+export const deleteRiderAccount = async (req, res, next) => {
+    const conn = await db.getConnection();
+    try {
+        const { id } = req.params;
+        await conn.beginTransaction();
+
+        // 1. Get user_id associated with this rider
+        const [riderRows] = await conn.query("SELECT user_id FROM riders WHERE id = ?", [id]);
+        if (riderRows.length === 0) throw new ApiError(404, "Rider not found");
+        const userId = riderRows[0].user_id;
+
+        // 2. Deactivate both nodes
+        await conn.query("UPDATE users SET is_active = 0 WHERE id = ?", [userId]);
+        await conn.query("UPDATE riders SET is_active = 0 WHERE id = ?", [id]);
+
+        await conn.commit();
+        res.json({ success: true, message: "Rider node deactivated (Offline)." });
+    } catch (err) {
+        await conn.rollback();
+        next(err);
+    } finally {
+        conn.release();
+    }
+};
+
+export const permanentDeleteRider = async (req, res, next) => {
+    const conn = await db.getConnection();
+    try {
+        const { id } = req.params;
+        await conn.beginTransaction();
+
+        // 1. Fetch dependencies
+        const [riderRows] = await conn.query("SELECT user_id FROM riders WHERE id = ?", [id]);
+        if (riderRows.length === 0) throw new ApiError(404, "Rider not found");
+        const userId = riderRows[0].user_id;
+
+        // 2. SAFETY CHECK: Check for active or historical pickups
+        const [pickups] = await conn.query(
+            "SELECT id FROM pickups WHERE rider_id = ? AND status NOT IN ('completed', 'cancelled') LIMIT 1",
+            [id]
+        );
+        if (pickups.length > 0) {
+            throw new ApiError(400, "Cannot purge: Rider has active pickup assignments. Complete or reassign them first.");
+        }
+
+        // 3. Purge Child Nodes first (Addresses, Wallets)
+        await conn.query("DELETE FROM addresses WHERE user_id = ?", [userId]);
+        await conn.query("DELETE FROM wallet_accounts WHERE user_id = ?", [userId]);
+
+        // 4. Purge Primary Nodes
+        await conn.query("DELETE FROM riders WHERE id = ?", [id]);
+        await conn.query("DELETE FROM users WHERE id = ?", [userId]);
+
+        await conn.commit();
+        res.json({ success: true, message: "Rider identity and logistics node purged successfully." });
+    } catch (err) {
+        await conn.rollback();
+        next(err);
+    } finally {
+        conn.release();
+    }
+};
+
+export const reassignRiderPickups = async (req, res, next) => {
+    const conn = await db.getConnection();
+    try {
+        const { source_rider_id, target_rider_id } = req.body;
+
+        if (!source_rider_id || !target_rider_id) {
+            throw new ApiError(400, "Both Source and Target riders are required");
+        }
+
+        await conn.beginTransaction();
+
+        // 1. Update the pickups table
+        // Included 'assigned' status and updated the assigned_at timestamp
+        const [result] = await conn.query(
+            `UPDATE pickups 
+             SET rider_id = ?, 
+                 assigned_at = CURRENT_TIMESTAMP,
+                 status = 'assigned' 
+             WHERE rider_id = ? 
+             AND status IN ('pending', 'assigned', 'accepted', 'started')
+             AND is_deleted = 0`,
+            [target_rider_id, source_rider_id]
+        );
+
+        if (result.affectedRows === 0) {
+            await conn.rollback();
+            return res.json({
+                success: false,
+                message: "No active pickups found for the source rider to migrate."
+            });
+        }
+
+        await conn.commit();
+
+        res.json({
+            success: true,
+            message: `Successfully migrated ${result.affectedRows} pickups to the new rider Node.`,
+            affectedCount: result.affectedRows
+        });
+    } catch (err) {
+        await conn.rollback();
+        next(err);
+    } finally {
+        conn.release();
+    }
+};
+/**
+ * PERMANENT DELETE
+ * Cleans up wallet_accounts, addresses, agents, and users
+ */
+export const permanentDeleteAgent = async (req, res, next) => {
+    const conn = await db.getConnection();
+    try {
+        const { id } = req.params; // Agent ID
+        await conn.beginTransaction();
+
+        // 1. Find the owner_user_id
+        const [agentRows] = await conn.query("SELECT owner_user_id FROM agents WHERE id = ?", [id]);
+        if (agentRows.length === 0) throw new ApiError(404, "Agent node not found");
+        const userId = agentRows[0].owner_user_id;
+
+        // 2. CHECK FOR LOGISTICS DEPENDENCIES (Pickups/Riders)
+        // Check for Riders attached to this Agent Hub
+        const [riders] = await conn.query("SELECT id FROM riders WHERE agent_id = ? LIMIT 1", [id]);
+        if (riders.length > 0) {
+            throw new ApiError(400, "Migration Required: Move active riders to another hub before deleting this node.");
+        }
+
+        // Check for Pickups processed by this Agent Hub
+        const [pickups] = await conn.query("SELECT id FROM pickups WHERE agent_id = ? LIMIT 1", [id]);
+        if (pickups.length > 0) {
+            throw new ApiError(400, "Historical Data Conflict: Hub has processed pickups. Please use 'Deactivate' to preserve records.");
+        }
+
+        // 3. DELETE DEPENDENCIES IN ORDER (Child rows first)
+        // Delete geographic nodes
+        await conn.query("DELETE FROM addresses WHERE user_id = ?", [userId]);
+
+        // Delete wallet nodes (This fixes your current error)
+        await conn.query("DELETE FROM wallet_accounts WHERE user_id = ?", [userId]);
+
+        // 4. DELETE PRIMARY NODES (Parent rows last)
+        // Delete from agents table
+        await conn.query("DELETE FROM agents WHERE id = ?", [id]);
+
+        // Finally, delete the identity record from users
+        await conn.query("DELETE FROM users WHERE id = ?", [userId]);
+
+        await conn.commit();
+        res.json({ success: true, message: "Agent node and all associated financial/identity data purged." });
+
+    } catch (err) {
+        await conn.rollback();
+        console.error("Purge Error:", err.message);
+        next(err);
+    } finally {
+        conn.release();
+    }
+};
+
+/**
+ * REASSIGN RIDERS
+ * Move all riders from one agent to another
+ */
+export const reassignRiders = async (req, res, next) => {
+    try {
+        const { old_agent_id, new_agent_id } = req.body;
+
+        if (!old_agent_id || !new_agent_id) {
+            throw new ApiError(400, "Both Source and Target Hub IDs are required");
+        }
+
+        // Update all riders in one query
+        const [result] = await db.query(
+            "UPDATE riders SET agent_id = ? WHERE agent_id = ?",
+            [new_agent_id, old_agent_id]
+        );
+
+        res.json({
+            success: true,
+            message: `Successfully migrated ${result.affectedRows} riders to the new Hub node.`
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+/* --------------------------------------------------
+    LISTINGS (With Rider Count & Wallet Sync)
+-------------------------------------------------- */
+export const listAgents = async (req, res, next) => {
+    try {
+        const query = `
+            SELECT 
+                a.*, 
+                u.full_name, 
+                u.phone, 
+                u.email, 
+                a.is_active, 
+                w.balance,
+                (SELECT COUNT(*) FROM riders r WHERE r.agent_id = a.id) as rider_count
+            FROM agents a
+            JOIN users u ON a.owner_user_id = u.id
+            LEFT JOIN wallet_accounts w ON u.id = w.user_id
+            ORDER BY a.created_at DESC
+        `;
+
+        const [rows] = await db.query(query);
+
+        res.json({
+            success: true,
+            data: rows
+        });
+    } catch (err) {
+        console.error("Fetch Agents Error:", err);
         next(err);
     }
 };
 
 /* --------------------------------------------------
-   ADMIN/AGENT → LIST RIDERS
+    LIST RIDERS (Backend Controller Update)
 -------------------------------------------------- */
 export const listRiders = async (req, res, next) => {
     try {
-        const requester = req.user;
-
-        if (requester.role === "admin") {
-            const riders = await getAllRidersWithAgent();
-            return res.json({ success: true, data: riders });
-        }
-
-        if (requester.role === "agent") {
-            const agent = await getAgentByUserId(requester.id);
-            if (!agent) throw new ApiError(400, "Agent profile missing");
-
-            const riders = await getRidersByAgent(agent.agent_id);
-            return res.json({ success: true, data: riders });
-        }
-
-        throw new ApiError(403, "Not allowed");
-
+        const query = `
+            SELECT 
+                r.*, 
+                u.full_name, u.phone, u.email, u.is_active as user_active,
+                a.business_name as agency_name,
+                (SELECT COUNT(*) FROM pickups p WHERE p.rider_id = r.id AND p.status IN ('pending', 'accepted', 'started')) as active_pickup_count
+            FROM riders r
+            JOIN users u ON r.user_id = u.id
+            LEFT JOIN agents a ON r.agent_id = a.id
+            ORDER BY r.created_at DESC
+        `;
+        const [rows] = await db.query(query);
+        res.json({ success: true, data: rows });
     } catch (err) {
         next(err);
     }
 };
 
 /* --------------------------------------------------
-   ADMIN/AGENT → CREATE CUSTOMER
+    ADMIN/AGENT → CREATE CUSTOMER (With Address)
 -------------------------------------------------- */
 export const createCustomerAccount = async (req, res, next) => {
+    const conn = await db.getConnection();
     try {
-        checkValidation(req);
+        // Validation check (express-validator)
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) return next(new ApiError(400, errors.array()[0].msg));
 
-        const { full_name, phone, email, password } = req.body;
+        await conn.beginTransaction();
 
-        if (email) {
-            const exists = await findUserByEmail(email);
-            if (exists) throw new ApiError(400, "Email already in use");
-        }
+        const {
+            full_name, phone, email, password,
+            address_line, division_id, district_id, upazila_id
+        } = req.body;
 
-        const phoneExists = await findUserByPhone(phone);
-        if (phoneExists) throw new ApiError(400, "Phone already in use");
+        // 1. Check if user already exists
+        const [exists] = await conn.query("SELECT id FROM users WHERE phone = ?", [phone]);
+        if (exists.length > 0) throw new ApiError(400, 'A user with this phone number already exists.');
 
         const password_hash = await bcrypt.hash(password, 10);
 
-        // 1️⃣ Create customer user
-        const user = await createUser({
-            full_name,
-            phone,
-            email,
-            password_hash,
-            role: "customer",
-            agent_id: null,
-        });
+        // 2. Create User (Role 4 = Customer)
+        const [userResult] = await conn.query(
+            "INSERT INTO users (full_name, phone, email, password_hash, role_id, is_active) VALUES (?, ?, ?, ?, 4, 1)",
+            [full_name, phone, email || null, password_hash]
+        );
+        const userId = userResult.insertId;
 
-        // 2️⃣ Create customer profile
-        const customer = await createCustomer({ userId: user.id });
+        // 3. Create Primary Address Node (Link to Geography)
+        await conn.query(
+            `INSERT INTO addresses (user_id, label, address_line, division_id, district_id, upazila_id, is_default) 
+             VALUES (?, 'Home', ?, ?, ?, ?, 1)`,
+            [userId, address_line || 'Primary Address', division_id, district_id, upazila_id]
+        );
 
-        return res.status(201).json({
-            success: true,
-            data: { user, customer },
-        });
+        // 4. Create Customer Profile
+        const refCode = 'GS-' + Math.random().toString(36).substring(2, 7).toUpperCase();
+        await conn.query(
+            "INSERT INTO customers (user_id, referral_code, total_points) VALUES (?, ?, 20)",
+            [userId, refCode]
+        );
 
+        // 5. Initialize Wallet
+        await conn.query("INSERT INTO wallet_accounts (user_id, balance) VALUES (?, 0)", [userId]);
+
+        await conn.commit();
+        res.status(201).json({ success: true, message: "Customer account and address initialized successfully." });
+
+    } catch (err) {
+        await conn.rollback();
+        next(err);
+    } finally {
+        conn.release();
+    }
+};
+
+export const listCustomers = async (req, res, next) => {
+    try {
+        const query = `
+            SELECT 
+                u.id, u.full_name, u.phone, u.email, u.is_active, u.created_at,
+                w.balance,
+                
+                -- Geographic IDs (Crucial for Edit Modal pre-filling)
+                addr.division_id, 
+                addr.district_id, 
+                addr.upazila_id,
+                addr.address_line,
+
+                -- Geographic Names (For Table Display)
+                divs.name_en as division_name,
+                dist.name_en as district_name,
+                upz.name_en as upazila_name,
+                
+                -- Summary Stats
+                (SELECT COUNT(*) FROM pickups WHERE customer_id = u.id) as total_bookings,
+                (SELECT COUNT(*) FROM pickups WHERE customer_id = u.id AND status NOT IN ('completed', 'cancelled')) as active_bookings,
+                (SELECT MAX(created_at) FROM pickups WHERE customer_id = u.id) as last_order_date
+                
+            FROM users u
+            LEFT JOIN wallet_accounts w ON u.id = w.user_id
+            
+            -- Improved Geographic Joins 
+            -- We fetch the 'Default' address or the most recent one if no default exists
+            LEFT JOIN (
+                SELECT * FROM addresses 
+                WHERE id IN (
+                    SELECT MAX(id) FROM addresses GROUP BY user_id
+                )
+            ) addr ON u.id = addr.user_id
+            
+            LEFT JOIN divisions divs ON addr.division_id = divs.id
+            LEFT JOIN districts dist ON addr.district_id = dist.id
+            LEFT JOIN upazilas upz ON addr.upazila_id = upz.id
+            
+            WHERE u.role_id = 4
+            ORDER BY u.created_at DESC
+        `;
+
+        const [rows] = await db.query(query);
+        res.json({ success: true, data: rows });
     } catch (err) {
         next(err);
     }
 };
+
+/* --------------------------------------------------
+    ADMIN -> UPDATE CUSTOMER (Identity + Geography)
+-------------------------------------------------- */
+export const updateCustomer = async (req, res, next) => {
+    const conn = await db.getConnection();
+    try {
+        // 'id' comes from the URL: /management/customers/7
+        const { id } = req.params; 
+        const { 
+            full_name, phone, email, is_active,
+            address_line, division_id, district_id, upazila_id 
+        } = req.body;
+
+        await conn.beginTransaction();
+
+        // 1. Update Identity (users table)
+        const [userUpdate] = await conn.query(
+            `UPDATE users SET 
+                full_name = COALESCE(?, full_name),
+                phone = COALESCE(?, phone),
+                email = COALESCE(?, email),
+                is_active = COALESCE(?, is_active),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND role_id = 4`,
+            [full_name, phone, email, is_active, id]
+        );
+
+        if (userUpdate.affectedRows === 0) {
+            throw new ApiError(404, "Customer not found.");
+        }
+
+        // 2. Check if an address already exists for this user
+        const [existingAddr] = await conn.query(
+            "SELECT id FROM addresses WHERE user_id = ? LIMIT 1", 
+            [id]
+        );
+
+        if (existingAddr.length > 0) {
+            // 3a. If exists, UPDATE it
+            await conn.query(
+                `UPDATE addresses SET 
+                    address_line = COALESCE(?, address_line),
+                    division_id = COALESCE(?, division_id),
+                    district_id = COALESCE(?, district_id),
+                    upazila_id = COALESCE(?, upazila_id),
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = ?`,
+                [address_line, division_id, district_id, upazila_id, id]
+            );
+        } else {
+            // 3b. If for some reason no address exists, INSERT a new one
+            await conn.query(
+                `INSERT INTO addresses (user_id, label, address_line, division_id, district_id, upazila_id, is_default)
+                 VALUES (?, 'Home', ?, ?, ?, ?, 1)`,
+                [id, address_line, division_id, district_id, upazila_id]
+            );
+        }
+
+        await conn.commit();
+        res.json({ 
+            success: true, 
+            message: "Customer node and address updated successfully." 
+        });
+
+    } catch (err) {
+        await conn.rollback();
+        next(err);
+    } finally {
+        conn.release();
+    }
+};
+/* --------------------------------------------------
+    ADMIN -> PERMANENT DELETE (PURGE)
+-------------------------------------------------- */
+export const permanentDeleteCustomer = async (req, res, next) => {
+    const conn = await db.getConnection();
+    try {
+        const { id } = req.params;
+        await conn.beginTransaction();
+
+        // 1. Safety Check: Don't delete if they have active bookings
+        const [active] = await conn.query(
+            "SELECT id FROM pickups WHERE customer_id = ? AND status NOT IN ('completed', 'cancelled') LIMIT 1",
+            [id]
+        );
+        if (active.length > 0) {
+            throw new ApiError(400, "Cannot purge: Customer has active pickup requests.");
+        }
+
+        // 2. Cascade Delete related data
+        await conn.query("DELETE FROM addresses WHERE user_id = ?", [id]);
+        await conn.query("DELETE FROM wallet_accounts WHERE user_id = ?", [id]);
+        await conn.query("DELETE FROM customers WHERE user_id = ?", [id]);
+        await conn.query("DELETE FROM users WHERE id = ?", [id]);
+
+        await conn.commit();
+        res.json({ success: true, message: "Customer and all associated data purged." });
+    } catch (err) {
+        await conn.rollback();
+        next(err);
+    } finally {
+        conn.release();
+    }
+}

@@ -1,298 +1,137 @@
-// src/controllers/agentDashboardController.js
-import pool from "../config/db.js";        // adjust path if needed
-import ApiError from "../utils/ApiError.js"; // default export, same as in auth.js
+import pool from "../config/db.js";
+import ApiError from "../utils/ApiError.js";
 
-/* --------------------------------------------------
-   Helper: resolve agent_id for current request
-   - agent user  => lookup agents.owner_user_id = user.id
-   - admin user  => must pass ?agent_id= in query
--------------------------------------------------- */
+/**
+ * Helper: Resolve the Agent ID based on the logged-in user's role.
+ */
 async function resolveAgentId(req) {
-    const { role, id: userId } = req.user || {};
-    const { agent_id } = req.query || {};
+    const { role, id: userId } = req.user;
+    const { agent_id } = req.query;
 
-    if (!role || !userId) {
-        throw new ApiError(401, "Unauthorized");
-    }
-
-    /* --------------------------------------------------------
-       ADMIN → CAN VIEW ANY AGENT (REQUIRES ?agent_id=)
-    -------------------------------------------------------- */
     if (role === "admin") {
-        if (!agent_id) {
-            throw new ApiError(
-                400,
-                "agent_id query parameter is required for admin"
-            );
-        }
+        if (!agent_id) throw new ApiError(400, "Admin must specify ?agent_id= to view a specific hub.");
         return Number(agent_id);
     }
 
-    /* --------------------------------------------------------
-       AGENT USER → FIND agent.id WHERE owner_user_id = user.id
-    -------------------------------------------------------- */
     if (role === "agent") {
-        const [rows] = await pool.query(
-            "SELECT id FROM agents WHERE owner_user_id = ? LIMIT 1",
-            [userId]
-        );
-
-        if (!rows.length) {
-            throw new ApiError(
-                404,
-                "Agent profile not found for this user (create agent profile first)"
-            );
-        }
-
+        const [rows] = await pool.query("SELECT id FROM agents WHERE owner_user_id = ? LIMIT 1", [userId]);
+        if (!rows.length) throw new ApiError(404, "Agent profile not found.");
         return rows[0].id;
     }
 
-    /* --------------------------------------------------------
-       RIDER USER → rider.agent_id
-    -------------------------------------------------------- */
-    if (role === "rider") {
-        const [riderRows] = await pool.query(
-            "SELECT agent_id FROM riders WHERE user_id = ? LIMIT 1",
-            [userId]
-        );
-
-        if (!riderRows.length) {
-            throw new ApiError(
-                404,
-                "Rider profile not found for this user"
-            );
-        }
-
-        return riderRows[0].agent_id;
-    }
-
-    /* --------------------------------------------------------
-       ALL OTHER ROLES → DENY ACCESS
-    -------------------------------------------------------- */
-    throw new ApiError(403, "You do not have permission to access the agent dashboard");
+    throw new ApiError(403, "Access denied to Agent Dashboard.");
 }
 
-
-/* --------------------------------------------------
-   MAIN: GET /api/v1/agent/dashboard
--------------------------------------------------- */
 export async function getAgentDashboard(req, res, next) {
     try {
         const agentId = await resolveAgentId(req);
 
-        /* ------------------------------------------
-           1) TODAY'S PICKUPS (list + summary)
-        ------------------------------------------ */
-        const [todayList] = await pool.query(
-            `
+        /* ---------------------------------------------
+           1) LIVE OPERATIONS (Today's Pulse)
+        --------------------------------------------- */
+        const [todayStats] = await pool.query(`
+            SELECT
+                COUNT(*) AS total_today,
+                SUM(CASE WHEN status IN ('pending', 'assigned', 'rider_on_way', 'arrived', 'weighing') THEN 1 ELSE 0 END) AS active_now,
+                SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed_today,
+                COALESCE(SUM(CASE WHEN status = 'completed' THEN agent_commission_amount ELSE 0 END), 0) AS earnings_today,
+                (SELECT COALESCE(SUM(pi.actual_weight), 0) 
+                 FROM pickup_items pi 
+                 JOIN pickups p ON pi.pickup_id = p.id 
+                 WHERE p.agent_id = ? AND DATE(p.completed_at) = CURDATE()) AS tonnage_today
+            FROM pickups
+            WHERE agent_id = ? AND (DATE(created_at) = CURDATE() OR scheduled_date = CURDATE())
+        `, [agentId, agentId]);
+
+        /* ---------------------------------------------
+           2) FINANCIAL OVERVIEW (Wallet & Cash)
+        --------------------------------------------- */
+        const [financeStats] = await pool.query(`
+            SELECT
+                COALESCE(SUM(agent_commission_amount), 0) AS total_lifetime_commission,
+                -- Total cash riders currently have that hasn't been settled
+                COALESCE(SUM(rider_collected_cash), 0) AS total_rider_cash_collected,
+                (SELECT balance FROM wallet_accounts WHERE user_id = (SELECT owner_user_id FROM agents WHERE id = ?)) AS current_wallet_balance
+            FROM pickups
+            WHERE agent_id = ? AND status = 'completed'
+        `, [agentId, agentId]);
+
+        /* ---------------------------------------------
+           3) RIDER PERFORMANCE (Staff Accountability)
+        --------------------------------------------- */
+        const [riderPerformance] = await pool.query(`
+            SELECT
+                u.full_name AS name,
+                r.is_online,
+                r.vehicle_type,
+                r.rating_avg,
+                COUNT(p.id) AS total_pickups,
+                COALESCE(SUM(p.rider_collected_cash), 0) AS cash_in_hand
+            FROM riders r
+            JOIN users u ON r.user_id = u.id
+            LEFT JOIN pickups p ON p.rider_id = r.id AND p.status = 'completed'
+            WHERE r.agent_id = ?
+            GROUP BY r.id
+            ORDER BY r.is_online DESC, cash_in_hand DESC
+        `, [agentId]);
+
+        /* ---------------------------------------------
+           4) RECENT BOOKINGS (Actionable Feed)
+        --------------------------------------------- */
+        const [recentBookings] = await pool.query(`
             SELECT 
-                p.id,
-                p.booking_code,
-                p.status,
-                p.scheduled_date,
+                p.id, p.booking_code, p.status, p.net_payable_amount, 
+                u.full_name AS customer_name,
                 p.scheduled_time_slot,
-                p.net_payable_amount,
-                p.created_at,
-                c.id AS customer_id,
-                u.full_name AS customer_name
+                ru.full_name AS rider_name
             FROM pickups p
             JOIN customers c ON p.customer_id = c.id
             JOIN users u ON c.user_id = u.id
+            LEFT JOIN riders r ON p.rider_id = r.id
+            LEFT JOIN users ru ON r.user_id = ru.id
             WHERE p.agent_id = ?
-              AND (
-                    p.scheduled_date = CURDATE()
-                    OR DATE(p.created_at) = CURDATE()
-                  )
-            ORDER BY 
-                p.scheduled_date IS NULL,    -- scheduled ones first
-                p.scheduled_date ASC,
-                p.created_at DESC
-            `,
-            [agentId]
-        );
+            ORDER BY p.created_at DESC LIMIT 10
+        `, [agentId]);
 
-        const [todaySummaryRows] = await pool.query(
-            `
-            SELECT
-                COUNT(*) AS total,
-                SUM(CASE WHEN status = 'pending'        THEN 1 ELSE 0 END) AS pending,
-                SUM(CASE WHEN status = 'assigned'       THEN 1 ELSE 0 END) AS assigned,
-                SUM(CASE WHEN status = 'rider_on_way'   THEN 1 ELSE 0 END) AS rider_on_way,
-                SUM(CASE WHEN status = 'arrived'        THEN 1 ELSE 0 END) AS arrived,
-                SUM(CASE WHEN status = 'weighing'       THEN 1 ELSE 0 END) AS weighing,
-                SUM(CASE WHEN status = 'completed'      THEN 1 ELSE 0 END) AS completed,
-                SUM(CASE WHEN status = 'cancelled'      THEN 1 ELSE 0 END) AS cancelled
-            FROM pickups
-            WHERE agent_id = ?
-              AND (
-                    scheduled_date = CURDATE()
-                    OR DATE(created_at) = CURDATE()
-                  )
-            `,
-            [agentId]
-        );
+        /* ---------------------------------------------
+           5) INVENTORY INSIGHTS (Warehouse Stock)
+        --------------------------------------------- */
+        const [inventory] = await pool.query(`
+            SELECT 
+                cat.name_en, 
+                cat.name_bn,
+                SUM(pi.actual_weight) AS total_weight_kg
+            FROM pickup_items pi
+            JOIN pickups p ON pi.pickup_id = p.id
+            JOIN scrap_items si ON pi.item_id = si.id
+            JOIN scrap_categories cat ON si.category_id = cat.id
+            WHERE p.agent_id = ? AND p.status = 'completed'
+            GROUP BY cat.id
+            ORDER BY total_weight_kg DESC
+        `, [agentId]);
 
-        const todaySummary = todaySummaryRows[0] || {
-            total: 0,
-            pending: 0,
-            assigned: 0,
-            rider_on_way: 0,
-            arrived: 0,
-            weighing: 0,
-            completed: 0,
-            cancelled: 0,
-        };
-
-        /* ------------------------------------------
-           2) RIDER PERFORMANCE
-        ------------------------------------------ */
-        const [riderStats] = await pool.query(
-            `
-            SELECT
-                r.id AS rider_id,
-                u.full_name AS rider_name,
-                r.vehicle_type,
-                r.vehicle_number,
-                r.rating_avg,
-                r.total_completed,
-
-                COALESCE(SUM(CASE WHEN p.status = 'completed' THEN 1 ELSE 0 END), 0) AS total_pickups,
-                COALESCE(SUM(CASE 
-                    WHEN p.status = 'completed'
-                     AND DATE(p.completed_at) = CURDATE()
-                    THEN 1 ELSE 0 END), 0) AS today_completed,
-
-                COALESCE(SUM(CASE 
-                    WHEN p.status = 'completed'
-                     AND YEARWEEK(p.completed_at, 1) = YEARWEEK(CURDATE(), 1)
-                    THEN 1 ELSE 0 END), 0) AS week_completed,
-
-                COALESCE(SUM(CASE 
-                    WHEN p.status = 'completed'
-                     AND YEAR(p.completed_at) = YEAR(CURDATE())
-                     AND MONTH(p.completed_at) = MONTH(CURDATE())
-                    THEN 1 ELSE 0 END), 0) AS month_completed
-
-            FROM riders r
-            JOIN users u ON r.user_id = u.id
-            LEFT JOIN pickups p 
-                ON p.rider_id = r.id
-               AND p.agent_id = r.agent_id
-            WHERE r.agent_id = ?
-            GROUP BY
-                r.id,
-                u.full_name,
-                r.vehicle_type,
-                r.vehicle_number,
-                r.rating_avg,
-                r.total_completed
-            ORDER BY u.full_name ASC
-            `,
-            [agentId]
-        );
-
-        /* ------------------------------------------
-           3) EARNINGS (Agent commission)
-        ------------------------------------------ */
-        const [earningRows] = await pool.query(
-            `
-            SELECT
-                COALESCE(SUM(agent_commission_amount), 0) AS total_earnings,
-                COALESCE(SUM(
-                    CASE 
-                        WHEN DATE(completed_at) = CURDATE() 
-                        THEN agent_commission_amount 
-                        ELSE 0 
-                    END
-                ), 0) AS today_earnings,
-                COALESCE(SUM(
-                    CASE 
-                        WHEN YEARWEEK(completed_at, 1) = YEARWEEK(CURDATE(), 1)
-                        THEN agent_commission_amount 
-                        ELSE 0 
-                    END
-                ), 0) AS week_earnings,
-                COALESCE(SUM(
-                    CASE 
-                        WHEN YEAR(completed_at) = YEAR(CURDATE())
-                         AND MONTH(completed_at) = MONTH(CURDATE())
-                        THEN agent_commission_amount 
-                        ELSE 0 
-                    END
-                ), 0) AS month_earnings
-            FROM pickups
-            WHERE agent_id = ?
-              AND status = 'completed'
-            `,
-            [agentId]
-        );
-
-        const earnings = earningRows[0] || {
-            total_earnings: 0,
-            today_earnings: 0,
-            week_earnings: 0,
-            month_earnings: 0,
-        };
-
-        /* ------------------------------------------
-           4) PICKUP SUMMARY (overall for this agent)
-        ------------------------------------------ */
-        const [summaryRows] = await pool.query(
-            `
-            SELECT
-                COUNT(*) AS total_pickups,
-                SUM(CASE WHEN status = 'pending'        THEN 1 ELSE 0 END) AS pending,
-                SUM(CASE WHEN status = 'assigned'       THEN 1 ELSE 0 END) AS assigned,
-                SUM(CASE WHEN status = 'rider_on_way'   THEN 1 ELSE 0 END) AS rider_on_way,
-                SUM(CASE WHEN status = 'arrived'        THEN 1 ELSE 0 END) AS arrived,
-                SUM(CASE WHEN status = 'weighing'       THEN 1 ELSE 0 END) AS weighing,
-                SUM(CASE WHEN status = 'completed'      THEN 1 ELSE 0 END) AS completed,
-                SUM(CASE WHEN status = 'cancelled'      THEN 1 ELSE 0 END) AS cancelled,
-
-                COALESCE(SUM(net_payable_amount), 0)       AS total_net_payable,
-                COALESCE(SUM(agent_commission_amount), 0)  AS total_agent_commission,
-                COALESCE(SUM(rider_commission_amount), 0)  AS total_rider_commission,
-                COALESCE(SUM(rider_collected_cash), 0)     AS total_rider_collected_cash,
-                COALESCE(SUM(cash_paid_to_customer), 0)    AS total_cash_paid_to_customer,
-                COALESCE(SUM(wallet_credit_amount), 0)     AS total_wallet_credit
-            FROM pickups
-            WHERE agent_id = ?
-            `,
-            [agentId]
-        );
-
-        const pickupSummary = summaryRows[0] || {
-            total_pickups: 0,
-            pending: 0,
-            assigned: 0,
-            rider_on_way: 0,
-            arrived: 0,
-            weighing: 0,
-            completed: 0,
-            cancelled: 0,
-            total_net_payable: 0,
-            total_agent_commission: 0,
-            total_rider_commission: 0,
-            total_rider_collected_cash: 0,
-            total_cash_paid_to_customer: 0,
-            total_wallet_credit: 0,
-        };
-
-        /* ------------------------------------------
-           FINAL RESPONSE
-        ------------------------------------------ */
-        return res.json({
+        /* ---------------------------------------------
+           CONSOLIDATED RESPONSE
+        --------------------------------------------- */
+        res.json({
             success: true,
             data: {
-                today_pickups: {
-                    summary: todaySummary,
-                    list: todayList,
+                operational_summary: todayStats[0],
+                financial_summary: {
+                    wallet_balance: financeStats[0]?.current_wallet_balance || 0,
+                    lifetime_commission: financeStats[0]?.total_lifetime_commission || 0,
+                    outstanding_rider_cash: financeStats[0]?.total_rider_cash_collected || 0
                 },
-                rider_performance: riderStats,
-                earnings,
-                pickup_summary: pickupSummary,
-            },
+                riders: riderPerformance,
+                recent_pickups: recentBookings,
+                inventory: inventory,
+                hub_meta: {
+                    timestamp: new Date(),
+                    agent_id: agentId
+                }
+            }
         });
+
     } catch (err) {
         next(err);
     }

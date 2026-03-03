@@ -3,12 +3,13 @@ import { body } from 'express-validator';
 import {
   registerRequest,
   verifyAndRegister,
+  onboardCustomer, // New Controller for Admin onboarding
   login,
   getMe,
   forgotPasswordRequest,
   resetPassword,
-  updateProfile,   // New Controller
-  changePassword   // New Controller
+  updateProfile,
+  changePassword
 } from '../controllers/authController.js';
 import { auth } from '../middlewares/auth.js';
 
@@ -16,6 +17,7 @@ const router = express.Router();
 
 /**
  * 1. CUSTOMER REGISTRATION - STEP 1 (Request OTP)
+ * For public/guest self-registration.
  */
 router.post(
   '/register',
@@ -42,7 +44,24 @@ router.post(
 );
 
 /**
- * 3. FORGOT PASSWORD - STEP 1 (Request Reset OTP)
+ * 3. ADMIN/AGENT -> DIRECT CUSTOMER ONBOARDING
+ * Bypasses OTP flow. Requires Admin/Agent authorization.
+ */
+router.post(
+  '/onboard/customer',
+  auth(['admin', 'agent']), // Only staff can use this
+  [
+    body('full_name').trim().notEmpty().withMessage('Full name is required'),
+    body('phone').trim().notEmpty().withMessage('Phone is required'),
+    body('password').isLength({ min: 6 }).withMessage('Initial password must be at least 6 characters'),
+    body('email').optional().isEmail().withMessage('Invalid email format'),
+    body('referral_code').optional().trim(),
+  ],
+  onboardCustomer
+);
+
+/**
+ * 4. FORGOT PASSWORD - STEP 1 (Request Reset OTP)
  */
 router.post(
   '/forgot-password',
@@ -53,7 +72,7 @@ router.post(
 );
 
 /**
- * 4. FORGOT PASSWORD - STEP 2 (Verify & Reset)
+ * 5. FORGOT PASSWORD - STEP 2 (Verify & Reset)
  */
 router.post(
   '/reset-password',
@@ -66,7 +85,7 @@ router.post(
 );
 
 /**
- * 5. LOGIN - PHONE & PASSWORD
+ * 6. LOGIN - PHONE & PASSWORD
  */
 router.post(
   '/login',
@@ -78,23 +97,21 @@ router.post(
 );
 
 /**
- * 6. GET AUTHENTICATED USER
+ * 7. GET AUTHENTICATED USER
  */
 router.get('/me', auth(), getMe);
 
 /**
- * 7. UPDATE PROFILE (Role-Aware)
+ * 8. UPDATE PROFILE (Role-Aware)
  * Handles updates for users, customers, and riders profiles.
  */
 router.patch(
   '/profile',
-  auth(), // Protect with your existing auth middleware
+  auth(),
   [
     body('full_name').optional().trim().notEmpty().withMessage('Full name cannot be empty'),
     body('email').optional().isEmail().withMessage('Invalid email format'),
-    // Customer specific validation
     body('default_address_id').optional().isNumeric(),
-    // Rider specific validation
     body('vehicle_type').optional().notEmpty(),
     body('is_online').optional().isBoolean(),
   ],
@@ -102,7 +119,7 @@ router.patch(
 );
 
 /**
- * 8. CHANGE PASSWORD (Secure)
+ * 9. CHANGE PASSWORD (Secure)
  * Dedicated route for logged-in users to update their password.
  */
 router.post(

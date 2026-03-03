@@ -1,0 +1,454 @@
+{
+    "info": {
+        "_postman_id": "gs-hub-2026-unique-id",
+        "name": "GreenScrapHub API - Full System",
+        "description": "Comprehensive collection for GreenScrapHub (Noapara, Khulna). Covers Auth, Pickups, Wallets, Points, and Dashboards.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "1. Authentication",
+            "item": [
+                {
+                    "name": "Register Request (Step 1 - OTP)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"phone\": \"01711223344\",\n    \"email\": \"customer@example.com\",\n    \"full_name\": \"Abir Hasan\",\n    \"password\": \"password123\",\n    \"referral_code\": \"\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/auth/register-request"
+                        }
+                    }
+                },
+                {
+                    "name": "Verify & Register (Step 2)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"phone\": \"01711223344\",\n    \"otp\": \"123456\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/auth/verify-register"
+                        }
+                    }
+                },
+                {
+                    "name": "Login",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"phone\": \"01711223344\",\n    \"password\": \"password123\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/auth/login"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "2. Geography (Noapara Context)",
+            "item": [
+                {
+                    "name": "Get Divisions",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/geo/divisions"
+                        }
+                    }
+                },
+                {
+                    "name": "Get Districts (Khulna)",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/geo/districts/6"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "3. Scrap Catalog",
+            "item": [
+                {
+                    "name": "Get All Items (Bilingual)",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/scrap/items"
+                        }
+                    }
+                },
+                {
+                    "name": "Update Price (Admin)",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"current_min_rate\": 25.50,\n    \"current_max_rate\": 28.00,\n    \"change_reason\": \"Market demand increase in Noapara\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/scrap/items/1"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "4. Pickups (Logistics)",
+            "item": [
+                {
+                    "name": "Create Pickup (Form-Data)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "address_id",
+                                    "value": "1",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "upazila_id",
+                                    "value": "12",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "items",
+                                    "value": "[{\"item_id\":1, \"estimated_weight\":10}]",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "scheduled_date",
+                                    "value": "2026-03-10",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/pickups"
+                        }
+                    }
+                },
+                {
+                    "name": "Assign Rider (Agent)",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"rider_id\": 5\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/pickups/1/assign-rider"
+                        }
+                    }
+                },
+                {
+                    "name": "Complete & Weigh (Rider)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "items",
+                                    "value": "[{\"id\":1, \"actual_weight\":12.5, \"final_rate\":26}]",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "payment_method",
+                                    "value": "wallet",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "proof_image",
+                                    "type": "file",
+                                    "src": ""
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/pickups/1/complete"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "5. Wallets & Payouts",
+            "item": [
+                {
+                    "name": "Wallet Summary",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/wallet/summary"
+                        }
+                    }
+                },
+                {
+                    "name": "Request Withdrawal",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"amount\": 500,\n    \"method\": \"bkash\",\n    \"account_details\": \"017XXXXXXXX\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/payouts/request"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "6. Points & Loyalty",
+            "item": [
+                {
+                    "name": "Redeem Points",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"pointsToRedeem\": 200\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/points/redeem"
+                        }
+                    }
+                },
+                {
+                    "name": "Leaderboard",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/points/leaderboard"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "7. Dashboards (Summary)",
+            "item": [
+                {
+                    "name": "Admin Dashboard",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/dashboard/admin/summary"
+                        }
+                    }
+                },
+                {
+                    "name": "Agent Dashboard",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/dashboard/agent/summary"
+                        }
+                    }
+                },
+                {
+                    "name": "Rider Dashboard",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/dashboard/rider/main"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "8. System & Audit",
+            "item": [
+                {
+                    "name": "Settle Rider Cash",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"rider_id\": 5,\n    \"amount\": 1200,\n    \"note\": \"End of day settlement\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/system/settle-rider"
+                        }
+                    }
+                },
+                {
+                    "name": "Update Hub Coverage",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"agent_id\": 1,\n    \"upazila_ids\": [12, 14]\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/system/admin/hub-coverage"
+                        }
+                    }
+                }
+            ]
+        }
+    ],
+    "event": [
+        {
+            "listen": "prerequest",
+            "script": {
+                "type": "text/javascript",
+                "exec": [
+                    ""
+                ]
+            }
+        },
+        {
+            "listen": "test",
+            "script": {
+                "type": "text/javascript",
+                "exec": [
+                    ""
+                ]
+            }
+        }
+    ],
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:5000/api/v1",
+            "type": "string"
+        },
+        {
+            "key": "token",
+            "value": "your_jwt_here",
+            "type": "string"
+        }
+    ]
+}

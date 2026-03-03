@@ -1,18 +1,18 @@
 import pool from "../config/db.js";
 import ApiError from "../utils/ApiError.js";
 
-/* ------------------------------------------------------------
-   Resolve rider_id from logged-in user
------------------------------------------------------------- */
+/**
+ * Helper: Resolve rider_id from logged-in user
+ */
 async function getRiderId(req) {
     const { role, id: userId } = req.user;
 
     if (role !== "rider") {
-        throw new ApiError(403, "Only riders can access rider dashboard");
+        throw new ApiError(403, "Access denied. Only riders can view this dashboard.");
     }
 
     const [rows] = await pool.query(
-        "SELECT id FROM riders WHERE user_id = ? LIMIT 1",
+        "SELECT id, is_online FROM riders WHERE user_id = ? LIMIT 1",
         [userId]
     );
 
@@ -20,131 +20,112 @@ async function getRiderId(req) {
         throw new ApiError(404, "Rider profile not found");
     }
 
-    return rows[0].id;
+    return rows[0];
 }
 
-/* ------------------------------------------------------------
-   RIDER DASHBOARD
------------------------------------------------------------- */
 export async function getRiderDashboard(req, res, next) {
     try {
-        const riderId = await getRiderId(req);
+        const riderInfo = await getRiderId(req);
+        const riderId = riderInfo.id;
 
-        /* ------------------------------------------
-           1) Today's assigned pickups
-        ------------------------------------------ */
-        const [todayAssigned] = await pool.query(
+        /* ------------------------------------------------------------
+            1) ACTIVE TASK LIST (Logistics & Navigation)
+            Focuses on scheduled pickups that need action.
+        ------------------------------------------------------------ */
+        const [activeTasks] = await pool.query(
             `
             SELECT 
                 p.id AS pickup_id,
                 p.booking_code,
                 p.status,
+                p.scheduled_date,
                 p.scheduled_time_slot,
-                p.pickup_latitude,
-                p.pickup_longitude,
-                p.customer_note,
+                p.base_amount,
                 u.full_name AS customer_name,
-                ca.address_line AS address
+                u.phone AS customer_phone,
+                -- Joining addresses to get location data for Google Maps navigation
+                a.address_line,
+                a.division_id, a.district_id, a.upazila_id,
+                p.customer_note
             FROM pickups p
             JOIN customers c ON p.customer_id = c.id
             JOIN users u ON c.user_id = u.id
-            LEFT JOIN customer_addresses ca ON p.customer_address_id = ca.id
-            WHERE p.rider_id = ?
-              AND (
-                   p.status IN ('assigned', 'rider_on_way', 'arrived', 'weighing')
-                   OR DATE(p.created_at) = CURDATE()
-                  )
-            ORDER BY p.created_at DESC
+            LEFT JOIN addresses a ON p.customer_address_id = a.id
+            WHERE p.rider_id = ? 
+              AND p.status IN ('assigned', 'rider_on_way', 'arrived', 'weighing')
+            ORDER BY p.scheduled_date ASC, p.created_at ASC
             `,
             [riderId]
         );
 
-        /* ------------------------------------------
-           2) Performance Stats
-        ------------------------------------------ */
-        const [performance] = await pool.query(
+        /* ------------------------------------------------------------
+            2) PERFORMANCE SUMMARY (Incentive Tracking)
+            Calculates how much the rider earned today vs this month.
+        ------------------------------------------------------------ */
+        const [stats] = await pool.query(
             `
             SELECT
-                COALESCE(SUM(CASE 
-                    WHEN DATE(completed_at) = CURDATE() 
-                    THEN 1 ELSE 0 END), 0) AS today_completed,
-
-                COALESCE(SUM(CASE 
-                    WHEN YEARWEEK(completed_at, 1) = YEARWEEK(CURDATE(), 1) 
-                    THEN 1 ELSE 0 END), 0) AS week_completed,
-
-                COALESCE(SUM(CASE 
-                    WHEN YEAR(completed_at) = YEAR(CURDATE())
-                     AND MONTH(completed_at) = MONTH(CURDATE())
-                    THEN 1 ELSE 0 END), 0) AS month_completed,
-
-                COALESCE(SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END), 0) AS total_completed
+                COUNT(CASE WHEN DATE(completed_at) = CURDATE() THEN 1 END) AS completed_today,
+                COUNT(CASE WHEN MONTH(completed_at) = MONTH(CURDATE()) AND YEAR(completed_at) = YEAR(CURDATE()) THEN 1 END) AS completed_month,
+                COALESCE(SUM(CASE WHEN DATE(completed_at) = CURDATE() THEN rider_commission_amount ELSE 0 END), 0) AS earnings_today,
+                COALESCE(SUM(CASE WHEN MONTH(completed_at) = MONTH(CURDATE()) THEN rider_commission_amount ELSE 0 END), 0) AS earnings_month
             FROM pickups
-            WHERE rider_id = ?
+            WHERE rider_id = ? AND status = 'completed'
             `,
             [riderId]
         );
 
-        /* ------------------------------------------
-           3) Earnings Summary
-        ------------------------------------------ */
-        const [earnings] = await pool.query(
+        /* ------------------------------------------------------------
+            3) FINANCIAL ACCOUNTABILITY (Cash Collection)
+            Money currently in the rider's pocket from cash pickups.
+        ------------------------------------------------------------ */
+        const [finance] = await pool.query(
             `
-            SELECT
-                COALESCE(SUM(
-                    CASE WHEN DATE(completed_at)=CURDATE()
-                    THEN rider_commission_amount ELSE 0 END
-                ),0) AS today,
-
-                COALESCE(SUM(
-                    CASE WHEN YEARWEEK(completed_at,1)=YEARWEEK(CURDATE(),1)
-                    THEN rider_commission_amount ELSE 0 END
-                ),0) AS week,
-
-                COALESCE(SUM(
-                    CASE WHEN YEAR(completed_at)=YEAR(CURDATE())
-                     AND MONTH(completed_at)=MONTH(CURDATE())
-                    THEN rider_commission_amount ELSE 0 END
-                ),0) AS month,
-
-                COALESCE(SUM(rider_commission_amount),0) AS total
-            FROM pickups
-            WHERE rider_id = ?
-              AND status='completed'
+            SELECT 
+                -- We track cash where the customer was paid in cash but rider hasn't settled with Agent
+                COALESCE(SUM(rider_collected_cash), 0) AS total_cash_held,
+                (SELECT balance FROM wallet_accounts WHERE user_id = ?) AS wallet_balance
+            FROM pickups 
+            WHERE rider_id = ? 
+              AND status = 'completed' 
+              -- Using your logic: If rider_collected_cash exists, they are holding physical hub money
+              AND rider_collected_cash > 0
             `,
-            [riderId]
+            [req.user.id, riderId]
         );
 
-        /* ------------------------------------------
-           4) Status Summary
-        ------------------------------------------ */
-        const [statusSummary] = await pool.query(
-            `
-            SELECT
-                SUM(CASE WHEN status='assigned' THEN 1 ELSE 0 END) AS assigned,
-                SUM(CASE WHEN status='rider_on_way' THEN 1 ELSE 0 END) AS rider_on_way,
-                SUM(CASE WHEN status='arrived' THEN 1 ELSE 0 END) AS arrived,
-                SUM(CASE WHEN status='weighing' THEN 1 ELSE 0 END) AS weighing,
-                SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END) AS completed
-            FROM pickups
-            WHERE rider_id = ?
-            `,
-            [riderId]
-        );
-
-        /* ------------------------------------------
-           FINAL RESPONSE
-        ------------------------------------------ */
+        /* ------------------------------------------------------------
+            FINAL RESPONSE (Mobile Optimized)
+        ------------------------------------------------------------ */
         return res.json({
             success: true,
             data: {
-                today: {
-                    assigned: todayAssigned,
-                    completed_count: performance[0].today_completed
+                rider_status: {
+                    is_online: Boolean(riderInfo.is_online),
+                    last_pulse: new Date()
                 },
-                performance: performance[0],
-                earnings: earnings[0],
-                status_summary: statusSummary[0]
+                tasks: {
+                    active_count: activeTasks.length,
+                    active_list: activeTasks
+                },
+                performance: {
+                    today: {
+                        pickups: stats[0].completed_today,
+                        earned: parseFloat(stats[0].earnings_today)
+                    },
+                    monthly: {
+                        pickups: stats[0].completed_month,
+                        earned: parseFloat(stats[0].earnings_month)
+                    }
+                },
+                finance: {
+                    cash_in_hand: parseFloat(finance[0].total_cash_held),
+                    withdrawable_commission: parseFloat(finance[0].wallet_balance)
+                },
+                meta: {
+                    currency: "BDT",
+                    hub_context: "Khulna Division"
+                }
             }
         });
 

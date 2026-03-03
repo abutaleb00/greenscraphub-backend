@@ -1,7 +1,8 @@
+// src/models/userModel.js
 import pool from "../config/db.js";
 
 /* -------------------------------------------------------
-   FIND USER BY PHONE
+    FIND USER BY PHONE
 ------------------------------------------------------- */
 export async function findUserByPhone(phone) {
   const [rows] = await pool.query(
@@ -12,6 +13,8 @@ export async function findUserByPhone(phone) {
       u.phone,
       u.email,
       u.password_hash,
+      u.agent_id,
+      u.is_active,
       r.name AS role
     FROM users u
     LEFT JOIN roles r ON u.role_id = r.id
@@ -25,7 +28,7 @@ export async function findUserByPhone(phone) {
 }
 
 /* -------------------------------------------------------
-   FIND USER BY EMAIL
+    FIND USER BY EMAIL
 ------------------------------------------------------- */
 export async function findUserByEmail(email) {
   const [rows] = await pool.query(
@@ -36,6 +39,8 @@ export async function findUserByEmail(email) {
       u.phone,
       u.email,
       u.password_hash,
+      u.agent_id,
+      u.is_active,
       r.name AS role
     FROM users u
     LEFT JOIN roles r ON u.role_id = r.id
@@ -49,7 +54,7 @@ export async function findUserByEmail(email) {
 }
 
 /* -------------------------------------------------------
-   FIND USER BY ID
+    FIND USER BY ID
 ------------------------------------------------------- */
 export async function findUserById(id) {
   const [rows] = await pool.query(
@@ -60,6 +65,8 @@ export async function findUserById(id) {
       u.phone,
       u.email,
       u.password_hash,
+      u.agent_id,
+      u.is_active,
       r.name AS role
     FROM users u
     LEFT JOIN roles r ON u.role_id = r.id
@@ -73,10 +80,9 @@ export async function findUserById(id) {
 }
 
 /* -------------------------------------------------------
-   CREATE USER (role → role_id)
+    CREATE USER (Supports Hub/Agent Linkage)
 ------------------------------------------------------- */
-export async function createUser({ full_name, phone, email, password_hash, role }) {
-
+export async function createUser({ full_name, phone, email, password_hash, role, agent_id = null }) {
   const [roleRow] = await pool.query(
     `SELECT id FROM roles WHERE name = ? LIMIT 1`,
     [role]
@@ -90,10 +96,10 @@ export async function createUser({ full_name, phone, email, password_hash, role 
 
   const [result] = await pool.query(
     `
-    INSERT INTO users (full_name, phone, email, password_hash, role_id)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO users (full_name, phone, email, password_hash, role_id, agent_id, is_active)
+    VALUES (?, ?, ?, ?, ?, ?, 1)
     `,
-    [full_name, phone, email, password_hash, role_id]
+    [full_name, phone, email || null, password_hash, role_id, agent_id]
   );
 
   return {
@@ -102,5 +108,17 @@ export async function createUser({ full_name, phone, email, password_hash, role 
     phone,
     email,
     role,
+    agent_id
   };
+}
+
+/* -------------------------------------------------------
+    UPDATE USER STATUS (Admin Logic)
+------------------------------------------------------- */
+export async function updateUserStatus(id, is_active) {
+  const [result] = await pool.query(
+    `UPDATE users SET is_active = ? WHERE id = ?`,
+    [is_active ? 1 : 0, id]
+  );
+  return result.affectedRows > 0;
 }

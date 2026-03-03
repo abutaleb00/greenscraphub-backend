@@ -1,40 +1,44 @@
+// src/models/scrapItemModel.js
 import pool from "../config/db.js";
 
 /* ----------------------------------------------------
-   CREATE ITEM
+    CREATE ITEM
 ---------------------------------------------------- */
 export async function createScrapItem({
     category_id,
-    name,
+    name_en,
+    name_bn,
     slug,
     description = null,
     unit = "kg",
-    min_price_per_unit,
-    max_price_per_unit,
+    current_min_rate,
+    current_max_rate,
     image_url = null,
 }) {
     const [result] = await pool.query(
         `
     INSERT INTO scrap_items (
       category_id,
-      name,
+      name_en,
+      name_bn,
       slug,
       description,
       unit,
-      min_price_per_unit,
-      max_price_per_unit,
+      current_min_rate,
+      current_max_rate,
       image_url
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
         [
             category_id,
-            name,
+            name_en,
+            name_bn,
             slug,
             description,
             unit,
-            min_price_per_unit,
-            max_price_per_unit,
+            current_min_rate,
+            current_max_rate,
             image_url,
         ]
     );
@@ -43,25 +47,17 @@ export async function createScrapItem({
 }
 
 /* ----------------------------------------------------
-   GET ITEM BY SLUG
+    GET ITEM BY SLUG
 ---------------------------------------------------- */
 export async function getScrapItemBySlug(slug) {
     const [rows] = await pool.query(
         `
         SELECT 
-          i.id,
-          i.category_id,
-          i.name,
-          i.slug,
-          i.description,
-          i.unit,
-          i.min_price_per_unit,
-          i.max_price_per_unit,
-          i.image_url,
-          i.is_active,
-          i.created_at,
-          i.updated_at
+          i.*,
+          c.name_en AS category_name_en,
+          c.name_bn AS category_name_bn
         FROM scrap_items i
+        LEFT JOIN scrap_categories c ON i.category_id = c.id
         WHERE i.slug = ?
         LIMIT 1
         `,
@@ -72,25 +68,15 @@ export async function getScrapItemBySlug(slug) {
 }
 
 /* ----------------------------------------------------
-   GET ITEM BY ID
+    GET ITEM BY ID
 ---------------------------------------------------- */
 export async function getScrapItemById(id) {
     const [rows] = await pool.query(
         `
     SELECT 
-      i.id,
-      i.category_id,
-      i.name,
-      i.slug,
-      i.description,
-      i.unit,
-      i.min_price_per_unit,
-      i.max_price_per_unit,
-      i.image_url,
-      i.is_active,
-      i.created_at,
-      i.updated_at,
-      c.name AS category_name
+      i.*,
+      c.name_en AS category_name_en,
+      c.name_bn AS category_name_bn
     FROM scrap_items i
     LEFT JOIN scrap_categories c ON i.category_id = c.id
     WHERE i.id = ?
@@ -103,19 +89,20 @@ export async function getScrapItemById(id) {
 }
 
 /* ----------------------------------------------------
-   GET ITEMS BY CATEGORY (PUBLIC)
+    GET ITEMS BY CATEGORY (PUBLIC)
 ---------------------------------------------------- */
 export async function getScrapItemsByCategory(categoryId, { onlyActive = true } = {}) {
     let query = `
     SELECT 
       id,
       category_id,
-      name,
+      name_en,
+      name_bn,
       slug,
       description,
       unit,
-      min_price_per_unit,
-      max_price_per_unit,
+      current_min_rate,
+      current_max_rate,
       image_url,
       is_active,
       created_at,
@@ -130,31 +117,21 @@ export async function getScrapItemsByCategory(categoryId, { onlyActive = true } 
         query += ` AND is_active = 1`;
     }
 
-    query += ` ORDER BY name ASC`;
+    query += ` ORDER BY name_en ASC`;
 
     const [rows] = await pool.query(query, params);
     return rows;
 }
 
 /* ----------------------------------------------------
-   LIST ALL ITEMS (ADMIN)
+    LIST ALL ITEMS (ADMIN)
 ---------------------------------------------------- */
 export async function getAllScrapItems({ includeInactive = false } = {}) {
     let query = `
     SELECT 
-      i.id,
-      i.category_id,
-      i.name,
-      i.slug,
-      i.description,
-      i.unit,
-      i.min_price_per_unit,
-      i.max_price_per_unit,
-      i.image_url,
-      i.is_active,
-      i.created_at,
-      i.updated_at,
-      c.name AS category_name
+      i.*,
+      c.name_en AS category_name_en,
+      c.name_bn AS category_name_bn
     FROM scrap_items i
     LEFT JOIN scrap_categories c ON i.category_id = c.id
   `;
@@ -163,22 +140,24 @@ export async function getAllScrapItems({ includeInactive = false } = {}) {
         query += ` WHERE i.is_active = 1`;
     }
 
-    query += ` ORDER BY c.name ASC, i.name ASC`;
+    query += ` ORDER BY c.name_en ASC, i.name_en ASC`;
 
     const [rows] = await pool.query(query);
     return rows;
 }
 
 /* ----------------------------------------------------
-   UPDATE ITEM (Defensive Dynamic Update)
+    UPDATE ITEM (Defensive Dynamic Update)
+    Supports Transactional Connection from Controller
 ---------------------------------------------------- */
-export async function updateScrapItem(id, data) {
+export async function updateScrapItem(id, data, connection = null) {
+    const conn = connection || pool;
     const fields = [];
     const values = [];
 
     const allowedUpdates = [
-        'category_id', 'name', 'slug', 'description',
-        'unit', 'min_price_per_unit', 'max_price_per_unit',
+        'category_id', 'name_en', 'name_bn', 'slug', 'description',
+        'unit', 'current_min_rate', 'current_max_rate',
         'image_url', 'is_active'
     ];
 
@@ -193,7 +172,7 @@ export async function updateScrapItem(id, data) {
 
     values.push(id);
 
-    await pool.query(
+    const [result] = await conn.query(
         `
     UPDATE scrap_items
     SET ${fields.join(", ")}
@@ -202,11 +181,11 @@ export async function updateScrapItem(id, data) {
         values
     );
 
-    return await getScrapItemById(id);
+    return result.affectedRows > 0;
 }
 
 /* ----------------------------------------------------
-   TOGGLE ACTIVE STATUS
+    TOGGLE ACTIVE STATUS
 ---------------------------------------------------- */
 export async function updateItemStatus(id, isActive) {
     const [result] = await pool.query(
@@ -217,42 +196,28 @@ export async function updateItemStatus(id, isActive) {
 }
 
 /* ----------------------------------------------------
-   DELETE ITEM (Hybrid Hard/Soft Delete)
-   - Performs HARD DELETE if no references exist.
-   - Performs SOFT DELETE if linked to pickup history.
+    DELETE ITEM (Hybrid Hard/Soft Delete)
 ---------------------------------------------------- */
 export async function deleteScrapItem(id) {
-    // 1. Check if the item is linked to any pickup_items
+    // 1. Check if the item is linked to any pickup history
     const [usage] = await pool.query(
-        `SELECT COUNT(*) as count FROM pickup_items WHERE scrap_item_id = ?`,
+        `SELECT COUNT(*) as count FROM pickup_items WHERE item_id = ?`,
         [id]
     );
 
     if (usage[0].count > 0) {
-        // 2. Perform a SOFT DELETE (Hide from app, keep for history)
+        // 2. Perform a SOFT DELETE (Hide from app, keep for historical records)
         const [result] = await pool.query(
             `UPDATE scrap_items SET is_active = 0 WHERE id = ?`,
             [id]
         )
-        // Return structured data for the controller
         return { success: true, type: 'soft', affectedRows: result.affectedRows };
     } else {
-        // 3. Perform a HARD DELETE (Safe to remove)
+        // 3. Perform a HARD DELETE (Safe to remove as it has no history)
         const [result] = await pool.query(
             `DELETE FROM scrap_items WHERE id = ?`,
             [id]
         );
         return { success: true, type: 'hard', affectedRows: result.affectedRows };
     }
-}
-
-/* ----------------------------------------------------
-   SOFT DELETE ITEM (Direct helper if needed)
----------------------------------------------------- */
-export async function softDeleteScrapItem(id) {
-    const [result] = await pool.query(
-        `UPDATE scrap_items SET is_active = 0 WHERE id = ?`,
-        [id]
-    );
-    return result.affectedRows > 0;
 }

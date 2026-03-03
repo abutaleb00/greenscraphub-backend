@@ -1,21 +1,22 @@
-// src/models/scrapCategoryModel.js
 import pool from "../config/db.js";
 
 /* ----------------------------------------------------
-   CREATE CATEGORY
+    CREATE CATEGORY
+    Updated: Supporting bilingual fields
 ---------------------------------------------------- */
-export async function createCategory({ name, slug, description = null, icon = null, display_order = 0 }) {
+export async function createCategory({ name_en, name_bn, slug, description = null, icon = null, display_order = 0 }) {
     const [result] = await pool.query(
         `
-    INSERT INTO scrap_categories (name, slug, description, icon, display_order)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO scrap_categories (name_en, name_bn, slug, description, icon, display_order)
+    VALUES (?, ?, ?, ?, ?, ?)
     `,
-        [name, slug, description, icon, display_order]
+        [name_en, name_bn, slug, description, icon, display_order]
     );
 
     return {
         id: result.insertId,
-        name,
+        name_en,
+        name_bn,
         slug,
         description,
         icon,
@@ -25,12 +26,12 @@ export async function createCategory({ name, slug, description = null, icon = nu
 }
 
 /* ----------------------------------------------------
-   GET CATEGORY BY ID
+    GET CATEGORY BY ID
 ---------------------------------------------------- */
 export async function getCategoryById(id) {
     const [rows] = await pool.query(
         `
-    SELECT id, name, slug, description, icon, display_order, is_active,
+    SELECT id, name_en, name_bn, slug, description, icon, display_order, is_active,
            created_at, updated_at
     FROM scrap_categories
     WHERE id = ?
@@ -43,12 +44,12 @@ export async function getCategoryById(id) {
 }
 
 /* ----------------------------------------------------
-   GET CATEGORY BY SLUG
+    GET CATEGORY BY SLUG
 ---------------------------------------------------- */
 export async function getCategoryBySlug(slug) {
     const [rows] = await pool.query(
         `
-    SELECT id, name, slug, description, icon, display_order, is_active,
+    SELECT id, name_en, name_bn, slug, description, icon, display_order, is_active,
            created_at, updated_at
     FROM scrap_categories
     WHERE slug = ?
@@ -61,11 +62,11 @@ export async function getCategoryBySlug(slug) {
 }
 
 /* ----------------------------------------------------
-   LIST CATEGORIES
+    LIST CATEGORIES
 ---------------------------------------------------- */
 export async function getAllCategories({ includeInactive = false } = {}) {
     let sql = `
-    SELECT id, name, slug, description, icon, display_order, is_active,
+    SELECT id, name_en, name_bn, slug, description, icon, display_order, is_active,
            created_at, updated_at
     FROM scrap_categories
     `;
@@ -74,25 +75,25 @@ export async function getAllCategories({ includeInactive = false } = {}) {
         sql += ` WHERE is_active = 1`;
     }
 
-    sql += ` ORDER BY display_order ASC, name ASC`;
+    // Default sort by display order then English name
+    sql += ` ORDER BY display_order ASC, name_en ASC`;
 
     const [rows] = await pool.query(sql);
     return rows;
 }
 
 /* ----------------------------------------------------
-   UPDATE CATEGORY (Dynamic & Defensive)
-   Fixed: Prevents empty values like "icon = ,"
+    UPDATE CATEGORY (Dynamic & Defensive)
+    Updated: Included bilingual fields in allowedUpdates
 ---------------------------------------------------- */
 export async function updateCategory(id, data) {
     const fields = [];
     const values = [];
 
-    // Define allowed columns to prevent malicious input
-    const allowedUpdates = ['name', 'slug', 'description', 'icon', 'display_order', 'is_active'];
+    // Define allowed columns based on the new schema
+    const allowedUpdates = ['name_en', 'name_bn', 'slug', 'description', 'icon', 'display_order', 'is_active'];
 
     Object.entries(data).forEach(([key, value]) => {
-        // Only add to query if key is allowed and value is NOT undefined
         if (allowedUpdates.includes(key) && value !== undefined) {
             fields.push(`${key} = ?`);
             values.push(value);
@@ -101,7 +102,6 @@ export async function updateCategory(id, data) {
 
     if (fields.length === 0) return false;
 
-    // Add ID to the values array for the WHERE clause
     values.push(id);
 
     const sql = `
@@ -115,7 +115,7 @@ export async function updateCategory(id, data) {
 }
 
 /* ----------------------------------------------------
-   SOFT DELETE CATEGORY
+    SOFT DELETE CATEGORY
 ---------------------------------------------------- */
 export async function softDeleteCategory(id) {
     const [result] = await pool.query(
@@ -130,9 +130,8 @@ export async function softDeleteCategory(id) {
 }
 
 /* ----------------------------------------------------
-   DELETE CATEGORY WITH REASSIGNMENT
-   - Moves all items from old category to new category
-   - Then deletes the old category
+    DELETE CATEGORY WITH REASSIGNMENT
+    Logic: Atomic transaction to ensure data integrity
 ---------------------------------------------------- */
 export async function deleteCategoryAndReassignItems(id, reassignToId) {
     const connection = await pool.getConnection();
@@ -161,9 +160,9 @@ export async function deleteCategoryAndReassignItems(id, reassignToId) {
     }
 }
 
-/** * Keep your existing deleteCategory for "Clean" deletes 
- * (where you know the category is empty)
- */
+/* ----------------------------------------------------
+    DELETE CATEGORY (Standard)
+---------------------------------------------------- */
 export async function deleteCategory(id) {
     const [result] = await pool.query(
         `DELETE FROM scrap_categories WHERE id = ?`,
@@ -172,14 +171,13 @@ export async function deleteCategory(id) {
     return result.affectedRows > 0;
 }
 
-/**
- * Helper to check if a category has items
- */
+/* ----------------------------------------------------
+    ITEM COUNT HELPER
+---------------------------------------------------- */
 export async function getCategoryItemCount(id) {
     const [rows] = await pool.query(
         `SELECT COUNT(*) as count FROM scrap_items WHERE category_id = ?`,
         [id]
     );
-    // MariaDB returns an array, so we grab the first row and the count column
     return rows[0].count;
 }

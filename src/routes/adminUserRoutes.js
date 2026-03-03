@@ -6,41 +6,88 @@ import { auth } from "../middlewares/auth.js";
 import {
     createAgentAccount,
     listAgents,
+    updateAgentAccount,    // NEW
+    deleteAgentAccount,    // NEW
     createRiderAccount,
+    updateRiderAccount,
     listRiders,
+    reassignRiders,
+    reassignRiderPickups,
+    deleteRiderAccount,
+    permanentDeleteRider,
+    permanentDeleteAgent,
     createCustomerAccount,
+    listCustomers,
+    updateCustomer,
+    permanentDeleteCustomer
 } from "../controllers/adminUserController.js";
 
 const router = express.Router();
 
 /* ============================================================
-   AGENTS (ADMIN ONLY)
+    AGENTS (ADMIN ONLY)
 ============================================================ */
 
-// Admin creates an Agent
+/**
+ * @route   POST /api/v1/admin-users/agents
+ * @desc    Admin creates a new Agent Hub
+ * @access  Private (Admin)
+ */
 router.post(
     "/agents",
     auth(["admin"]),
     [
         body("full_name").notEmpty().withMessage("Full name is required"),
-        body("phone").notEmpty().withMessage("Phone is required"),
+        body("phone")
+            .notEmpty().withMessage("Phone is required")
+            .isLength({ min: 11, max: 15 }).withMessage("Valid phone number required"),
         body("password")
             .isLength({ min: 6 })
             .withMessage("Password must be at least 6 characters"),
-        body("email").optional().isEmail().withMessage("Invalid email"),
-        body("company_name").optional(),
+        body("email").optional().isEmail().withMessage("Invalid email format"),
+        body("business_name").notEmpty().withMessage("Business/Agency name is required"),
+        body("area_coverage").optional().isString().withMessage("Area coverage must be text"),
     ],
     createAgentAccount
 );
 
-// Admin gets list of all Agents
+/**
+ * @route   GET /api/v1/admin-users/agents
+ * @desc    Get list of all Agents with their wallet balances
+ * @access  Private (Admin)
+ */
 router.get("/agents", auth(["admin"]), listAgents);
 
+/**
+ * @route   PUT /api/v1/management/agents/:id
+ * @desc    Update Agent and associated User info
+ */
+router.put(
+    "/agents/:id",
+    auth(["admin"]),
+    [
+        body("full_name").optional().notEmpty(),
+        body("business_name").optional().notEmpty(),
+    ],
+    updateAgentAccount
+);
+
+/**
+ * @route   DELETE /api/v1/management/agents/:id
+ * @desc    Soft-delete or deactivate Agent
+ */
+router.post("/agents/reassign-riders", auth(["admin"]), reassignRiders);
+router.delete("/agents/:id", auth(["admin"]), deleteAgentAccount);
+router.delete("/agents/:id/permanent", auth(["admin"]), permanentDeleteAgent);
 /* ============================================================
-   RIDERS (ADMIN + AGENT)
+    RIDERS (ADMIN + AGENT)
 ============================================================ */
 
-// Create Rider
+/**
+ * @route   POST /api/v1/admin-users/riders
+ * @desc    Admin or Agent creates a Rider account
+ * @access  Private (Admin, Agent)
+ */
 router.post(
     "/riders",
     auth(["admin", "agent"]),
@@ -50,16 +97,17 @@ router.post(
         body("password")
             .isLength({ min: 6 })
             .withMessage("Password must be at least 6 characters"),
-        body("email").optional().isEmail().withMessage("Invalid email"),
-        body("vehicle_type").optional(),
-        body("vehicle_number").optional(),
+        body("email").optional().isEmail().withMessage("Invalid email format"),
+        body("vehicle_type").notEmpty().withMessage("Vehicle type is required (e.g., Van, Rickshaw, Bicycle)"),
+        body("vehicle_number").optional().isString(),
 
-        // Only Admin should provide agent_id
+        // Validation Logic: If Admin is creating, agent_id is mandatory. 
+        // If Agent is creating, it's pulled from their session in the controller.
         body("agent_id")
             .optional()
             .custom((value, { req }) => {
                 if (req.user.role === "admin" && !value) {
-                    throw new Error("agent_id is required for admin");
+                    throw new Error("As an Admin, you must assign this rider to an agent_id");
                 }
                 return true;
             }),
@@ -67,14 +115,41 @@ router.post(
     createRiderAccount
 );
 
-// List Riders
+router.put(
+    "/riders/:id",
+    auth(["admin", "agent"]),
+    [
+        body("full_name").optional().notEmpty().withMessage("Name cannot be empty"),
+        body("phone").optional().notEmpty().withMessage("Phone cannot be empty"),
+        body("email").optional().isEmail().withMessage("Invalid email format"),
+        body("vehicle_type").optional().notEmpty(),
+        body("agent_id").optional().isInt().withMessage("Invalid Agent ID"),
+        body("is_active").optional().isIn([0, 1]).withMessage("Status must be 0 or 1"),
+    ],
+    updateRiderAccount
+);
+/**
+ * @route   GET /api/v1/admin-users/riders
+ * @desc    List Riders (Admins see all, Agents see only their own staff)
+ * @access  Private (Admin, Agent)
+ */
 router.get("/riders", auth(["admin", "agent"]), listRiders);
+router.post("/riders/reassign-pickups", auth(["admin", "agent"]), reassignRiderPickups);
+// Soft Delete: Just marks as inactive
+router.delete("/riders/:id", auth(["admin", "agent"]), deleteRiderAccount);
+
+// Permanent Purge: Removes all data nodes
+router.delete("/riders/:id/permanent", auth(["admin"]), permanentDeleteRider);
 
 /* ============================================================
-   CUSTOMERS (ADMIN + AGENT)
+    CUSTOMERS (ADMIN + AGENT)
 ============================================================ */
 
-// Create Customer
+/**
+ * @route   POST /api/v1/admin-users/customers
+ * @desc    Manually create a customer account (e.g., for walk-in users)
+ * @access  Private (Admin, Agent)
+ */
 router.post(
     "/customers",
     auth(["admin", "agent"]),
@@ -84,9 +159,13 @@ router.post(
         body("password")
             .isLength({ min: 6 })
             .withMessage("Password must be at least 6 characters"),
-        body("email").optional().isEmail().withMessage("Invalid email"),
+        body("email").optional().isEmail().withMessage("Invalid email format"),
     ],
     createCustomerAccount
 );
 
+// Customer Management
+router.get("/customers", auth(["admin", "agent"]), listCustomers);
+router.put("/customers/:id", auth(["admin"]), updateCustomer); // Also handles deactivation
+router.delete("/customers/:id/permanent", auth(["admin"]), permanentDeleteCustomer);
 export default router;

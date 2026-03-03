@@ -1,65 +1,72 @@
-import db from "../config/db.js";
+// src/controllers/payoutController.js
+import db from '../config/db.js';
+import ApiError from '../utils/ApiError.js';
 
 /**
- * 1. REQUEST WITHDRAWAL (User: Customer, Rider, Agent)
- * Deducts balance immediately and creates a pending request.
+ * 1. REQUEST WITHDRAWAL (Customer, Rider, Agent)
+ * Deducts balance immediately to prevent double-spending.
  */
 export const requestWithdrawal = async (req, res) => {
     const conn = await db.getConnection();
     try {
         await conn.beginTransaction();
-        const { id: userId, role } = req.user;
+        const { id: userId } = req.user;
         const { amount, method, account_details } = req.body;
 
-        // Fetch and Lock Wallet
+        // 1. Fetch and Lock Wallet (Row Lock)
         const [wallet] = await conn.query(
-            "SELECT id, balance FROM wallet_accounts WHERE user_id = ? AND user_type = ? FOR UPDATE",
-            [userId, role]
+            "SELECT id, balance FROM wallet_accounts WHERE user_id = ? FOR UPDATE",
+            [userId]
         );
 
         if (!wallet.length || parseFloat(wallet[0].balance) < parseFloat(amount)) {
-            return res.status(400).json({ success: false, message: "Insufficient balance." });
+            throw new ApiError(400, "Insufficient balance for this withdrawal.");
         }
 
         const balanceBefore = parseFloat(wallet[0].balance);
         const withdrawAmount = parseFloat(amount);
         const balanceAfter = balanceBefore - withdrawAmount;
 
-        // A) Create Payout Request
+        // 2. Create Payout Request
         const [request] = await conn.query(
             `INSERT INTO payout_requests 
-            (user_id, user_type, wallet_id, amount, method, account_details, status) 
-            VALUES (?, ?, ?, ?, ?, ?, 'pending')`,
-            [userId, role, wallet[0].id, withdrawAmount, method, JSON.stringify(account_details)]
+            (user_id, wallet_id, amount, method, account_details, status, created_at) 
+            VALUES (?, ?, ?, ?, ?, 'pending', NOW())`,
+            [userId, wallet[0].id, withdrawAmount, method, JSON.stringify(account_details)]
         );
+        const requestId = request.insertId;
 
-        // B) Update Wallet Balance (Immediate Debit)
+        // 3. Update Wallet Balance Immediately
         await conn.query(
             "UPDATE wallet_accounts SET balance = ?, updated_at = NOW() WHERE id = ?",
             [balanceAfter, wallet[0].id]
         );
 
-        // C) Record Wallet Transaction
+        // 4. Record Wallet Transaction (Bilingual)
         await conn.query(
             `INSERT INTO wallet_transactions 
-            (wallet_id, type, source, reference_type, reference_id, amount, balance_before, balance_after, description, status) 
-            VALUES (?, 'debit', 'withdrawal', 'payout_request', ?, ?, ?, ?, ?, 'pending')`,
+            (wallet_id, type, source, reference_type, reference_id, amount, balance_before, balance_after, description_en, description_bn, status) 
+            VALUES (?, 'debit', 'withdrawal', 'payout_request', ?, ?, ?, ?, ?, ?, 'pending')`,
             [
                 wallet[0].id,
-                request.insertId,
+                requestId,
                 withdrawAmount,
                 balanceBefore,
                 balanceAfter,
                 `Withdrawal request via ${method.toUpperCase()}`,
-                'pending'
+                `${method.toUpperCase()} এর মাধ্যমে উত্তোলনের অনুরোধ`,
             ]
         );
 
         await conn.commit();
-        res.status(201).json({ success: true, message: "Withdrawal request submitted." });
+        res.status(201).json({
+            success: true,
+            message: "Withdrawal request submitted successfully.",
+            data: { request_id: requestId, remaining_balance: balanceAfter }
+        });
     } catch (err) {
         await conn.rollback();
-        res.status(500).json({ success: false, message: err.message });
+        res.status(err.statusCode || 500).json({ success: false, message: err.message });
     } finally {
         conn.release();
     }
@@ -67,34 +74,22 @@ export const requestWithdrawal = async (req, res) => {
 
 /**
  * 2. LIST USER PAYOUTS (Personal History)
- * Updated to handle potential schema mismatches
  */
 export const listUserPayouts = async (req, res) => {
     try {
-        const { id: userId, role } = req.user;
-
-        // Log for debugging: Check if these values exist
-        console.log(`[PAYOUT] Fetching for UserID: ${userId}, Role: ${role}`);
+        const { id: userId } = req.user;
 
         const [rows] = await db.query(
-            // Ensure these column names (user_id, user_type) match your SQL exactly
-            "SELECT * FROM payout_requests WHERE user_id = ? ORDER BY created_at DESC",
+            `SELECT id, amount, method, account_details, status, admin_note, transaction_id, created_at, processed_at 
+             FROM payout_requests 
+             WHERE user_id = ? 
+             ORDER BY created_at DESC`,
             [userId]
         );
 
-        res.json({ 
-            success: true, 
-            payouts: rows 
-        });
+        res.json({ success: true, data: rows });
     } catch (err) {
-        // Detailed logging to your terminal so you can see the EXACT SQL error
-        console.error("Database Error in listUserPayouts:", err.message);
-        
-        res.status(500).json({ 
-            success: false, 
-            message: "Failed to load payout history.",
-            error: process.env.NODE_ENV === 'development' ? err.message : undefined
-        });
+        res.status(500).json({ success: false, message: "Failed to load payout history." });
     }
 };
 
@@ -103,13 +98,25 @@ export const listUserPayouts = async (req, res) => {
  */
 export const adminListAllPayouts = async (req, res) => {
     try {
-        const [rows] = await db.query(
-            `SELECT p.*, u.full_name, u.phone 
-             FROM payout_requests p 
-             JOIN users u ON p.user_id = u.id 
-             ORDER BY p.status = 'pending' DESC, p.created_at DESC`
-        );
-        res.json({ success: true, payouts: rows });
+        const { status } = req.query; // Optional filter: pending, completed, rejected
+
+        let query = `
+            SELECT p.*, u.full_name, u.phone, w.balance as current_wallet_balance
+            FROM payout_requests p 
+            JOIN users u ON p.user_id = u.id 
+            JOIN wallet_accounts w ON u.id = w.user_id
+        `;
+
+        const params = [];
+        if (status) {
+            query += " WHERE p.status = ?";
+            params.push(status);
+        }
+
+        query += " ORDER BY (p.status = 'pending') DESC, p.created_at DESC";
+
+        const [rows] = await db.query(query, params);
+        res.json({ success: true, data: rows });
     } catch (err) {
         res.status(500).json({ success: false, message: "Server error." });
     }
@@ -118,7 +125,7 @@ export const adminListAllPayouts = async (req, res) => {
 /**
  * 4. ADMIN: PROCESS PAYOUT (Approve/Reject)
  */
-export const processPayout = async (req, res) => {
+export const processPayout = async (req, res, next) => {
     const conn = await db.getConnection();
     const { requestId } = req.params;
     const { status, admin_note, transaction_id } = req.body; // status: 'completed' or 'rejected'
@@ -127,20 +134,25 @@ export const processPayout = async (req, res) => {
     try {
         await conn.beginTransaction();
 
-        // Fetch Request
+        // 1. Fetch Request with Row Lock
         const [request] = await conn.query(
             "SELECT * FROM payout_requests WHERE id = ? FOR UPDATE",
             [requestId]
         );
 
         if (!request.length || request[0].status !== 'pending') {
-            throw new Error("Invalid request or already processed.");
+            throw new ApiError(400, "Request not found or already processed.");
         }
 
         const payout = request[0];
 
         if (status === 'completed') {
-            // Finalize status (Balance was already deducted)
+            // MANUAL CHECK: Admin must provide the bKash/Bank TrxID
+            if (!transaction_id) {
+                throw new ApiError(400, "Transaction ID is required for manual payout completion.");
+            }
+
+            // A) Finalize Payout Record
             await conn.query(
                 `UPDATE payout_requests 
                  SET status = 'completed', transaction_id = ?, admin_note = ?, processed_by = ?, processed_at = NOW() 
@@ -148,14 +160,14 @@ export const processPayout = async (req, res) => {
                 [transaction_id, admin_note, adminId, requestId]
             );
 
-            // Update original wallet transaction status
+            // B) Mark the wallet transaction as completed (Balance was deducted during request)
             await conn.query(
                 "UPDATE wallet_transactions SET status = 'completed' WHERE reference_id = ? AND reference_type = 'payout_request'",
                 [requestId]
             );
-        }
+        } 
         else if (status === 'rejected') {
-            // REFUND LOGIC
+            // REFUND LOGIC: Give money back to user wallet
             const [wallet] = await conn.query(
                 "SELECT id, balance FROM wallet_accounts WHERE id = ? FOR UPDATE",
                 [payout.wallet_id]
@@ -165,18 +177,21 @@ export const processPayout = async (req, res) => {
             const refundAmount = parseFloat(payout.amount);
             const balanceAfter = balanceBefore + refundAmount;
 
-            // Update Wallet Balance
             await conn.query(
-                "UPDATE wallet_accounts SET balance = ? WHERE id = ?",
+                "UPDATE wallet_accounts SET balance = ?, updated_at = NOW() WHERE id = ?",
                 [balanceAfter, payout.wallet_id]
             );
 
-            // Create Credit Transaction for Refund
+            // Create Refund Transaction Log (Bilingual)
             await conn.query(
                 `INSERT INTO wallet_transactions 
-                (wallet_id, type, source, reference_type, reference_id, amount, balance_before, balance_after, description, status) 
-                VALUES (?, 'credit', 'refund', 'payout_request', ?, ?, ?, ?, ?, 'completed')`,
-                [payout.wallet_id, requestId, refundAmount, balanceBefore, balanceAfter, `Refund: ${admin_note}`]
+                (wallet_id, type, source, reference_type, reference_id, amount, balance_before, balance_after, description_en, description_bn, status) 
+                VALUES (?, 'credit', 'refund', 'payout_request', ?, ?, ?, ?, ?, ?, 'completed')`,
+                [
+                    payout.wallet_id, requestId, refundAmount, balanceBefore, balanceAfter, 
+                    `Refund for rejected payout #${requestId}`, 
+                    `বাতিলকৃত পেমেন্ট #${requestId} এর রিফান্ড`
+                ]
             );
 
             // Mark Request as Rejected
@@ -187,10 +202,11 @@ export const processPayout = async (req, res) => {
         }
 
         await conn.commit();
-        res.json({ success: true, message: `Payout marked as ${status}.` });
+        res.json({ success: true, message: `Payout successfully marked as ${status}.` });
+
     } catch (err) {
         await conn.rollback();
-        res.status(500).json({ success: false, message: err.message });
+        next(err);
     } finally {
         conn.release();
     }

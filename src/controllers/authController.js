@@ -4,11 +4,7 @@ import { validationResult } from 'express-validator';
 import nodemailer from 'nodemailer';
 import ApiError from '../utils/ApiError.js';
 import db from '../config/db.js';
-import {
-  findUserByEmail,
-  findUserByPhone,
-  findUserById
-} from '../models/userModel.js';
+import { awardReferralBonus } from './pointController.js'; // Import the helper we created
 
 // Temporary store for OTPs and registration data
 const otpStore = new Map();
@@ -32,64 +28,41 @@ const sendEmailOTP = async (email, otp) => {
     to: email,
     subject: "Verification Code - GreenScrapHub",
     html: `
-            <div style="font-family: sans-serif; padding: 20px; color: #333; border: 1px solid #eee; border-radius: 10px;">
-                <h2 style="color: #10B981;">Welcome to GreenScrapHub</h2>
-                <p>Use the code below to verify your account. This code will expire in 5 minutes.</p>
+            <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+                <h2 style="color: #10B981;">GreenScrapHub Verification</h2>
+                <p>Use the code below to verify your account. Valid for 5 minutes.</p>
                 <div style="background: #f4f4f4; padding: 20px; text-align: center; border-radius: 10px;">
-                    <h1 style="letter-spacing: 5px; color: #10B981; margin: 0; font-size: 40px;">${otp}</h1>
+                    <h1 style="letter-spacing: 5px; color: #10B981; font-size: 40px;">${otp}</h1>
                 </div>
-                <p style="font-size: 12px; color: #777; margin-top: 20px;">If you did not request this, please ignore this email.</p>
             </div>
         `,
   });
 };
 
 /* -----------------------------------------------------
-    STEP 1: REGISTRATION REQUEST (OTP SEND)
+    CUSTOMER SELF-REGISTRATION (STEP 1: OTP REQUEST)
 ----------------------------------------------------- */
 export const registerRequest = async (req, res, next) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) return next(new ApiError(422, errors.array()[0].msg));
+    const { phone, email, full_name, password, referral_code } = req.body;
 
-    const { full_name, phone, email, password, referral_code } = req.body;
+    const [exists] = await db.query("SELECT id FROM users WHERE phone = ? OR (email IS NOT NULL AND email = ?)", [phone, email]);
+    if (exists.length > 0) return next(new ApiError(400, 'Phone or Email already registered'));
 
-    // Check availability
-    if (await findUserByPhone(phone)) return next(new ApiError(400, 'Phone number already registered'));
-    if (email && await findUserByEmail(email)) return next(new ApiError(400, 'Email address already registered'));
-
-    // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    otpStore.set(phone, { ...req.body, otp, expires: Date.now() + 300000 });
 
-    // Store data temporarily
-    otpStore.set(phone, {
-      full_name,
-      phone,
-      email,
-      password,
-      otp,
-      referral_code: referral_code || null,
-      expires: Date.now() + 300000 // 5 Minutes
-    });
+    if (email) await sendEmailOTP(email, otp);
+    console.log(`[AUTH] OTP for ${phone}: ${otp}`);
 
-    if (email) {
-      await sendEmailOTP(email, otp);
-    }
-
-    console.log(`[AUTH] OTP for ${phone} is: ${otp}`);
-
-    res.status(200).json({
-      success: true,
-      message: "Verification code sent successfully."
-    });
+    res.json({ success: true, message: "Verification code sent to your email/phone." });
   } catch (err) {
-    console.error("OTP Error:", err);
-    next(new ApiError(500, "Failed to send verification code."));
+    next(err);
   }
 };
 
 /* -----------------------------------------------------
-    STEP 2: VERIFY OTP & COMPLETE REGISTRATION
+    CUSTOMER SELF-REGISTRATION (STEP 2: VERIFY & CREATE)
 ----------------------------------------------------- */
 export const verifyAndRegister = async (req, res, next) => {
   const conn = await db.getConnection();
@@ -98,85 +71,173 @@ export const verifyAndRegister = async (req, res, next) => {
     const data = otpStore.get(phone);
 
     if (!data || data.otp !== otp || Date.now() > data.expires) {
-      return next(new ApiError(400, "Invalid or expired verification code"));
+      return next(new ApiError(400, "Invalid or expired OTP"));
     }
 
     await conn.beginTransaction();
 
     const password_hash = await bcrypt.hash(data.password, 10);
 
-    // 1. Create Base User Record 
-    // Set role_id to 4 (Customer) as per your roles table
-    const [userResult] = await conn.query(
-      "INSERT INTO users (full_name, phone, email, password_hash, role_id, is_active) VALUES (?, ?, ?, ?, 4, 1)",
-      [data.full_name, data.phone, data.email, password_hash]
+    // 1. Create Base User (Role 4 = Customer)
+    const [u] = await conn.query(
+      "INSERT INTO users (full_name, phone, email, password_hash, role_id) VALUES (?, ?, ?, ?, 4)",
+      [data.full_name, data.phone, data.email || null, password_hash]
     );
-    const userId = userResult.insertId;
+    const userId = u.insertId;
 
-    // 2. Generate Unique Referral Code (Professional Format: GS + 5 Alphanumeric)
-    const newUserCode = 'GS' + Math.random().toString(36).substring(2, 7).toUpperCase();
-
-    // 3. Resolve Referrer (Check if the provided code belongs to an existing customer)
+    // 2. Resolve Referrer (Check if referral_code exists)
     let referredByCustomerId = null;
     if (data.referral_code) {
-      const [referrerRows] = await conn.query(
-        "SELECT id FROM customers WHERE referral_code = ?",
-        [data.referral_code]
-      );
-      if (referrerRows.length > 0) {
-        referredByCustomerId = referrerRows[0].id;
+      const [ref] = await conn.query("SELECT id FROM customers WHERE referral_code = ?", [data.referral_code]);
+      if (ref.length > 0) {
+        referredByCustomerId = ref[0].id;
+        // AWARD BONUS TO REFERRER
+        await awardReferralBonus(referredByCustomerId, conn);
       }
     }
 
-    // 4. Create Customer Profile with Welcome Points (20)
-    const [customerResult] = await conn.query(
-      "INSERT INTO customers (user_id, referral_code, referred_by, total_points) VALUES (?, ?, ?, ?)",
-      [userId, newUserCode, referredByCustomerId, 20]
-    );
-    const customerId = customerResult.insertId;
-
-    // 5. Initialize Wallet Account
+    // 3. Setup Customer Profile (GS + 5 random chars)
+    const refCode = 'GS' + Math.random().toString(36).substring(2, 7).toUpperCase();
     await conn.query(
-      "INSERT INTO wallet_accounts (user_id, user_type, balance) VALUES (?, 'customer', 0.00)",
-      [userId]
+      "INSERT INTO customers (user_id, referral_code, referred_by, total_points) VALUES (?, ?, ?, 20)",
+      [userId, refCode, referredByCustomerId]
     );
+
+    // 4. Initialize Wallet
+    await conn.query("INSERT INTO wallet_accounts (user_id, balance) VALUES (?, 0)", [userId]);
 
     await conn.commit();
     otpStore.delete(phone);
 
-    // 6. Generate JWT with explicit 'customer' string role for frontend middleware
-    const token = jwt.sign(
-      { id: userId, role: 'customer', full_name: data.full_name },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
+    const token = jwt.sign({ id: userId, role: 'customer' }, process.env.JWT_SECRET, { expiresIn: '7d' });
     res.status(201).json({
       success: true,
-      message: "Registration complete!",
-      data: {
-        token,
-        user: {
-          id: userId,
-          customer_id: customerId,
-          full_name: data.full_name,
-          phone: data.phone,
-          email: data.email,
-          role: 'customer',
-          referral_code: newUserCode,
-          total_points: 20
-        }
-      },
+      message: "Registration successful!",
+      data: { token, role: 'customer', user_id: userId }
     });
   } catch (err) {
     await conn.rollback();
-    console.error("Registration Finalization Error:", err);
-    next(new ApiError(500, "Transaction failed during account creation."));
+    next(err);
   } finally {
     conn.release();
   }
 };
 
+/* -----------------------------------------------------
+    STAFF ONBOARDING (Admin Creates Agent / Agent Creates Rider)
+----------------------------------------------------- */
+export const onboardStaff = async (req, res, next) => {
+  const conn = await db.getConnection();
+  try {
+    const { full_name, phone, email, password, role_name, agent_id } = req.body;
+    const creatorRole = req.user.role;
+
+    // Security check
+    if (role_name === 'agent' && creatorRole !== 'admin') {
+      return next(new ApiError(403, "Only Admins can onboard new Agents"));
+    }
+
+    await conn.beginTransaction();
+
+    const [roles] = await conn.query("SELECT id FROM roles WHERE name = ?", [role_name]);
+    if (!roles.length) throw new Error("Invalid role specified");
+    const roleId = roles[0].id;
+
+    const password_hash = await bcrypt.hash(password, 10);
+    const [u] = await conn.query(
+      "INSERT INTO users (full_name, phone, email, password_hash, role_id, agent_id) VALUES (?, ?, ?, ?, ?, ?)",
+      [full_name, phone, email || null, password_hash, roleId, agent_id || null]
+    );
+    const userId = u.insertId;
+
+    // Profile Creation
+    if (role_name === 'rider') {
+      await conn.query(
+        "INSERT INTO riders (user_id, agent_id, vehicle_type) VALUES (?, ?, ?)",
+        [userId, agent_id || null, req.body.vehicle_type || 'Bicycle']
+      );
+    } else if (role_name === 'agent') {
+      const agentCode = 'AG' + Math.random().toString(36).substring(2, 6).toUpperCase();
+      await conn.query(
+        "INSERT INTO agents (owner_user_id, name, code) VALUES (?, ?, ?)",
+        [userId, full_name, agentCode]
+      );
+    }
+
+    // Initialize Wallet for earnings
+    await conn.query("INSERT INTO wallet_accounts (user_id, balance) VALUES (?, 0)", [userId]);
+
+    await conn.commit();
+    res.status(201).json({ success: true, message: `${role_name} onboarded successfully.` });
+  } catch (err) {
+    await conn.rollback();
+    next(err);
+  } finally {
+    conn.release();
+  }
+};
+
+/* -----------------------------------------------------
+    HELPER: INITIALIZE CUSTOMER PROFILE
+    (Used by both self-reg and admin-onboarding)
+----------------------------------------------------- */
+const createCustomerProfile = async (conn, userId, referralCodeInput) => {
+  let referredByCustomerId = null;
+  if (referralCodeInput) {
+    const [ref] = await conn.query("SELECT id FROM customers WHERE referral_code = ?", [referralCodeInput]);
+    if (ref.length > 0) {
+      referredByCustomerId = ref[0].id;
+      await awardReferralBonus(referredByCustomerId, conn);
+    }
+  }
+
+  const newRefCode = 'GS' + Math.random().toString(36).substring(2, 7).toUpperCase();
+  await conn.query(
+    "INSERT INTO customers (user_id, referral_code, referred_by, total_points) VALUES (?, ?, ?, 20)",
+    [userId, newRefCode, referredByCustomerId]
+  );
+};
+
+/* -----------------------------------------------------
+    ADMIN → ONBOARD CUSTOMER (DIRECT)
+----------------------------------------------------- */
+export const onboardCustomer = async (req, res, next) => {
+  const conn = await db.getConnection();
+  try {
+    const { full_name, phone, email, password, referral_code } = req.body;
+
+    // 1. Check if user already exists
+    const [exists] = await conn.query("SELECT id FROM users WHERE phone = ?", [phone]);
+    if (exists.length > 0) return next(new ApiError(400, 'User with this phone already exists'));
+
+    await conn.beginTransaction();
+
+    // 2. Create User (Role 4 = Customer)
+    const password_hash = await bcrypt.hash(password, 10);
+    const [u] = await conn.query(
+      "INSERT INTO users (full_name, phone, email, password_hash, role_id, is_active) VALUES (?, ?, ?, ?, 4, 1)",
+      [full_name, phone, email || null, password_hash]
+    );
+    const userId = u.insertId;
+
+    // 3. Setup Profile & Referral via helper
+    await createCustomerProfile(conn, userId, referral_code);
+
+    // 4. Initialize Wallet
+    await conn.query("INSERT INTO wallet_accounts (user_id, balance) VALUES (?, 0)", [userId]);
+
+    await conn.commit();
+    res.status(201).json({
+      success: true,
+      message: "Customer onboarded successfully by Admin."
+    });
+  } catch (err) {
+    await conn.rollback();
+    next(err);
+  } finally {
+    conn.release();
+  }
+};
 /* -----------------------------------------------------
     LOGIN
 ----------------------------------------------------- */
@@ -184,56 +245,25 @@ export const login = async (req, res, next) => {
   try {
     const { phone, password } = req.body;
 
-    // 1. Join users with roles to get the role name string
     const [rows] = await db.query(`
-      SELECT u.*, r.name as role_name 
-      FROM users u 
-      INNER JOIN roles r ON u.role_id = r.id 
-      WHERE u.phone = ?`,
-      [phone]
-    );
+            SELECT u.*, r.name as role_name 
+            FROM users u 
+            JOIN roles r ON u.role_id = r.id 
+            WHERE u.phone = ? AND u.is_active = 1`, [phone]);
 
     const user = rows[0];
-
-    // 2. Validate user existence
-    if (!user) {
+    if (!user || !(await bcrypt.compare(password, user.password_hash))) {
       return next(new ApiError(401, 'Invalid phone number or password'));
     }
 
-    // 3. Validate password
-    const match = await bcrypt.compare(password, user.password_hash);
-    if (!match) {
-      return next(new ApiError(401, 'Invalid phone number or password'));
-    }
-
-    // 4. Normalize the role name (Critical for fixing 403 errors)
-    // This ensures the token contains 'customer', 'rider', etc.
-    const userRole = user.role_name ? user.role_name.toLowerCase() : 'customer';
-
-    // 5. Generate JWT with the correct role string
-    const token = jwt.sign(
-      {
-        id: user.id,
-        role: userRole,
-        full_name: user.full_name
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
-    // 6. Cleanup sensitive data
-    delete user.password_hash;
-    delete user.role_name; // Remove the temporary alias
+    const role = user.role_name.toLowerCase();
+    const token = jwt.sign({ id: user.id, role }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
     res.json({
       success: true,
-      message: "Login successful",
       data: {
         token,
-        user: {
-          ...user,
-          role: userRole // Pass the string role to the frontend
-        }
+        user: { id: user.id, full_name: user.full_name, role, phone: user.phone }
       }
     });
   } catch (err) {
@@ -242,113 +272,36 @@ export const login = async (req, res, next) => {
 };
 
 /* -----------------------------------------------------
-    GET ME (Comprehensive Multi-Role Profile - FINAL)
+    GET ME (Comprehensive Profile)
 ----------------------------------------------------- */
 export const getMe = async (req, res, next) => {
   try {
     const [rows] = await db.query(`
-        SELECT 
-            u.id, 
-            u.full_name, 
-            u.phone, 
-            u.email, 
-            u.is_active,
-            u.created_at,
-            r.name AS role_name, 
-            -- Customer specific fields
-            c.id AS customer_id,
-            c.referral_code, 
-            c.total_points, 
-            c.default_address_id,
-            (SELECT COUNT(*) FROM customers WHERE referred_by = c.id) as referral_count,
-            -- Rider specific fields
-            rd.id AS rider_id,
-            rd.vehicle_type,
-            rd.vehicle_number,
-            rd.is_online AS rider_online,
-            rd.is_verified AS rider_verified,
-            rd.rating_avg,
-            rd.total_completed,
-            -- Agent specific fields
-            ag.id AS agent_id,
-            ag.name AS agent_business_name,
-            ag.code AS agent_code,
-            ag.commission_type,
-            ag.commission_value,
-            ag.is_active AS agent_active
-        FROM users u 
-        INNER JOIN roles r ON u.role_id = r.id
-        LEFT JOIN customers c ON u.id = c.user_id 
-        LEFT JOIN riders rd ON u.id = rd.user_id
-        LEFT JOIN agents ag ON u.id = ag.owner_user_id 
-        WHERE u.id = ?`,
-      [req.user.id]
-    );
+            SELECT 
+                u.id, 
+                u.full_name, 
+                u.phone, 
+                u.email, 
+                r.name as role,
+                c.referral_code, 
+                c.total_points,
+                rd.is_online, 
+                rd.vehicle_number,
+                -- Use COALESCE to fallback to u.full_name if ag.business_name is null
+                COALESCE(ag.business_name, u.full_name) as business_name, 
+                ag.code as agent_code,
+                w.balance as wallet_balance
+            FROM users u
+            JOIN roles r ON u.role_id = r.id
+            LEFT JOIN customers c ON u.id = c.user_id
+            LEFT JOIN riders rd ON u.id = rd.user_id
+            LEFT JOIN agents ag ON u.id = ag.owner_user_id
+            LEFT JOIN wallet_accounts w ON u.id = w.user_id
+            WHERE u.id = ?`, [req.user.id]);
 
-    if (!rows.length) {
-      return next(new ApiError(404, 'User session invalid or user not found'));
-    }
-
-    const rawData = rows[0];
-    const role = rawData.role_name.toLowerCase();
-    // 1. Core User Data (Universal for all roles)
-    const responseData = {
-      id: rawData.id,
-      full_name: rawData.full_name,
-      phone: rawData.phone,
-      email: rawData.email,
-      role: role,
-      is_active: Boolean(rawData.is_active),
-      created_at: rawData.created_at
-    };
-
-    // 2. Role-Specific Payload Construction
-    switch (role) {
-      case 'customer':
-        responseData.customer_id = rawData.customer_id;
-        responseData.referral_code = rawData.referral_code;
-        responseData.total_points = rawData.total_points || 0;
-        responseData.referral_count = rawData.referral_count || 0;
-        responseData.default_address_id = rawData.default_address_id;
-        break;
-
-      case 'rider':
-        responseData.rider_id = rawData.rider_id;
-        responseData.vehicle_type = rawData.vehicle_type;
-        responseData.vehicle_number = rawData.vehicle_number;
-        responseData.is_online = Boolean(rawData.rider_online);
-        responseData.is_verified = Boolean(rawData.rider_verified);
-        responseData.rating_avg = rawData.rating_avg || "0.0";
-        responseData.total_completed = rawData.total_completed || 0;
-        break;
-
-      case 'agent':
-        responseData.agent_id = rawData.agent_id;
-        responseData.business_name = rawData.agent_business_name || rawData.full_name;
-        responseData.agent_code = rawData.agent_code;
-        responseData.is_verified = Boolean(rawData.agent_active);
-        responseData.commission = {
-          type: rawData.commission_type,
-          value: rawData.commission_value || "0.00"
-        };
-        break;
-
-      case 'admin':
-      case 'superadmin':
-        responseData.is_staff = true;
-        break;
-
-      default:
-        // Optional: Add basic profile even for unknown roles
-        break;
-    }
-
-    res.json({
-      success: true,
-      data: responseData
-    });
+    if (!rows.length) return next(new ApiError(404, 'User not found'));
+    res.json({ success: true, data: rows[0] });
   } catch (err) {
-    console.error("GetMe Error:", err);
     next(err);
   }
 };
