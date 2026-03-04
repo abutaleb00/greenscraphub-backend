@@ -108,6 +108,32 @@ export const getPublicItemDetail = async (req, res, next) => {
     }
 };
 
+/**
+ * RIDER SPECIFIC: Get simplified price list for weighing
+ */
+export const getRiderPriceList = async (req, res, next) => {
+    try {
+        const [items] = await db.query(`
+            SELECT 
+                id, 
+                name_en as name, 
+                unit, 
+                current_min_rate as price, -- Using min_rate as default purchase price
+                current_max_rate as max_price,
+                image_url
+            FROM scrap_items 
+            WHERE is_active = 1 
+            ORDER BY name_en ASC
+        `);
+
+        res.json({
+            success: true,
+            data: items
+        });
+    } catch (err) {
+        next(err);
+    }
+};
 /* ====================================================
     ADMIN CATALOG – CATEGORIES
 ==================================================== */
@@ -283,7 +309,7 @@ export const updateItemAdmin = async (req, res, next) => {
         handleValidation(req);
 
         const { itemId } = req.params;
-        const adminId = req.user.id; 
+        const adminId = req.user.id;
 
         await conn.beginTransaction();
 
@@ -292,23 +318,23 @@ export const updateItemAdmin = async (req, res, next) => {
             "SELECT current_min_rate, current_max_rate, image_url FROM scrap_items WHERE id = ? FOR UPDATE",
             [itemId]
         );
-        
+
         if (!oldItemRows.length) throw new ApiError(404, "Item not found");
         const oldItem = oldItemRows[0];
 
         // 3. Destructure and Sanitize Body
         // Note: Multer puts text fields in req.body. 
         // We handle strings vs numbers carefully here.
-        const { 
-            name_en, 
-            name_bn, 
-            description, 
-            unit, 
-            current_min_rate, 
-            current_max_rate, 
-            is_active, 
-            category_id, 
-            change_reason 
+        const {
+            name_en,
+            name_bn,
+            description,
+            unit,
+            current_min_rate,
+            current_max_rate,
+            is_active,
+            category_id,
+            change_reason
         } = req.body;
 
         const dataToUpdate = {};
@@ -318,7 +344,7 @@ export const updateItemAdmin = async (req, res, next) => {
             dataToUpdate.name_en = name_en;
             dataToUpdate.slug = name_en.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '');
         }
-        
+
         if (name_bn !== undefined) dataToUpdate.name_bn = name_bn === 'undefined' ? null : name_bn;
         if (description !== undefined) dataToUpdate.description = description === 'undefined' ? null : description;
         if (unit !== undefined) dataToUpdate.unit = unit;
@@ -346,7 +372,7 @@ export const updateItemAdmin = async (req, res, next) => {
         if (Object.keys(dataToUpdate).length > 0) {
             const fields = Object.keys(dataToUpdate).map(key => `${key} = ?`).join(", ");
             const values = Object.values(dataToUpdate);
-            
+
             await conn.query(
                 `UPDATE scrap_items SET ${fields} WHERE id = ?`,
                 [...values, itemId]

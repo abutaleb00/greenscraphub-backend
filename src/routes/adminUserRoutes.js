@@ -21,6 +21,7 @@ import {
     updateCustomer,
     permanentDeleteCustomer
 } from "../controllers/adminUserController.js";
+import { upsertPriceOverride, getItemOverrides, getAdminPriceIndex, getPriceHistory } from "../controllers/priceOverrideController.js";
 
 const router = express.Router();
 
@@ -168,4 +169,9 @@ router.post(
 router.get("/customers", auth(["admin", "agent"]), listCustomers);
 router.put("/customers/:id", auth(["admin"]), updateCustomer); // Also handles deactivation
 router.delete("/customers/:id/permanent", auth(["admin"]), permanentDeleteCustomer);
+// Price Override
+router.post("/price-overrides", auth(["admin"]), upsertPriceOverride);
+router.get("/price-overrides/list", auth(["admin"]), getAdminPriceIndex);
+router.get("/prices/history/:item_id", auth(["admin"]), getPriceHistory);
+router.get("/price-overrides/:item_id", auth(["admin"]), getItemOverrides);
 export default router;

@@ -1,23 +1,24 @@
-// src/controllers/pointController.js
 import db from "../config/db.js";
+import ApiError from "../utils/ApiError.js";
 
 /**
- * REDEEM POINTS TO CASH
- * Logic: 10 Points = 1 BDT (৳)
- * Minimum: 100 Points
+ * 1. REDEEM POINTS TO CASH (Customer Only)
+ * Logic: 10 Points = 1 BDT (৳) | Minimum: 100 Points
  */
-export const redeemPoints = async (req, res) => {
+export const redeemPoints = async (req, res, next) => {
     const conn = await db.getConnection();
     try {
         await conn.beginTransaction();
-        const { id: userId } = req.user;
+        const { id: userId, role } = req.user;
         const { pointsToRedeem } = req.body;
 
+        // Role Protection: Only customers typically earn/redeem green points
+        if (role !== 'customer') {
+            throw new ApiError(403, "Only customers can redeem green points for cash.");
+        }
+
         if (!pointsToRedeem || pointsToRedeem < 100) {
-            return res.status(400).json({
-                success: false,
-                message: "Minimum 100 points required to redeem (৳10 value)."
-            });
+            throw new ApiError(400, "Minimum 100 points required to redeem (৳10 value).");
         }
 
         // 1. Fetch Customer Points with Row Lock
@@ -27,10 +28,7 @@ export const redeemPoints = async (req, res) => {
         );
 
         if (!customer.length || customer[0].total_points < pointsToRedeem) {
-            return res.status(400).json({
-                success: false,
-                message: "Insufficient points balance."
-            });
+            throw new ApiError(400, "Insufficient points balance.");
         }
 
         // 2. Conversion Formula (10:1)
@@ -43,8 +41,8 @@ export const redeemPoints = async (req, res) => {
         );
 
         const [pointTx] = await conn.query(
-            `INSERT INTO point_transactions (customer_id, amount, type, description) 
-             VALUES (?, ?, 'redemption', ?)`,
+            `INSERT INTO point_transactions (customer_id, amount, type, description, created_at) 
+             VALUES (?, ?, 'redemption', ?, NOW())`,
             [
                 customer[0].id,
                 -pointsToRedeem,
@@ -59,7 +57,7 @@ export const redeemPoints = async (req, res) => {
         );
 
         if (!wallet.length) {
-            throw new Error("Wallet account not found.");
+            throw new ApiError(404, "Wallet account not found. Please contact support.");
         }
 
         const balanceBefore = parseFloat(wallet[0].balance);
@@ -71,11 +69,11 @@ export const redeemPoints = async (req, res) => {
             [balanceAfter, wallet[0].id]
         );
 
-        // 6. Log Wallet Transaction (Bilingual for Audit Trail)
+        // 6. Log Wallet Transaction for Audit Trail
         await conn.query(
             `INSERT INTO wallet_transactions 
-            (wallet_id, type, source, reference_type, reference_id, amount, balance_before, balance_after, description_en, description_bn, status) 
-            VALUES (?, 'credit', 'point_redemption', 'point_transaction', ?, ?, ?, ?, ?, ?, 'completed')`,
+            (wallet_id, type, source, reference_type, reference_id, amount, balance_before, balance_after, description_en, description_bn, status, created_at) 
+            VALUES (?, 'credit', 'point_redemption', 'point_transaction', ?, ?, ?, ?, ?, ?, 'completed', NOW())`,
             [
                 wallet[0].id,
                 pointTx.insertId,
@@ -88,7 +86,7 @@ export const redeemPoints = async (req, res) => {
         );
 
         await conn.commit();
-        res.json({
+        res.status(200).json({
             success: true,
             message: `Success! ৳${cashValue} has been added to your wallet.`,
             data: {
@@ -100,47 +98,52 @@ export const redeemPoints = async (req, res) => {
 
     } catch (err) {
         await conn.rollback();
-        console.error("Redeem Error:", err);
-        res.status(500).json({ success: false, message: "Internal server error during redemption." });
+        next(err);
     } finally {
         conn.release();
     }
 };
 
 /**
- * AWARD REFERRAL BONUS
- * Logic: Award points to the referrer when a new user joins
- * Can be called internally from verifyAndRegister
+ * 2. AWARD REFERRAL BONUS
+ * Triggered internally when a new customer registers with a ref code
  */
 export const awardReferralBonus = async (referrerId, conn) => {
-    const bonusPoints = 50; // Example: 50 points per referral
+    const bonusPoints = 50;
 
+    // Update Referrer Points
     await conn.query(
         "UPDATE customers SET total_points = total_points + ? WHERE id = ?",
         [bonusPoints, referrerId]
     );
 
+    // Log the transaction
     await conn.query(
-        `INSERT INTO point_transactions (customer_id, amount, type, description) 
-         VALUES (?, ?, 'referral_bonus', ?)`,
+        `INSERT INTO point_transactions (customer_id, amount, type, description, created_at) 
+         VALUES (?, ?, 'referral_bonus', ?, NOW())`,
         [referrerId, bonusPoints, "Referral bonus for inviting a new member"]
     );
 };
 
 /**
- * GET LEADERBOARD
+ * 3. GET GLOBAL LEADERBOARD
+ * Accessible by all users to encourage competition
  */
-export const getLeaderboard = async (req, res) => {
+export const getLeaderboard = async (req, res, next) => {
     try {
         const [rows] = await db.query(`
             SELECT 
                 u.id as user_id,
                 u.full_name as name, 
                 c.total_points as points,
+                -- Count how many people this specific customer referred
                 (SELECT COUNT(*) FROM customers WHERE referred_by = c.id) as referral_count
             FROM customers c
             INNER JOIN users u ON c.user_id = u.id
-            WHERE u.is_active = 1
+            -- Join roles table to filter by the name 'customer' dynamically
+            INNER JOIN roles r ON u.role_id = r.id
+            WHERE u.is_active = 1 
+              AND r.name = 'customer' 
             ORDER BY c.total_points DESC
             LIMIT 10
         `);
@@ -150,6 +153,59 @@ export const getLeaderboard = async (req, res) => {
             data: rows
         });
     } catch (err) {
-        res.status(500).json({ success: false, message: "Failed to fetch leaderboard." });
+        // Log the error for internal debugging
+        console.error("Leaderboard Fetch Error:", err);
+        next(err);
+    }
+};
+
+/**
+ * 4. GET POINT HISTORY (Specific to Logged in User)
+ */
+export const getMyPointHistory = async (req, res, next) => {
+    try {
+        const { id: userId, role } = req.user;
+
+        // Find customer ID first
+        const [customer] = await db.query("SELECT id FROM customers WHERE user_id = ?", [userId]);
+        if (!customer.length) throw new ApiError(404, "Customer profile not found.");
+
+        const [history] = await db.query(
+            "SELECT * FROM point_transactions WHERE customer_id = ? ORDER BY created_at DESC",
+            [customer[0].id]
+        );
+
+        res.json({ success: true, data: history });
+    } catch (err) {
+        next(err);
+    }
+};
+
+/**
+ * 5. ADMIN: MANUAL POINT ADJUSTMENT
+ * For customer support issues or special rewards
+ */
+export const adminAdjustPoints = async (req, res, next) => {
+    try {
+        const { customer_id, amount, reason } = req.body;
+
+        if (req.user.role !== 'admin') {
+            throw new ApiError(403, "Unauthorized: Admin access only.");
+        }
+
+        await db.query(
+            "UPDATE customers SET total_points = total_points + ? WHERE id = ?",
+            [amount, customer_id]
+        );
+
+        await db.query(
+            `INSERT INTO point_transactions (customer_id, amount, type, description, created_at) 
+             VALUES (?, ?, 'adjustment', ?, NOW())`,
+            [customer_id, amount, `Admin Adjustment: ${reason}`]
+        );
+
+        res.json({ success: true, message: "Points adjusted successfully." });
+    } catch (err) {
+        next(err);
     }
 };

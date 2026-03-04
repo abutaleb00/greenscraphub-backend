@@ -21,7 +21,8 @@ import {
     createItemAdmin,
     updateItemAdmin,
     toggleItemStatusAdmin,
-    deleteItemAdmin
+    deleteItemAdmin,
+    getRiderPriceList
 } from "../controllers/scrapCatalogController.js";
 
 const router = express.Router();
@@ -35,7 +36,7 @@ router.get("/categories", listPublicCategories);
 router.get("/categories/:categoryId/items", listPublicItemsByCategory);
 router.get("/items/:itemId", getPublicItemDetail);
 
-
+router.get("/rider/price-list", auth(["rider", "agent", "admin"]), getRiderPriceList);
 /* ====================================================
     ADMIN CATALOG ROUTES
     (Strictly Protected by auth(["admin"]))

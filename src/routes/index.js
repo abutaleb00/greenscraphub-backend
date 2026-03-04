@@ -13,11 +13,11 @@ import geographyRoutes from './geographyRoutes.js';
 
 // --- Import Dashboard Routes ---
 import adminDashboardRoutes from "./adminDashboardRoutes.js";
-import agentDashboardRoutes from "./agentDashboardRoutes.js";
-import riderDashboardRoutes from "./riderDashboardRoutes.js";
+import riderRoutes from "./riderRoutes.js";
 import customerDashboardRoutes from "./customerDashboardRoutes.js";
 import systemRoutes from "./systemRoutes.js";
-
+import agentRoutes from './agentRoutes.js';
+import receiptRoutes from './receiptRoutes.js';
 const router = express.Router();
 
 /**
@@ -66,10 +66,15 @@ router.use('/geography', geographyRoutes); // Division/District/Upazila lookup
  * Role-specific data aggregation
  */
 router.use('/dashboard/admin', adminDashboardRoutes);
-router.use('/dashboard/agent', agentDashboardRoutes);
-router.use('/dashboard/rider', riderDashboardRoutes);
-router.use('/dashboard/customer', customerDashboardRoutes);
+router.use('/riders', riderRoutes);
+router.use('/customers', customerDashboardRoutes);
+router.use('/receipts', receiptRoutes);
 
+/**
+ * @section Agents Management
+ * Path: /api/v1/agents
+ */
+router.use('/agents', agentRoutes);
 /**
  * @section Admin User Management
  * Path: /api/v1/management
