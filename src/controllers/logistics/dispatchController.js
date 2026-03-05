@@ -10,23 +10,40 @@ export const assignRiderController = async (req, res, next) => {
 
         await conn.beginTransaction();
 
-        const [riderRows] = await conn.query("SELECT id, agent_id FROM riders WHERE id = ?", [rider_id]);
+        // 1. Get Rider and their Hub Info
+        const [riderRows] = await conn.query(
+            "SELECT r.id, r.agent_id, u.full_name FROM riders r JOIN users u ON r.user_id = u.id WHERE r.id = ?",
+            [rider_id]
+        );
         if (!riderRows.length) throw new ApiError(404, "Rider not found");
+        const rider = riderRows[0];
 
+        // 2. Update Pickup
+        // We allow 'pending' (Direct) or 'assigned' (Hub-led)
+        // We change status to 'accepted' so the Rider knows they have work
         const [updateResult] = await conn.query(
-            "UPDATE pickups SET rider_id = ?, agent_id = ?, status = 'assigned', assigned_at = NOW() WHERE id = ? AND status = 'pending'",
-            [riderRows[0].id, riderRows[0].agent_id, pickupId]
+            `UPDATE pickups SET 
+                rider_id = ?, 
+                agent_id = ?, 
+                status = 'accepted', 
+                assigned_at = NOW(),
+                updated_at = NOW()
+             WHERE id = ? AND status IN ('pending', 'assigned')`,
+            [rider.id, rider.agent_id, pickupId]
         );
 
-        if (updateResult.affectedRows === 0) throw new ApiError(400, "Pickup already assigned or processed.");
+        if (updateResult.affectedRows === 0) {
+            throw new ApiError(400, "Pickup is already being processed by a rider or has been completed.");
+        }
 
+        // 3. Timeline
         await conn.query(
-            "INSERT INTO pickup_timeline (pickup_id, status, changed_by, note) VALUES (?, 'assigned', ?, ?)",
-            [pickupId, changerId, `Assigned to Rider ${rider_id}`]
+            "INSERT INTO pickup_timeline (pickup_id, status, changed_by, note) VALUES (?, 'accepted', ?, ?)",
+            [pickupId, changerId, `Dispatched to Rider: ${rider.full_name}`]
         );
 
         await conn.commit();
-        res.json({ success: true, message: "Rider dispatched." });
+        res.json({ success: true, message: `Rider ${rider.full_name} has been dispatched.` });
     } catch (err) {
         await conn.rollback();
         next(err);

@@ -492,12 +492,11 @@ export const settleRiderCash = async (req, res, next) => {
 };
 
 export const getDispatchConsole = async (req, res, next) => {
+    const conn = await db.getConnection();
     try {
-        // DEBUG: Check if agent_id exists. If not, we might need to fetch it from the database first
         let agentId = req.user.agent_id;
 
         if (!agentId) {
-            // Fallback: If middleware didn't attach agent_id, find it via the logged-in userId
             const [agentRecord] = await db.query(
                 "SELECT id FROM agents WHERE owner_user_id = ?",
                 [req.user.id]
@@ -506,24 +505,27 @@ export const getDispatchConsole = async (req, res, next) => {
             agentId = agentRecord[0].id;
         }
 
-        console.log(`[Dispatch] Fetching console for Agent ID: ${agentId}`);
-
-        // 1. Fetch Unassigned (Pending) Pickups
+        // 1. Fetch Queue: Includes 'pending' (Marketplace) AND 'assigned' (Direct from Admin)
+        // CRITICAL: We only show 'assigned' if rider_id is still NULL
         const [queue] = await db.query(`
             SELECT 
                 p.id, p.booking_code, p.status, p.scheduled_date, 
                 p.scheduled_time_slot, u.full_name as customer_name,
-                addr.address_line
+                addr.address_line, p.agent_id, p.rider_id
             FROM pickups p
-            JOIN customers c ON p.customer_id = c.id
-            JOIN users u ON c.user_id = u.id
+            LEFT JOIN customers c ON p.customer_id = c.id
+            LEFT JOIN users u ON c.user_id = u.id
             LEFT JOIN addresses addr ON p.customer_address_id = addr.id
-            WHERE p.agent_id = ? 
-              AND p.status = 'pending' 
+            WHERE 
+                (
+                    (p.status = 'pending' AND p.agent_id IS NULL) -- Marketplace broadcast
+                    OR 
+                    (p.status = 'assigned' AND p.agent_id = ? AND p.rider_id IS NULL) -- Direct Admin assignment
+                )
               AND p.is_deleted = 0
             ORDER BY p.created_at DESC`, [agentId]);
 
-        // 2. Fetch Active Missions
+        // 2. Fetch Active Missions: Orders that actually have a rider moving
         const [active] = await db.query(`
             SELECT 
                 p.id, p.booking_code, p.status, 
@@ -532,29 +534,26 @@ export const getDispatchConsole = async (req, res, next) => {
             INNER JOIN riders r ON p.rider_id = r.id
             INNER JOIN users ur ON r.user_id = ur.id
             WHERE p.agent_id = ? 
-              AND p.status IN ('assigned', 'rider_on_way', 'arrived', 'weighing')
+              AND p.status IN ('accepted', 'rider_on_way', 'arrived', 'weighing')
               AND p.is_deleted = 0`, [agentId]);
 
-        // 3. Fetch Fleet
+        // 3. Fetch Fleet (Unchanged)
         const [fleet] = await db.query(`
             SELECT 
                 r.id, u.full_name as name, r.is_online, r.vehicle_type,
-                (SELECT COUNT(*) FROM pickups WHERE rider_id = r.id AND status IN ('assigned', 'rider_on_way', 'arrived', 'weighing')) as active_tasks
+                (SELECT COUNT(*) FROM pickups WHERE rider_id = r.id AND status IN ('accepted', 'rider_on_way', 'arrived', 'weighing')) as active_tasks
             FROM riders r
             JOIN users u ON r.user_id = u.id
             WHERE r.agent_id = ?`, [agentId]);
 
         res.json({
             success: true,
-            data: {
-                queue,
-                active_missions: active,
-                fleet
-            }
+            data: { queue, active_missions: active, fleet }
         });
     } catch (err) {
-        console.error("Dispatch Console Error:", err);
         next(err);
+    } finally {
+        conn.release();
     }
 };
 

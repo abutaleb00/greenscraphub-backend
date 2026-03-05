@@ -19,7 +19,8 @@ import {
     createCustomerAccount,
     listCustomers,
     updateCustomer,
-    permanentDeleteCustomer
+    permanentDeleteCustomer,
+    assignPickupToAgent
 } from "../controllers/adminUserController.js";
 import { upsertPriceOverride, getItemOverrides, getAdminPriceIndex, getPriceHistory } from "../controllers/priceOverrideController.js";
 import { getCommissionSettings, updateAgentCommission } from '../controllers/commissionController.js';
@@ -82,6 +83,15 @@ router.put(
  * @route   DELETE /api/v1/management/agents/:id
  * @desc    Soft-delete or deactivate Agent
  */
+router.post(
+    '/admin/assign-to-agent',
+    auth(['admin']), // Security: Only Admins can force assign
+    [
+        body('pickup_id').isInt().withMessage('Valid Pickup ID required'),
+        body('agent_id').isInt().withMessage('Valid Agent ID required')
+    ],
+    assignPickupToAgent
+);
 router.post("/agents/reassign-riders", auth(["admin"]), reassignRiders);
 router.delete("/agents/:id", auth(["admin"]), deleteAgentAccount);
 router.delete("/agents/:id/permanent", auth(["admin"]), permanentDeleteAgent);

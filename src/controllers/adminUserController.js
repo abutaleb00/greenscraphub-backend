@@ -274,7 +274,7 @@ export const updateRiderAccount = async (req, res, next) => {
 
         // 1. Verify Rider exists and get their user_id
         const [riderRows] = await conn.query(
-            "SELECT user_id, agent_id FROM riders WHERE id = ?", 
+            "SELECT user_id, agent_id FROM riders WHERE id = ?",
             [id]
         );
         if (riderRows.length === 0) throw new ApiError(404, "Rider node not found");
@@ -283,7 +283,7 @@ export const updateRiderAccount = async (req, res, next) => {
         // 2. AGENT SECURITY: Ensure the agent owns this rider
         if (requester.role === "agent") {
             const [agent] = await conn.query(
-                "SELECT id FROM agents WHERE owner_user_id = ?", 
+                "SELECT id FROM agents WHERE owner_user_id = ?",
                 [requester.id]
             );
             if (!agent.length || agent[0].id !== riderData.agent_id) {
@@ -317,9 +317,9 @@ export const updateRiderAccount = async (req, res, next) => {
         );
 
         await conn.commit();
-        res.json({ 
-            success: true, 
-            message: `Rider ${full_name || 'profile'} updated successfully.` 
+        res.json({
+            success: true,
+            message: `Rider ${full_name || 'profile'} updated successfully.`
         });
 
     } catch (err) {
@@ -517,6 +517,47 @@ export const reassignRiders = async (req, res, next) => {
         });
     } catch (err) {
         next(err);
+    }
+};
+
+export const assignPickupToAgent = async (req, res, next) => {
+    const conn = await db.getConnection();
+    try {
+        const { pickup_id, agent_id } = req.body;
+
+        if (!pickup_id || !agent_id) {
+            throw new ApiError(400, "Pickup ID and Agent ID are required.");
+        }
+
+        await conn.beginTransaction();
+
+        // 1. Verify pickup is still in 'pending' state
+        const [pickup] = await conn.query("SELECT id, status FROM pickups WHERE id = ?", [pickup_id]);
+        if (!pickup.length) throw new ApiError(404, "Pickup request not found.");
+
+        // 2. Perform the assignment
+        const [result] = await conn.query(
+            `UPDATE pickups SET 
+                agent_id = ?, 
+                status = 'assigned', 
+                assigned_at = CURRENT_TIMESTAMP,
+                updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?`,
+            [agent_id, pickup_id]
+        );
+
+        await conn.commit();
+
+        res.json({
+            success: true,
+            message: `Pickup ${pickup_id} manually assigned to Agent ${agent_id}.`
+        });
+
+    } catch (err) {
+        await conn.rollback();
+        next(err);
+    } finally {
+        conn.release();
     }
 };
 /* --------------------------------------------------

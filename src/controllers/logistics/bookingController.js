@@ -186,13 +186,33 @@ export const listAllPickupsAdmin = async (req, res, next) => {
         const offset = (page - 1) * limit;
 
         let query = `
-            SELECT p.*, u.full_name as customer_name, upz.name_en as upazila_name
-            FROM pickups p 
-            JOIN customers c ON p.customer_id = c.id 
-            JOIN users u ON c.user_id = u.id
-            LEFT JOIN upazilas upz ON p.upazila_id = upz.id
-            WHERE p.is_deleted = 0
-        `;
+    SELECT 
+        p.*, 
+        u.full_name as customer_name, 
+        u.phone as customer_phone,
+        addr.address_line,
+        divs.name_en as division_name,
+        dist.name_en as district_name,
+        upz.name_en as upazila_name,
+        ag.business_name as agent_business_name,
+        r_u.full_name as rider_name
+    FROM pickups p 
+    -- 1. Join to Customers table first to bridge to the User
+    LEFT JOIN customers c ON p.customer_id = c.id
+    -- 2. Join to Users table to get Name and Phone
+    LEFT JOIN users u ON c.user_id = u.id
+    
+    -- 3. The rest of your joins
+    LEFT JOIN addresses addr ON p.customer_address_id = addr.id
+    LEFT JOIN divisions divs ON p.division_id = divs.id
+    LEFT JOIN districts dist ON p.district_id = dist.id
+    LEFT JOIN upazilas upz ON p.upazila_id = upz.id
+    LEFT JOIN agents ag ON p.agent_id = ag.id
+    LEFT JOIN riders r ON p.rider_id = r.id
+    LEFT JOIN users r_u ON r.user_id = r_u.id
+    
+    WHERE p.is_deleted = 0
+`;
 
         const params = [];
         if (status && status !== 'all') {
@@ -204,7 +224,11 @@ export const listAllPickupsAdmin = async (req, res, next) => {
         params.push(parseInt(limit), parseInt(offset));
 
         const [rows] = await db.query(query, params);
-        res.json({ success: true, data: rows });
+
+        res.json({
+            success: true,
+            data: rows
+        });
     } catch (err) {
         next(err);
     }
