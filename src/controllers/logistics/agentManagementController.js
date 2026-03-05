@@ -269,7 +269,7 @@ const getAgentInfo = async (req) => {
  */
 export const getPendingSettlements = async (req, res, next) => {
     try {
-        // 1. Get Agent identity from session
+        // 1. Get Agent identity
         const [agentRows] = await db.query(
             "SELECT id FROM agents WHERE owner_user_id = ?",
             [req.user.id]
@@ -279,6 +279,7 @@ export const getPendingSettlements = async (req, res, next) => {
         const agentId = agentRows[0].id;
 
         // 2. Query riders with unsettled cash liability
+        // IMPROVEMENT: We filter by rider_collected_cash > 0 and is_settled_to_hub = 0
         const [riders] = await db.query(`
             SELECT 
                 r.id as rider_id, 
@@ -290,7 +291,7 @@ export const getPendingSettlements = async (req, res, next) => {
                 COALESCE(SUM(p.rider_collected_cash), 0) as pending_cash,
                 -- Count of individual pickups making up this amount
                 COUNT(p.id) as pickup_count,
-                -- Total platform fee the agent will owe the system for these jobs
+                -- Total platform fee for these specific jobs
                 COALESCE(SUM(p.platform_fee_amount), 0) as total_platform_fee,
                 -- Last collection timestamp
                 MAX(p.completed_at) as last_collection
@@ -299,7 +300,7 @@ export const getPendingSettlements = async (req, res, next) => {
             JOIN pickups p ON r.id = p.rider_id
             WHERE p.agent_id = ? 
               AND p.status = 'completed' 
-              AND p.payment_method = 'cash' 
+              AND p.rider_collected_cash > 0  -- Most reliable check for cash
               AND p.is_settled_to_hub = 0
             GROUP BY r.id, u.full_name, u.phone, r.vehicle_type, r.vehicle_number
             HAVING pending_cash > 0
@@ -307,8 +308,6 @@ export const getPendingSettlements = async (req, res, next) => {
             [agentId]
         );
 
-        // 3. Optional: Fetch individual pickup breakdown for a "Details" view if needed
-        // This makes the UI much more realistic.
         const formattedData = riders.map(rider => ({
             ...rider,
             pending_cash: parseFloat(rider.pending_cash).toFixed(2),
@@ -394,6 +393,7 @@ export const settleRiderCash = async (req, res, next) => {
 
         const { riderId, amount, note } = req.body;
         const intakeAmount = parseFloat(amount);
+        const agentUserId = req.user.id; // Logged in Agent/Hub Staff
 
         if (isNaN(intakeAmount) || intakeAmount < 0) {
             throw new ApiError(400, "Invalid intake amount.");
@@ -402,7 +402,7 @@ export const settleRiderCash = async (req, res, next) => {
         const agent = await getAgentInfo(req);
         const agentId = agent.id;
 
-        // 1. Fetch Agent's Wallet
+        // 1. Fetch Agent's Wallet Identity
         const [agentWallet] = await conn.query(
             "SELECT id FROM wallet_accounts WHERE user_id = ?",
             [agent.owner_user_id]
@@ -410,8 +410,7 @@ export const settleRiderCash = async (req, res, next) => {
         if (!agentWallet.length) throw new ApiError(404, "Agent wallet not found.");
         const walletId = agentWallet[0].id;
 
-        // 2. Fetch ALL pickups that have NOT been stocked yet (is_settled_to_hub = 0)
-        // We do this because you want the items in the warehouse immediately.
+        // 2. Fetch ALL pickups that have NOT been settled yet
         const [pendingPickups] = await conn.query(`
             SELECT id FROM pickups 
             WHERE rider_id = ? AND agent_id = ? 
@@ -419,52 +418,67 @@ export const settleRiderCash = async (req, res, next) => {
             [riderId, agentId]
         );
 
+        // 3. LOGIC: Update Inventory & Status
         if (pendingPickups.length > 0) {
             const pendingIds = pendingPickups.map(p => p.id);
 
-            // 3. LOGIC: UPDATE HUB INVENTORY (STOCK STORE)
-            // Fetch all items from these specific pickups
+            // FIX: Join with scrap_items to get the actual category_id required for inventory
             const [itemsToStock] = await conn.query(`
-    SELECT item_id, actual_weight 
-    FROM pickup_items 
-    WHERE pickup_id IN (?)`, [settledPickupIds]);
+                SELECT 
+                    pi.actual_weight, 
+                    si.category_id 
+                FROM pickup_items pi
+                JOIN scrap_items si ON pi.item_id = si.id
+                WHERE pi.pickup_id IN (?)`, [pendingIds]);
 
+            // Bulk Update Hub Inventory using the correct Category Foreign Key
             for (const item of itemsToStock) {
                 const weight = parseFloat(item.actual_weight);
-                if (weight <= 0) continue;
+                const catId = item.category_id;
+
+                if (weight <= 0 || !catId) continue;
 
                 await conn.query(`
-        INSERT INTO hub_inventory (agent_id, category_id, current_weight)
-        VALUES (?, ?, ?)
-        ON DUPLICATE KEY UPDATE 
-            current_weight = current_weight + ?,
-            last_updated_at = NOW()`,
-                    [agentId, item.item_id, weight, weight]
+                    INSERT INTO hub_inventory (agent_id, category_id, current_weight)
+                    VALUES (?, ?, ?)
+                    ON DUPLICATE KEY UPDATE 
+                        current_weight = current_weight + ?,
+                        last_updated_at = NOW()`,
+                    [agentId, catId, weight, weight]
                 );
             }
 
-            // 4. Mark these pickups as settled to hub so inventory isn't double-counted later
+            // Mark pickups as settled
             await conn.query(
-                `UPDATE pickups SET is_settled_to_hub = 1 WHERE id IN (?)`,
+                `UPDATE pickups SET is_settled_to_hub = 1, updated_at = NOW() WHERE id IN (?)`,
                 [pendingIds]
+            );
+
+            // Log timeline for audit
+            const timelineEntries = pendingIds.map(id => [
+                id,
+                'completed',
+                `Handover confirmed by Agent. Items moved to Hub Inventory.`,
+                agentUserId
+            ]);
+            await conn.query(
+                `INSERT INTO pickup_timeline (pickup_id, status, note, changed_by) VALUES ?`,
+                [timelineEntries]
             );
         }
 
-        // 5. FINANCE: Log the Cash Transaction
-        // We log the amount the rider actually paid. 
-        // The "Pending Balance" is calculated in your 'getPendingSettlements' query 
-        // by comparing (Total Rider Collected Cash) vs (Total Wallet Transactions for that rider).
+        // 4. FINANCE: Log the Cash Transaction in the Wallet
         const [txResult] = await conn.query(`
             INSERT INTO wallet_transactions 
             (wallet_id, type, source, reference_type, reference_id, amount, balance_before, balance_after, description_en, status) 
             VALUES (?, 'credit', 'cash_settlement', 'rider', ?, ?, 0, 0, ?, 'completed')`,
             [
                 walletId, riderId, intakeAmount,
-                `Physical cash handover from Rider ID: ${riderId}. Note: ${note || 'Partial/Full'}`
+                `Physical cash handover from Rider ID: ${riderId}. Note: ${note || 'Handover'}`
             ]
         );
 
-        // 6. Update Financial Ledger for Audit
+        // 5. Update Financial Ledger
         await conn.query(`
             INSERT INTO financial_ledger 
             (wallet_id, transaction_id, source_type, source_id, credit, debit, entry_type, payment_method, description) 
@@ -479,7 +493,8 @@ export const settleRiderCash = async (req, res, next) => {
 
         res.json({
             success: true,
-            message: `Inventory updated for all items. ৳${intakeAmount} cash received and logged.`
+            message: `Stock updated for ${pendingPickups.length} missions. ৳${intakeAmount.toFixed(2)} received.`,
+            data: { settled_missions: pendingPickups.length, intake: intakeAmount }
         });
 
     } catch (err) {

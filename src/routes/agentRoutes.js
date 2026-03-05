@@ -53,7 +53,7 @@ router.get("/riders/:rider_id/audit", auth(["agent"]), getRiderAudit);
 
 router.get("/inventory", auth(["agent"]), getHubInventory);
 router.post("/inventory/release", auth(["agent"]), releaseInventory);
-router.post("/inventory/history", auth(["agent"]), getStockHistory);
+router.get("/inventory/history", auth(["agent"]), getStockHistory);
 
 router.patch(
     '/riders/:id/commission',

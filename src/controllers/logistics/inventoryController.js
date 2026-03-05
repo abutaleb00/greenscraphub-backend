@@ -19,37 +19,37 @@ export const getHubInventory = async (req, res, next) => {
         const agentId = agentRows[0].id;
 
         /**
-         * LOGIC:
-         * - Join hub_inventory with scrap_items (si) to get names and market rates.
-         * - Use a subquery on pickup_items (pi) to get the average price paid.
-         * - Columns matched to your schema: si.current_min_rate, pi.final_rate_per_unit, si.name_en
+         * UPDATED LOGIC:
+         * 1. Join hub_inventory (hi) with scrap_categories (sc) because hi stores category_id.
+         * 2. Use a subquery to get the average buy price from pickup_items based on category.
          */
         const [inventory] = await db.query(`
             SELECT 
-                si.id as item_id,
-                si.name_en as item_name,
-                si.unit as unit, 
+                sc.id as category_id,
+                sc.name_en as category_name,
                 hi.current_weight,
-                si.current_min_rate as market_price, 
+                -- Average buy price for all items in this category at this hub
                 (SELECT AVG(pi.final_rate_per_unit) 
                  FROM pickup_items pi 
                  JOIN pickups p ON pi.pickup_id = p.id 
-                 WHERE pi.item_id = si.id 
+                 JOIN scrap_items si ON pi.item_id = si.id
+                 WHERE si.category_id = sc.id 
                    AND p.agent_id = ? 
                    AND p.status = 'completed') as avg_buy_price
             FROM hub_inventory hi
-            JOIN scrap_items si ON hi.category_id = si.id
+            JOIN scrap_categories sc ON hi.category_id = sc.id
             WHERE hi.agent_id = ? AND hi.current_weight > 0
             ORDER BY hi.current_weight DESC`, [agentId, agentId]);
 
         // Calculate Totals for HUD
         const totalWeight = inventory.reduce((acc, item) => acc + parseFloat(item.current_weight || 0), 0);
 
-        // Valuation: Current Weight * Market Price (current_min_rate)
+        // Note: For valuation, you might want to join market rates from categories if available, 
+        // otherwise we use avg_buy_price as a placeholder valuation
         const valuation = inventory.reduce((acc, item) => {
-            const mPrice = parseFloat(item.market_price || 0);
+            const price = parseFloat(item.avg_buy_price || 0);
             const weight = parseFloat(item.current_weight || 0);
-            return acc + (weight * mPrice);
+            return acc + (weight * price);
         }, 0);
 
         res.json({
@@ -57,7 +57,7 @@ export const getHubInventory = async (req, res, next) => {
             stats: {
                 total_weight: totalWeight.toFixed(2),
                 valuation: valuation.toFixed(2),
-                item_count: inventory.length,
+                category_count: inventory.length,
                 last_stock_update: new Date().toISOString()
             },
             data: inventory
