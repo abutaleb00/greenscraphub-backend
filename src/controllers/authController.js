@@ -204,7 +204,11 @@ const createCustomerProfile = async (conn, userId, referralCodeInput) => {
 export const onboardCustomer = async (req, res, next) => {
   const conn = await db.getConnection();
   try {
-    const { full_name, phone, email, password, referral_code } = req.body;
+    const {
+      full_name, phone, email, password, referral_code,
+      address_line, division_id, district_id, upazila_id,
+      is_active, latitude, longitude
+    } = req.body;
 
     // 1. Check if user already exists
     const [exists] = await conn.query("SELECT id FROM users WHERE phone = ?", [phone]);
@@ -215,21 +219,39 @@ export const onboardCustomer = async (req, res, next) => {
     // 2. Create User (Role 4 = Customer)
     const password_hash = await bcrypt.hash(password, 10);
     const [u] = await conn.query(
-      "INSERT INTO users (full_name, phone, email, password_hash, role_id, is_active) VALUES (?, ?, ?, ?, 4, 1)",
-      [full_name, phone, email || null, password_hash]
+      "INSERT INTO users (full_name, phone, email, password_hash, role_id, is_active) VALUES (?, ?, ?, ?, 4, ?)",
+      [full_name, phone, email || null, password_hash, is_active || 1]
     );
     const userId = u.insertId;
 
-    // 3. Setup Profile & Referral via helper
+    // 3. Add Address Details WITH Lat/Long
+    // Ensure your 'addresses' table has latitude and longitude columns (DECIMAL 10,8 and 11,8)
+    await conn.query(
+      `INSERT INTO addresses (
+        user_id, address_line, division_id, district_id, upazila_id, 
+        latitude, longitude, is_default
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
+      [
+        userId,
+        address_line,
+        division_id,
+        district_id,
+        upazila_id,
+        latitude || null,
+        longitude || null
+      ]
+    );
+
+    // 4. Setup Profile & Referral via helper
     await createCustomerProfile(conn, userId, referral_code);
 
-    // 4. Initialize Wallet
+    // 5. Initialize Wallet
     await conn.query("INSERT INTO wallet_accounts (user_id, balance) VALUES (?, 0)", [userId]);
 
     await conn.commit();
     res.status(201).json({
       success: true,
-      message: "Customer onboarded successfully by Admin."
+      message: "Customer identity node deployed with precise geo-coordinates."
     });
   } catch (err) {
     await conn.rollback();

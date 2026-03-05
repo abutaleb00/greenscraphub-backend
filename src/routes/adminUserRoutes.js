@@ -22,7 +22,7 @@ import {
     permanentDeleteCustomer
 } from "../controllers/adminUserController.js";
 import { upsertPriceOverride, getItemOverrides, getAdminPriceIndex, getPriceHistory } from "../controllers/priceOverrideController.js";
-
+import { getCommissionSettings, updateAgentCommission } from '../controllers/commissionController.js';
 const router = express.Router();
 
 /* ============================================================
@@ -52,6 +52,11 @@ router.post(
     createAgentAccount
 );
 
+// GET all hub commission settings
+router.get('/settings/commissions', auth(["admin"]), getCommissionSettings);
+
+// UPDATE a specific hub's rates (Platform fee, default rider mode)
+router.patch('/agents/:id/rates', auth(["admin"]), updateAgentCommission);
 /**
  * @route   GET /api/v1/admin-users/agents
  * @desc    Get list of all Agents with their wallet balances
@@ -120,12 +125,12 @@ router.put(
     "/riders/:id",
     auth(["admin", "agent"]),
     [
-        body("full_name").optional().notEmpty().withMessage("Name cannot be empty"),
-        body("phone").optional().notEmpty().withMessage("Phone cannot be empty"),
-        body("email").optional().isEmail().withMessage("Invalid email format"),
-        body("vehicle_type").optional().notEmpty(),
-        body("agent_id").optional().isInt().withMessage("Invalid Agent ID"),
-        body("is_active").optional().isIn([0, 1]).withMessage("Status must be 0 or 1"),
+        body("full_name").optional().notEmpty(),
+        body("phone").optional().notEmpty(),
+        body("email").optional().isEmail(),
+        body("vehicle_type").optional().isIn(['bicycle', 'van', 'motorcycle', 'truck', 'rickshaw']),
+        body("payment_mode").optional().isIn(['commission', 'salary', 'default']),
+        body("is_active").optional().isIn([0, 1])
     ],
     updateRiderAccount
 );

@@ -14,31 +14,61 @@ export const getHubRiders = async (req, res, next) => {
                 r.id as rider_id, 
                 u.full_name, 
                 u.phone, 
+                u.email,
                 u.is_active,
                 r.vehicle_type, 
+                r.vehicle_number,
                 r.is_online,
                 r.status as rider_status,
-                -- Count active tasks accurately
+                r.payment_mode, -- Critical for the UI icons
+                a.default_rider_mode as hub_default_mode, -- For the 'default' fallback text
+                
+                -- 1. Active Task Count (Current Workload)
                 (SELECT COUNT(*) FROM pickups 
                  WHERE rider_id = r.id 
-                 AND status NOT IN ('completed', 'cancelled')) as active_tasks,
-                -- IMPORTANT: Only sum cash that hasn't been settled to the hub yet
+                 AND status IN ('assigned', 'rider_on_way', 'arrived', 'weighing')) as active_tasks,
+                
+                -- 2. Accountability (Physical cash held by rider)
                 (SELECT COALESCE(SUM(rider_collected_cash), 0) 
                  FROM pickups 
                  WHERE rider_id = r.id 
                  AND status = 'completed' 
                  AND payment_method = 'cash'
-                 AND is_settled_to_hub = 0) as cash_in_hand
+                 AND is_settled_to_hub = 0) as cash_in_hand,
+
+                -- 3. Last Activity (To show how recently they worked)
+                (SELECT MAX(completed_at) 
+                 FROM pickups 
+                 WHERE rider_id = r.id) as last_completed_at,
+
+                -- 4. Today's Performance (Instant audit)
+                (SELECT COUNT(*) 
+                 FROM pickups 
+                 WHERE rider_id = r.id 
+                 AND status = 'completed' 
+                 AND DATE(completed_at) = CURDATE()) as jobs_today
+
             FROM riders r
             JOIN users u ON r.user_id = u.id
             JOIN agents a ON r.agent_id = a.id
-            WHERE a.owner_user_id = ?`, [userId]);
+            WHERE a.owner_user_id = ? 
+            AND u.role_id = 3 -- Safety check for riders
+            ORDER BY r.is_online DESC, u.full_name ASC`, [userId]);
+
+        // Transform data slightly for cleaner Frontend consumption
+        const formattedRiders = riders.map(rider => ({
+            ...rider,
+            cash_in_hand: parseFloat(rider.cash_in_hand || 0).toFixed(2),
+            // Determine active payment mode for the UI badge
+            resolved_payment_mode: rider.payment_mode === 'default' ? rider.hub_default_mode : rider.payment_mode
+        }));
 
         res.json({
             success: true,
-            data: riders
+            data: formattedRiders
         });
     } catch (err) {
+        console.error("Hub Riders API Error:", err);
         next(err);
     }
 };
@@ -130,52 +160,42 @@ export const getHubCollectionLogs = async (req, res, next) => {
 };
 
 /**
- * 3. GET HUB EARNINGS (Financial Audit)
- * Logic: Provides a daily breakdown of commissions and a high-level summary.
+ * GET HUB EARNINGS (Financial Analytics)
+ * Updated Logic: Calculates Net Profit, Platform Fees, and Volume Breakdown
  */
 export const getHubEarnings = async (req, res, next) => {
     try {
         const userId = req.user.id;
+        const [agentRows] = await db.query("SELECT id FROM agents WHERE owner_user_id = ?", [userId]);
+        const agentId = agentRows[0].id;
 
-        // 1. Fetch Daily Breakdown
-        // We use COALESCE to ensure we return 0 instead of NULL for sums
-        const [earnings] = await db.query(`
+        const [stats] = await db.query(`
             SELECT 
-                DATE(p.completed_at) as date,
-                COUNT(p.id) as pickups_done,
-                COALESCE(SUM(p.agent_commission_amount), 0) as daily_commission,
-                COALESCE(SUM(p.net_payable_amount), 0) as total_volume
-            FROM pickups p
-            JOIN agents a ON p.agent_id = a.id
-            WHERE a.owner_user_id = ? 
-              AND p.status = 'completed'
-            GROUP BY DATE(p.completed_at)
-            ORDER BY date DESC
-            LIMIT 30`, [userId]);
-
-        // 2. Fetch Lifetime/Monthly Summary for the Top HUD Cards
-        const [summary] = await db.query(`
-            SELECT 
-                COALESCE(SUM(p.agent_commission_amount), 0) as total_lifetime_commission,
-                COUNT(p.id) as total_lifetime_pickups,
-                COALESCE(SUM(CASE WHEN MONTH(p.completed_at) = MONTH(CURRENT_DATE()) THEN p.agent_commission_amount ELSE 0 END), 0) as current_month_commission
-            FROM pickups p
-            JOIN agents a ON p.agent_id = a.id
-            WHERE a.owner_user_id = ? 
-              AND p.status = 'completed'`, [userId]);
+                -- 1. Money already in the Hub safe (Verified)
+                COALESCE(SUM(CASE WHEN is_settled_to_hub = 1 THEN rider_collected_cash ELSE 0 END), 0) as verified_cash_vault,
+                
+                -- 2. Money still with Riders (Unverified/Receivable)
+                COALESCE(SUM(CASE WHEN is_settled_to_hub = 0 THEN rider_collected_cash ELSE 0 END), 0) as floating_rider_cash,
+                
+                -- 3. Total Operating Margin (Potential Profit across all missions)
+                COALESCE(SUM(agent_commission_amount), 0) as total_operating_margin,
+                
+                -- 4. Total Platform Debt (Money owed to you, the owner)
+                COALESCE(SUM(platform_fee_amount), 0) as platform_debt
+            FROM pickups 
+            WHERE agent_id = ? AND status = 'completed' AND is_deleted = 0`, [agentId]);
 
         res.json({
             success: true,
-            data: earnings,
-            summary: summary[0] || {
-                total_lifetime_commission: 0,
-                total_lifetime_pickups: 0,
-                current_month_commission: 0
+            stats: {
+                cash_in_vault: parseFloat(stats[0].verified_cash_vault).toFixed(2),
+                floating_cash: parseFloat(stats[0].floating_rider_cash).toFixed(2),
+                total_assets: (parseFloat(stats[0].verified_cash_vault) + parseFloat(stats[0].floating_rider_cash)).toFixed(2),
+                operating_margin: parseFloat(stats[0].total_operating_margin).toFixed(2),
+                platform_debt: parseFloat(stats[0].platform_debt).toFixed(2)
             }
         });
-    } catch (err) {
-        next(err);
-    }
+    } catch (err) { next(err); }
 };
 
 /**
@@ -245,17 +265,35 @@ const getAgentInfo = async (req) => {
 
 /**
  * GET PENDING SETTLEMENTS
- * Fetches riders who have collected physical cash but haven't paid the hub yet
+ * Updated logic: Fetches detailed rider liability metadata for Agent verification.
  */
 export const getPendingSettlements = async (req, res, next) => {
     try {
-        const agent = await getAgentInfo(req);
+        // 1. Get Agent identity from session
+        const [agentRows] = await db.query(
+            "SELECT id FROM agents WHERE owner_user_id = ?",
+            [req.user.id]
+        );
 
+        if (!agentRows.length) throw new ApiError(403, "Agent profile not active.");
+        const agentId = agentRows[0].id;
+
+        // 2. Query riders with unsettled cash liability
         const [riders] = await db.query(`
             SELECT 
-                r.id, 
+                r.id as rider_id, 
                 u.full_name as name, 
-                SUM(p.rider_collected_cash) as pending_cash
+                u.phone,
+                r.vehicle_type,
+                r.vehicle_number,
+                -- Total physical cash the rider is carrying
+                COALESCE(SUM(p.rider_collected_cash), 0) as pending_cash,
+                -- Count of individual pickups making up this amount
+                COUNT(p.id) as pickup_count,
+                -- Total platform fee the agent will owe the system for these jobs
+                COALESCE(SUM(p.platform_fee_amount), 0) as total_platform_fee,
+                -- Last collection timestamp
+                MAX(p.completed_at) as last_collection
             FROM riders r
             JOIN users u ON r.user_id = u.id
             JOIN pickups p ON r.id = p.rider_id
@@ -263,17 +301,89 @@ export const getPendingSettlements = async (req, res, next) => {
               AND p.status = 'completed' 
               AND p.payment_method = 'cash' 
               AND p.is_settled_to_hub = 0
-            GROUP BY r.id, u.full_name
-            HAVING pending_cash > 0`,
-            [agent.id]
+            GROUP BY r.id, u.full_name, u.phone, r.vehicle_type, r.vehicle_number
+            HAVING pending_cash > 0
+            ORDER BY last_collection DESC`,
+            [agentId]
         );
 
-        res.json({ success: true, data: riders });
+        // 3. Optional: Fetch individual pickup breakdown for a "Details" view if needed
+        // This makes the UI much more realistic.
+        const formattedData = riders.map(rider => ({
+            ...rider,
+            pending_cash: parseFloat(rider.pending_cash).toFixed(2),
+            total_platform_fee: parseFloat(rider.total_platform_fee).toFixed(2),
+        }));
+
+        res.json({
+            success: true,
+            count: formattedData.length,
+            data: formattedData
+        });
     } catch (err) {
+        console.error("Settlement Query Error:", err);
         next(err);
     }
 };
 
+/**
+ * GET SETTLEMENT LOGS (AGENT)
+ * Fetches historical cash handovers and income stats
+ */
+export const getSettlementLogs = async (req, res, next) => {
+    try {
+        const [agentRows] = await db.query(
+            "SELECT id FROM agents WHERE owner_user_id = ?",
+            [req.user.id]
+        );
+        if (!agentRows.length) throw new ApiError(403, "Agent not found.");
+        const agentId = agentRows[0].id;
+
+        // 1. Fetch historical completed pickups that were settled
+        const [logs] = await db.query(`
+            SELECT 
+                p.id,
+                p.booking_code,
+                p.completed_at as date,
+                u.full_name as rider_name,
+                p.rider_collected_cash as collection_amount,
+                p.rider_commission_amount as rider_incentive,
+                p.platform_fee_amount as platform_fee,
+                -- Agent Net = Collection - Rider Cut - Platform Cut
+                (p.rider_collected_cash - p.rider_commission_amount - p.platform_fee_amount) as agent_net_income
+            FROM pickups p
+            JOIN riders r ON p.rider_id = r.id
+            JOIN users u ON r.user_id = u.id
+            WHERE p.agent_id = ? 
+              AND p.is_settled_to_hub = 1
+              AND p.status = 'completed'
+            ORDER BY p.completed_at DESC
+            LIMIT 50`, [agentId]);
+
+        // 2. Summary Stats for the Agent
+        const [stats] = await db.query(`
+            SELECT 
+                SUM(rider_collected_cash) as lifetime_collection,
+                SUM(platform_fee_amount) as total_platform_debt,
+                COUNT(id) as total_settled_jobs
+            FROM pickups 
+            WHERE agent_id = ? AND is_settled_to_hub = 1`, [agentId]);
+
+        res.json({
+            success: true,
+            stats: {
+                total_collected: parseFloat(stats[0].lifetime_collection || 0).toFixed(2),
+                platform_debt: parseFloat(stats[0].total_platform_debt || 0).toFixed(2),
+                job_count: stats[0].total_settled_jobs || 0
+            },
+            data: logs.map(log => ({
+                ...log,
+                collection_amount: parseFloat(log.collection_amount).toFixed(2),
+                agent_net_income: parseFloat(log.agent_net_income).toFixed(2)
+            }))
+        });
+    } catch (err) { next(err); }
+};
 /**
  * SETTLE RIDER CASH (Updated for Foreign Key Compliance)
  */
@@ -281,10 +391,18 @@ export const settleRiderCash = async (req, res, next) => {
     const conn = await db.getConnection();
     try {
         await conn.beginTransaction();
-        const { riderId, amount, note } = req.body;
-        const agent = await getAgentInfo(req);
 
-        // 1. Fetch Agent's Wallet ID
+        const { riderId, amount, note } = req.body;
+        const intakeAmount = parseFloat(amount);
+
+        if (isNaN(intakeAmount) || intakeAmount < 0) {
+            throw new ApiError(400, "Invalid intake amount.");
+        }
+
+        const agent = await getAgentInfo(req);
+        const agentId = agent.id;
+
+        // 1. Fetch Agent's Wallet
         const [agentWallet] = await conn.query(
             "SELECT id FROM wallet_accounts WHERE user_id = ?",
             [agent.owner_user_id]
@@ -292,46 +410,78 @@ export const settleRiderCash = async (req, res, next) => {
         if (!agentWallet.length) throw new ApiError(404, "Agent wallet not found.");
         const walletId = agentWallet[0].id;
 
-        // 2. Create a "Cash Intake" Transaction record to satisfy FK constraint
-        // This logs the event in wallet_transactions without necessarily changing the digital balance
+        // 2. Fetch ALL pickups that have NOT been stocked yet (is_settled_to_hub = 0)
+        // We do this because you want the items in the warehouse immediately.
+        const [pendingPickups] = await conn.query(`
+            SELECT id FROM pickups 
+            WHERE rider_id = ? AND agent_id = ? 
+              AND status = 'completed' AND is_settled_to_hub = 0`,
+            [riderId, agentId]
+        );
+
+        if (pendingPickups.length > 0) {
+            const pendingIds = pendingPickups.map(p => p.id);
+
+            // 3. LOGIC: UPDATE HUB INVENTORY (STOCK STORE)
+            // Fetch all items from these specific pickups
+            const [itemsToStock] = await conn.query(`
+    SELECT item_id, actual_weight 
+    FROM pickup_items 
+    WHERE pickup_id IN (?)`, [settledPickupIds]);
+
+            for (const item of itemsToStock) {
+                const weight = parseFloat(item.actual_weight);
+                if (weight <= 0) continue;
+
+                await conn.query(`
+        INSERT INTO hub_inventory (agent_id, category_id, current_weight)
+        VALUES (?, ?, ?)
+        ON DUPLICATE KEY UPDATE 
+            current_weight = current_weight + ?,
+            last_updated_at = NOW()`,
+                    [agentId, item.item_id, weight, weight]
+                );
+            }
+
+            // 4. Mark these pickups as settled to hub so inventory isn't double-counted later
+            await conn.query(
+                `UPDATE pickups SET is_settled_to_hub = 1 WHERE id IN (?)`,
+                [pendingIds]
+            );
+        }
+
+        // 5. FINANCE: Log the Cash Transaction
+        // We log the amount the rider actually paid. 
+        // The "Pending Balance" is calculated in your 'getPendingSettlements' query 
+        // by comparing (Total Rider Collected Cash) vs (Total Wallet Transactions for that rider).
         const [txResult] = await conn.query(`
             INSERT INTO wallet_transactions 
             (wallet_id, type, source, reference_type, reference_id, amount, balance_before, balance_after, description_en, status) 
             VALUES (?, 'credit', 'cash_settlement', 'rider', ?, ?, 0, 0, ?, 'completed')`,
             [
-                walletId,
-                riderId,
-                amount,
-                `Physical cash intake from Rider ID: ${riderId}`
+                walletId, riderId, intakeAmount,
+                `Physical cash handover from Rider ID: ${riderId}. Note: ${note || 'Partial/Full'}`
             ]
         );
-        const transactionId = txResult.insertId;
 
-        // 3. Mark pickups as settled to hub
-        await conn.query(`
-            UPDATE pickups 
-            SET is_settled_to_hub = 1 
-            WHERE rider_id = ? AND agent_id = ? 
-              AND status = 'completed' AND is_settled_to_hub = 0`,
-            [riderId, agent.id]
-        );
-
-        // 4. Log into Financial Ledger using the NEW transaction_id
+        // 6. Update Financial Ledger for Audit
         await conn.query(`
             INSERT INTO financial_ledger 
             (wallet_id, transaction_id, source_type, source_id, credit, debit, entry_type, payment_method, description) 
             VALUES (?, ?, 'cash_settlement', ?, ?, 0, 'inflow', 'cash', ?)`,
             [
-                walletId,
-                transactionId, // Satisfies financial_ledger_ibfk_2
-                riderId,
-                amount,
-                `Cash intake verified: ${note || 'Daily Settle'}`
+                walletId, txResult.insertId, riderId, intakeAmount,
+                `Hub Vault Intake: ${note || 'Handover'}`
             ]
         );
 
         await conn.commit();
-        res.json({ success: true, message: "Cash successfully reconciled into Hub Vault." });
+
+        res.json({
+            success: true,
+            message: `Inventory updated for all items. ৳${intakeAmount} cash received and logged.`
+        });
+
     } catch (err) {
         await conn.rollback();
         console.error("Settlement Error:", err);

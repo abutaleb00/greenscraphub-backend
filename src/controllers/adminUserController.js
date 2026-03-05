@@ -37,10 +37,10 @@ export const createAgentAccount = async (req, res, next) => {
         let {
             full_name, phone, email, password,
             business_name, address_line,
-            latitude, longitude, commission_value
+            latitude, longitude,
+            hub_commission_value, platform_fee_percent, default_rider_mode
         } = req.body;
 
-        // 1. Check if user already exists
         const [exists] = await conn.query(
             "SELECT id FROM users WHERE phone = ? OR (email IS NOT NULL AND email = ?)",
             [phone, email]
@@ -49,38 +49,38 @@ export const createAgentAccount = async (req, res, next) => {
 
         const password_hash = await bcrypt.hash(password, 10);
 
-        // 2. Create User (role_id 2 = Agent)
+        // Create User (role_id 2 = Agent)
         const [userResult] = await conn.query(
             "INSERT INTO users (full_name, phone, email, password_hash, role_id, is_active) VALUES (?, ?, ?, ?, 2, 1)",
             [full_name, phone, email || null, password_hash]
         );
         const userId = userResult.insertId;
 
-        // 3. Create Agent Profile 
         const agentCode = 'AG-' + Math.random().toString(36).substring(2, 7).toUpperCase();
 
+        // Updated for Hybrid Model
         await conn.query(
             `INSERT INTO agents (
                 owner_user_id, business_name, code, email, 
                 phone, address_line, latitude, longitude, 
-                commission_value, is_active
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
-            [userId, business_name, agentCode, email, phone, address_line, latitude, longitude, commission_value]
+                hub_commission_value, platform_fee_percent, default_rider_mode, is_active
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+            [
+                userId, business_name, agentCode, email,
+                phone, address_line, latitude, longitude,
+                hub_commission_value || 10.00, platform_fee_percent || 5.00, default_rider_mode || 'salary'
+            ]
         );
 
-        // 4. ALSO Insert into Addresses table (since you provided that schema)
         await conn.query(
-            `INSERT INTO addresses (
-                user_id, label, address_line, latitude, longitude, is_default
-            ) VALUES (?, 'Business Hub', ?, ?, ?, 1)`,
+            `INSERT INTO addresses (user_id, label, address_line, latitude, longitude, is_default) VALUES (?, 'Business Hub', ?, ?, ?, 1)`,
             [userId, address_line, latitude, longitude]
         );
 
-        // 5. Initialize Wallet
         await initializeWallet(conn, userId);
 
         await conn.commit();
-        res.status(201).json({ success: true, message: "Agent Hub and Address synchronized" });
+        res.status(201).json({ success: true, message: "Agent Hub created with hybrid configuration." });
 
     } catch (err) {
         await conn.rollback();
@@ -97,79 +97,53 @@ export const createAgentAccount = async (req, res, next) => {
 export const updateAgentAccount = async (req, res, next) => {
     const conn = await db.getConnection();
     try {
-        const { id } = req.params; // Agent ID
+        const { id } = req.params;
         const {
-            full_name,
-            phone,
-            email,
-            business_name,
-            address_line,     // Maps to Agents/Addresses table
-            commission_value,  // Maps to Agents table
-            latitude,
-            longitude,
-            is_active
+            full_name, phone, email, business_name, address_line,
+            hub_commission_value, platform_fee_percent, default_rider_mode,
+            latitude, longitude, is_active
         } = req.body;
 
         await conn.beginTransaction();
 
-        // 1. Fetch the owner_user_id to link to the other tables
-        const [agentRows] = await conn.query(
-            "SELECT owner_user_id FROM agents WHERE id = ?",
-            [id]
-        );
-
-        if (agentRows.length === 0) {
-            throw new ApiError(404, "Agent profile not found in the nodes.");
-        }
-
+        const [agentRows] = await conn.query("SELECT owner_user_id FROM agents WHERE id = ?", [id]);
+        if (agentRows.length === 0) throw new ApiError(404, "Agent not found");
         const ownerUserId = agentRows[0].owner_user_id;
 
-        // 2. Update Users table (Credentials & Identity)
         await conn.query(
-            `UPDATE users SET 
-                full_name = COALESCE(?, full_name), 
-                phone = COALESCE(?, phone), 
-                email = COALESCE(?, email),
-                is_active = COALESCE(?, is_active)
-            WHERE id = ?`,
+            `UPDATE users SET full_name = COALESCE(?, full_name), phone = COALESCE(?, phone), 
+             email = COALESCE(?, email), is_active = COALESCE(?, is_active) WHERE id = ?`,
             [full_name, phone, email, is_active, ownerUserId]
         );
 
-        // 3. Update Agents table (Business Details & Hub Location)
+        // Updated to support Hybrid Model global config
         await conn.query(
             `UPDATE agents SET 
                 business_name = COALESCE(?, business_name), 
                 address_line = COALESCE(?, address_line),
                 latitude = COALESCE(?, latitude),
                 longitude = COALESCE(?, longitude),
-                commission_value = COALESCE(?, commission_value),
+                hub_commission_value = COALESCE(?, hub_commission_value),
+                platform_fee_percent = COALESCE(?, platform_fee_percent),
+                default_rider_mode = COALESCE(?, default_rider_mode),
                 is_active = COALESCE(?, is_active),
                 phone = COALESCE(?, phone),
                 email = COALESCE(?, email)
             WHERE id = ?`,
-            [business_name, address_line, latitude, longitude, commission_value, is_active, phone, email, id]
+            [business_name, address_line, latitude, longitude, hub_commission_value, platform_fee_percent, default_rider_mode, is_active, phone, email, id]
         );
 
-        // 4. Update Addresses table (The Geographic Node)
-        // We update the 'default' business address for this user
         await conn.query(
-            `UPDATE addresses SET 
-                address_line = COALESCE(?, address_line),
-                latitude = COALESCE(?, latitude),
-                longitude = COALESCE(?, longitude)
-            WHERE user_id = ? AND label = 'Business Hub'`,
+            `UPDATE addresses SET address_line = COALESCE(?, address_line), latitude = COALESCE(?, latitude), 
+             longitude = COALESCE(?, longitude) WHERE user_id = ? AND label = 'Business Hub'`,
             [address_line, latitude, longitude, ownerUserId]
         );
 
         await conn.commit();
-        res.json({
-            success: true,
-            message: "Agent Hub, User Identity, and Geographic Node synchronized successfully."
-        });
+        res.json({ success: true, message: "Agent Hub and Hybrid Policy synchronized." });
 
     } catch (err) {
         await conn.rollback();
-        console.error("Critical Agent Update Sync Error:", err);
         next(err);
     } finally {
         conn.release();
@@ -239,40 +213,40 @@ export const createRiderAccount = async (req, res, next) => {
         checkValidation(req);
         await conn.beginTransaction();
 
-        const { full_name, phone, email, password, agent_id, vehicle_type, vehicle_number } = req.body;
+        const {
+            full_name, phone, email, password, agent_id,
+            vehicle_type, vehicle_number, payment_mode
+        } = req.body;
         const requester = req.user;
 
-        // 1. Role-based Agent ID determination
         let finalAgentId = null;
         if (requester.role === "agent") {
             const [agent] = await conn.query("SELECT id FROM agents WHERE owner_user_id = ?", [requester.id]);
-            if (!agent.length) throw new ApiError(403, "Agent profile not found for requester");
+            if (!agent.length) throw new ApiError(403, "Agent profile not found");
             finalAgentId = agent[0].id;
         } else {
-            finalAgentId = agent_id; // Admin provides the ID manually
+            finalAgentId = agent_id;
         }
 
         if (!finalAgentId) throw new ApiError(400, "agent_id is required");
 
-        // 2. Create User (Role 3 = Rider)
         const password_hash = await bcrypt.hash(password, 10);
         const [userResult] = await conn.query(
-            "INSERT INTO users (full_name, phone, email, password_hash, role_id, agent_id) VALUES (?, ?, ?, ?, 3, ?)",
-            [full_name, phone, email || null, password_hash, finalAgentId]
+            "INSERT INTO users (full_name, phone, email, password_hash, role_id) VALUES (?, ?, ?, ?, 3)",
+            [full_name, phone, email || null, password_hash]
         );
         const userId = userResult.insertId;
 
-        // 3. Create Rider Profile
+        // Updated to include payment_mode (salary, commission, or default)
         await conn.query(
-            "INSERT INTO riders (user_id, agent_id, vehicle_type, vehicle_number) VALUES (?, ?, ?, ?)",
-            [userId, finalAgentId, vehicle_type || 'Bicycle', vehicle_number || null]
+            "INSERT INTO riders (user_id, agent_id, vehicle_type, vehicle_number, payment_mode) VALUES (?, ?, ?, ?, ?)",
+            [userId, finalAgentId, vehicle_type || 'Bicycle', vehicle_number || null, payment_mode || 'default']
         );
 
-        // 4. Initialize Wallet
         await initializeWallet(conn, userId);
 
         await conn.commit();
-        res.status(201).json({ success: true, message: "Rider account created" });
+        res.status(201).json({ success: true, message: `Rider account created in ${payment_mode || 'default'} mode.` });
 
     } catch (err) {
         await conn.rollback();
@@ -288,61 +262,65 @@ export const createRiderAccount = async (req, res, next) => {
 export const updateRiderAccount = async (req, res, next) => {
     const conn = await db.getConnection();
     try {
-        checkValidation(req);
-        const { id } = req.params; // This is the Rider ID (from riders table)
+        const { id } = req.params; // Rider ID
         const {
             full_name, phone, email,
-            agent_id, vehicle_type, vehicle_number,
+            vehicle_type, vehicle_number, payment_mode,
             is_active
         } = req.body;
         const requester = req.user;
 
         await conn.beginTransaction();
 
-        // 1. Fetch current Rider data to verify ownership
+        // 1. Verify Rider exists and get their user_id
         const [riderRows] = await conn.query(
-            "SELECT user_id, agent_id FROM riders WHERE id = ?",
+            "SELECT user_id, agent_id FROM riders WHERE id = ?", 
             [id]
         );
         if (riderRows.length === 0) throw new ApiError(404, "Rider node not found");
-
         const riderData = riderRows[0];
 
-        // 2. Authorization Check: Agents can only update THEIR OWN riders
+        // 2. AGENT SECURITY: Ensure the agent owns this rider
         if (requester.role === "agent") {
-            const [agent] = await conn.query("SELECT id FROM agents WHERE owner_user_id = ?", [requester.id]);
+            const [agent] = await conn.query(
+                "SELECT id FROM agents WHERE owner_user_id = ?", 
+                [requester.id]
+            );
             if (!agent.length || agent[0].id !== riderData.agent_id) {
-                throw new ApiError(403, "Unauthorized: You do not manage this rider");
+                throw new ApiError(403, "Access Denied: This rider belongs to another Hub Node.");
             }
         }
 
-        // 3. Update Users Table (Identity & Status)
+        // 3. Update User Identity (users table)
         await conn.query(
             `UPDATE users SET 
-                full_name = COALESCE(?, full_name),
-                phone = COALESCE(?, phone),
-                email = COALESCE(?, email),
-                is_active = COALESCE(?, is_active)
-            WHERE id = ?`,
+                full_name = COALESCE(?, full_name), 
+                phone = COALESCE(?, phone), 
+                email = COALESCE(?, email), 
+                is_active = COALESCE(?, is_active),
+                updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?`,
             [full_name, phone, email, is_active, riderData.user_id]
         );
 
-        // 4. Update Riders Table (Logistics Details)
-        // Note: Only Admins are allowed to change a rider's agent_id via agent_id COALESCE
-        const finalAgentId = requester.role === 'admin' ? agent_id : undefined;
-
+        // 4. Update Rider Profile (riders table)
+        // Note: Agents cannot change a rider's agent_id, only Admins can.
         await conn.query(
             `UPDATE riders SET 
-                agent_id = COALESCE(?, agent_id),
                 vehicle_type = COALESCE(?, vehicle_type),
                 vehicle_number = COALESCE(?, vehicle_number),
-                is_active = COALESCE(?, is_active)
+                payment_mode = COALESCE(?, payment_mode),
+                is_active = COALESCE(?, is_active),
+                updated_at = CURRENT_TIMESTAMP
             WHERE id = ?`,
-            [finalAgentId, vehicle_type, vehicle_number, is_active, id]
+            [vehicle_type, vehicle_number, payment_mode, is_active, id]
         );
 
         await conn.commit();
-        res.json({ success: true, message: "Rider node synchronized successfully" });
+        res.json({ 
+            success: true, 
+            message: `Rider ${full_name || 'profile'} updated successfully.` 
+        });
 
     } catch (err) {
         await conn.rollback();
@@ -547,30 +525,15 @@ export const reassignRiders = async (req, res, next) => {
 export const listAgents = async (req, res, next) => {
     try {
         const query = `
-            SELECT 
-                a.*, 
-                u.full_name, 
-                u.phone, 
-                u.email, 
-                a.is_active, 
-                w.balance,
+            SELECT a.*, u.full_name, u.phone, u.email, w.balance,
                 (SELECT COUNT(*) FROM riders r WHERE r.agent_id = a.id) as rider_count
             FROM agents a
             JOIN users u ON a.owner_user_id = u.id
             LEFT JOIN wallet_accounts w ON u.id = w.user_id
-            ORDER BY a.created_at DESC
-        `;
-
+            ORDER BY a.created_at DESC`;
         const [rows] = await db.query(query);
-
-        res.json({
-            success: true,
-            data: rows
-        });
-    } catch (err) {
-        console.error("Fetch Agents Error:", err);
-        next(err);
-    }
+        res.json({ success: true, data: rows });
+    } catch (err) { next(err); }
 };
 
 /* --------------------------------------------------
@@ -579,22 +542,16 @@ export const listAgents = async (req, res, next) => {
 export const listRiders = async (req, res, next) => {
     try {
         const query = `
-            SELECT 
-                r.*, 
-                u.full_name, u.phone, u.email, u.is_active as user_active,
-                a.business_name as agency_name,
-                (SELECT COUNT(*) FROM pickups p WHERE p.rider_id = r.id AND p.status IN ('pending', 'accepted', 'started')) as active_pickup_count
+            SELECT r.*, u.full_name, u.phone, u.email, u.is_active as user_active,
+                a.business_name as agency_name, a.default_rider_mode as hub_default_mode
             FROM riders r
             JOIN users u ON r.user_id = u.id
             LEFT JOIN agents a ON r.agent_id = a.id
-            ORDER BY r.created_at DESC
-        `;
+            ORDER BY r.created_at DESC`;
         const [rows] = await db.query(query);
         res.json({ success: true, data: rows });
-    } catch (err) {
-        next(err);
-    }
-};
+    } catch (err) { next(err); }
+}
 
 /* --------------------------------------------------
     ADMIN/AGENT → CREATE CUSTOMER (With Address)
@@ -666,6 +623,8 @@ export const listCustomers = async (req, res, next) => {
                 addr.district_id, 
                 addr.upazila_id,
                 addr.address_line,
+                addr.latitude,
+                addr.longitude,
 
                 -- Geographic Names (For Table Display)
                 divs.name_en as division_name,
@@ -710,16 +669,17 @@ export const listCustomers = async (req, res, next) => {
 export const updateCustomer = async (req, res, next) => {
     const conn = await db.getConnection();
     try {
-        // 'id' comes from the URL: /management/customers/7
-        const { id } = req.params; 
-        const { 
+        const { id } = req.params;
+        const {
             full_name, phone, email, is_active,
-            address_line, division_id, district_id, upazila_id 
+            address_line, division_id, district_id, upazila_id,
+            latitude, longitude // Capture these from your payload
         } = req.body;
 
         await conn.beginTransaction();
 
         // 1. Update Identity (users table)
+        // We use COALESCE to keep the old value if the new one is undefined/null
         const [userUpdate] = await conn.query(
             `UPDATE users SET 
                 full_name = COALESCE(?, full_name),
@@ -737,35 +697,39 @@ export const updateCustomer = async (req, res, next) => {
 
         // 2. Check if an address already exists for this user
         const [existingAddr] = await conn.query(
-            "SELECT id FROM addresses WHERE user_id = ? LIMIT 1", 
+            "SELECT id FROM addresses WHERE user_id = ? LIMIT 1",
             [id]
         );
 
         if (existingAddr.length > 0) {
-            // 3a. If exists, UPDATE it
+            // 3a. UPDATE existing address including Geospatial data
             await conn.query(
                 `UPDATE addresses SET 
                     address_line = COALESCE(?, address_line),
                     division_id = COALESCE(?, division_id),
                     district_id = COALESCE(?, district_id),
                     upazila_id = COALESCE(?, upazila_id),
+                    latitude = COALESCE(?, latitude),
+                    longitude = COALESCE(?, longitude),
                     updated_at = CURRENT_TIMESTAMP
                 WHERE user_id = ?`,
-                [address_line, division_id, district_id, upazila_id, id]
+                [address_line, division_id, district_id, upazila_id, latitude, longitude, id]
             );
         } else {
-            // 3b. If for some reason no address exists, INSERT a new one
+            // 3b. INSERT a new address if one doesn't exist
             await conn.query(
-                `INSERT INTO addresses (user_id, label, address_line, division_id, district_id, upazila_id, is_default)
-                 VALUES (?, 'Home', ?, ?, ?, ?, 1)`,
-                [id, address_line, division_id, district_id, upazila_id]
+                `INSERT INTO addresses (
+                    user_id, label, address_line, division_id, 
+                    district_id, upazila_id, latitude, longitude, is_default
+                ) VALUES (?, 'Home', ?, ?, ?, ?, ?, ?, 1)`,
+                [id, address_line, division_id, district_id, upazila_id, latitude, longitude]
             );
         }
 
         await conn.commit();
-        res.json({ 
-            success: true, 
-            message: "Customer node and address updated successfully." 
+        res.json({
+            success: true,
+            message: "Customer profile and precise location updated."
         });
 
     } catch (err) {

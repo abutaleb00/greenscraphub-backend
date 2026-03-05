@@ -7,11 +7,13 @@ import {
     getRiderAudit,
     getPendingSettlements, // Updated
     settleRiderCash,
-    getDispatchConsole ,
-    getAgentMissionDetail
+    getDispatchConsole,
+    getAgentMissionDetail,
+    getSettlementLogs
 } from "../controllers/logistics/agentManagementController.js";
-
+import { updateRiderCommission } from '../controllers/commissionController.js';
 import { getAgentDashboard } from "../controllers/agentDashboardController.js";
+import { releaseInventory, getHubInventory, getStockHistory } from "../controllers/logistics/inventoryController.js";
 
 const router = express.Router();
 
@@ -39,6 +41,7 @@ router.get("/pickups/:id", auth(["agent"]), getAgentMissionDetail);
  * @desc    Fetch riders assigned to this hub with their live load/cash stats
  */
 router.get("/riders", auth(["agent"]), getHubRiders);
+router.get("/settlement-logs", auth(["agent"]), getSettlementLogs);
 router.get("/pending-settlements", auth(["agent"]), getPendingSettlements); // GET list
 router.post("/settle-cash", auth(["agent"]), settleRiderCash);
 router.get("/dispatch-console", auth(["agent"]), getDispatchConsole);
@@ -48,4 +51,13 @@ router.get("/dispatch-console", auth(["agent"]), getDispatchConsole);
  */
 router.get("/riders/:rider_id/audit", auth(["agent"]), getRiderAudit);
 
+router.get("/inventory", auth(["agent"]), getHubInventory);
+router.post("/inventory/release", auth(["agent"]), releaseInventory);
+router.post("/inventory/history", auth(["agent"]), getStockHistory);
+
+router.patch(
+    '/riders/:id/commission',
+    auth(["agent", "admin"]),
+    updateRiderCommission
+);
 export default router;

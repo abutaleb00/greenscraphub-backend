@@ -49,12 +49,30 @@ router.post(
  */
 router.post(
   '/onboard/customer',
-  auth(['admin', 'agent']), // Only staff can use this
+  auth(['admin', 'agent']),
   [
     body('full_name').trim().notEmpty().withMessage('Full name is required'),
     body('phone').trim().notEmpty().withMessage('Phone is required'),
     body('password').isLength({ min: 6 }).withMessage('Initial password must be at least 6 characters'),
-    body('email').optional().isEmail().withMessage('Invalid email format'),
+
+    // Address Fields
+    body('address_line').trim().notEmpty().withMessage('Street address is required'),
+    body('division_id').notEmpty().withMessage('Division selection is required'),
+    body('district_id').notEmpty().withMessage('District selection is required'),
+    body('upazila_id').notEmpty().withMessage('Upazila selection is required'),
+
+    // Geospatial Fields - Ensure .isNumeric() is BEFORE .withMessage()
+    body('latitude')
+      .optional({ checkFalsy: true })
+      .isNumeric()
+      .withMessage('Latitude must be a valid coordinate'),
+
+    body('longitude')
+      .optional({ checkFalsy: true })
+      .isNumeric()
+      .withMessage('Longitude must be a valid coordinate'),
+
+    body('email').optional({ checkFalsy: true }).isEmail().withMessage('Invalid email format'),
     body('referral_code').optional().trim(),
   ],
   onboardCustomer
