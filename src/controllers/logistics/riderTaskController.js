@@ -36,120 +36,97 @@ export async function getRiderDashboard(req, res, next) {
     try {
         const userId = req.user.id;
 
-        // 1. Get Rider basic info (including the new payment_mode fields if needed)
+        // 1. Get Rider Profile with safety check
         const [riderRows] = await db.query(
-            "SELECT id, is_online FROM riders WHERE user_id = ?",
+            `SELECT r.id, r.is_online, u.full_name, u.profile_image 
+             FROM riders r 
+             JOIN users u ON r.user_id = u.id 
+             WHERE r.user_id = ?`,
             [userId]
         );
 
-        if (!riderRows.length) {
-            throw new ApiError(404, "Rider profile not found.");
-        }
+        if (!riderRows.length) throw new ApiError(404, "Rider profile not found.");
+        const rider = riderRows[0];
+        const riderId = rider.id;
 
-        const riderId = riderRows[0].id;
-
-        // 2. Fetch Active Tasks with robust Address Formatting
+        // 2. Fetch Active Missions (Queue)
         const [activeTasks] = await db.query(
             `SELECT 
-                p.id AS pickup_id, 
-                p.booking_code, 
-                p.status, 
-                p.scheduled_date, 
-                p.scheduled_time_slot,
-                u.full_name AS customer_name, 
-                u.phone AS customer_phone,
-                adr.address_line,
-                adr.house_no,
-                adr.road_no,
-                adr.landmark,
-                adr.latitude, 
-                adr.longitude, 
-                COALESCE(p.customer_note, '') as customer_note
+                p.id, p.booking_code, p.status, p.scheduled_date, p.scheduled_time_slot,
+                u.full_name AS customer_name, u.phone AS customer_phone,
+                adr.address_line, adr.house_no, adr.road_no, adr.landmark,
+                adr.latitude, adr.longitude
             FROM pickups p
-            JOIN customers c ON p.customer_id = c.id
-            JOIN users u ON c.user_id = u.id
+            JOIN users u ON p.customer_id = u.id
             LEFT JOIN addresses adr ON p.customer_address_id = adr.id
             WHERE p.rider_id = ? 
               AND p.status IN ('accepted', 'rider_on_way', 'arrived', 'weighing')
               AND p.is_deleted = 0
-            ORDER BY p.scheduled_date ASC`,
+            ORDER BY p.status = 'weighing' DESC, p.scheduled_date ASC`,
             [riderId]
         );
 
-        // 3. Performance Stats (Today vs Month)
+        // 3. Financial Intelligence Query (Calculates Today, Month, and Liability)
         const [stats] = await db.query(
             `SELECT
-                COUNT(CASE WHEN DATE(completed_at) = CURDATE() THEN 1 END) AS completed_today,
-                COUNT(CASE WHEN MONTH(completed_at) = MONTH(CURDATE()) AND YEAR(completed_at) = YEAR(CURDATE()) THEN 1 END) AS completed_month,
-                COALESCE(SUM(CASE WHEN DATE(completed_at) = CURDATE() THEN rider_commission_amount ELSE 0 END), 0) AS earnings_today,
-                COALESCE(SUM(CASE WHEN MONTH(completed_at) = MONTH(CURDATE()) AND YEAR(completed_at) = YEAR(CURDATE()) THEN rider_commission_amount ELSE 0 END), 0) AS earnings_month
+                COUNT(CASE WHEN DATE(completed_at) = CURDATE() THEN 1 END) AS count_today,
+                COUNT(CASE WHEN MONTH(completed_at) = MONTH(CURDATE()) AND YEAR(completed_at) = YEAR(CURDATE()) THEN 1 END) AS count_month,
+                COALESCE(SUM(CASE WHEN DATE(completed_at) = CURDATE() THEN rider_commission_amount ELSE 0 END), 0) AS earn_today,
+                COALESCE(SUM(CASE WHEN MONTH(completed_at) = MONTH(CURDATE()) AND YEAR(completed_at) = YEAR(CURDATE()) THEN rider_commission_amount ELSE 0 END), 0) AS earn_month,
+                -- LIABILITY: Sum of collected cash where status is completed but NOT yet settled to hub
+                COALESCE(SUM(CASE WHEN is_settled_to_hub = 0 AND status = 'completed' THEN rider_collected_cash ELSE 0 END), 0) AS cash_liability
             FROM pickups
-            WHERE rider_id = ? AND status = 'completed' AND is_deleted = 0`,
+            WHERE rider_id = ?`,
             [riderId]
         );
 
-        // 4. Financial Accountability (Using the new is_settled_to_hub logic)
-        const [finance] = await db.query(
-            `SELECT 
-                COALESCE(SUM(rider_collected_cash), 0) AS total_cash_held
-            FROM pickups 
-            WHERE rider_id = ? 
-              AND status = 'completed' 
-              AND payment_method = 'cash'
-              AND is_settled_to_hub = 0`,
-            [riderId]
-        );
+        // 4. Wallet Balance (Actual Withdrawable Earnings)
+        const [wallet] = await db.query("SELECT balance FROM wallet_accounts WHERE user_id = ?", [userId]);
 
-        // 5. Wallet Balance (The rider's digital "Vault")
-        const [wallet] = await db.query(
-            "SELECT balance FROM wallet_accounts WHERE user_id = ?",
-            [userId]
-        );
+        // Helper for Avatar URL
+        const getAvatarUrl = (path) => {
+            if (!path) return null;
+            return path.startsWith('http') ? path : `${process.env.BASE_URL || 'http://localhost:4000'}${path}`;
+        };
 
         return res.json({
             success: true,
             data: {
-                rider_status: {
-                    is_online: Boolean(riderRows[0].is_online),
-                    last_pulse: new Date()
+                profile: {
+                    name: rider.full_name,
+                    avatar: getAvatarUrl(rider.profile_image),
+                    is_online: Boolean(rider.is_online)
                 },
-                tasks: {
-                    active_count: activeTasks.length,
-                    active_list: activeTasks.map(task => {
-                        // CLEAN ADDRESS BUILDER: Prevents "null" strings
-                        const parts = [];
-                        if (task.house_no) parts.push(`House ${task.house_no}`);
-                        if (task.road_no) parts.push(`Road ${task.road_no}`);
-                        if (task.address_line) parts.push(task.address_line);
-                        if (task.landmark) parts.push(`(${task.landmark})`);
-
-                        return {
-                            ...task,
-                            display_address: parts.length > 0 ? parts.join(', ') : "Address not provided"
-                        };
-                    })
+                financials: {
+                    withdrawable_balance: parseFloat(wallet[0]?.balance || 0).toFixed(2),
+                    cash_held_liability: parseFloat(stats[0].cash_liability || 0).toFixed(2),
+                    currency: "BDT"
                 },
                 performance: {
                     today: {
-                        pickups: stats[0].completed_today || 0,
-                        earned: parseFloat(stats[0].earnings_today || 0)
+                        trips: stats[0].count_today || 0,
+                        income: parseFloat(stats[0].earn_today || 0).toFixed(2)
                     },
                     monthly: {
-                        pickups: stats[0].completed_month || 0,
-                        earned: parseFloat(stats[0].earnings_month || 0)
+                        trips: stats[0].count_month || 0,
+                        income: parseFloat(stats[0].earn_month || 0).toFixed(2)
                     }
                 },
-                finance: {
-                    // This is the cash the rider is carrying
-                    cash_held_to_submit: parseFloat(finance[0].total_cash_held || 0),
-                    // This is the commission they have earned (if on commission mode)
-                    withdrawable_balance: parseFloat(wallet[0]?.balance || 0)
-                }
+                active_missions: activeTasks.map(t => ({
+                    id: t.id,
+                    ref: t.booking_code,
+                    status: t.status,
+                    customer: { name: t.customer_name, phone: t.customer_phone },
+                    location: {
+                        address: [t.house_no, t.road_no, t.address_line].filter(Boolean).join(', ') || 'Address N/A',
+                        landmark: t.landmark,
+                        coords: { lat: t.latitude, lng: t.longitude }
+                    },
+                    schedule: t.scheduled_time_slot
+                }))
             }
         });
-    } catch (err) {
-        next(err);
-    }
+    } catch (err) { next(err); }
 }
 
 /**
@@ -161,24 +138,14 @@ export const getMyTasks = async (req, res, next) => {
         const rider = await getRiderInfo(req);
         const riderId = rider.id;
 
+        // 1. Fetch Current Active Missions
         const [tasks] = await db.query(`
             SELECT 
-                p.id, 
-                p.booking_code, 
-                p.status, 
-                p.scheduled_date, 
-                p.scheduled_time_slot,
-                p.customer_note,
-                u.full_name as customer_name, 
-                u.phone as customer_phone,
-                -- Building Tactical Address components
-                addr.address_line, 
-                addr.house_no,
-                addr.road_no,
-                addr.landmark,
-                addr.latitude, 
-                addr.longitude,
-                -- Financial Context
+                p.id, p.booking_code, p.status, p.scheduled_date, 
+                p.scheduled_time_slot, p.customer_note,
+                u.full_name as customer_name, u.phone as customer_phone,
+                addr.address_line, addr.house_no, addr.road_no, addr.landmark,
+                addr.latitude, addr.longitude,
                 p.base_amount as estimated_amount,
                 p.payment_method,
                 p.payment_mode_snapshot as mode
@@ -198,9 +165,18 @@ export const getMyTasks = async (req, res, next) => {
                 END ASC, 
                 p.scheduled_date ASC`, [riderId]);
 
-        // Transform results for "Emerald Command" UI consistency
+        // 2. NEW: Calculate Total Liability (Cash collected but not settled to Hub)
+        const [liabilityRow] = await db.query(`
+            SELECT SUM(rider_collected_cash) as total_liability 
+            FROM pickups 
+            WHERE rider_id = ? 
+              AND status = 'completed' 
+              AND is_settled_to_hub = 0`, [riderId]);
+
+        const totalLiability = parseFloat(liabilityRow[0].total_liability || 0);
+
+        // 3. Transform Tasks for UI Consistency
         const missionQueue = tasks.map(task => {
-            // Clean Address formatting
             const addressParts = [];
             if (task.house_no) addressParts.push(`House ${task.house_no}`);
             if (task.road_no) addressParts.push(`Road ${task.road_no}`);
@@ -210,16 +186,18 @@ export const getMyTasks = async (req, res, next) => {
             return {
                 ...task,
                 display_address: addressParts.length > 0 ? addressParts.join(', ') : "Location not specified",
-                // Ensure numeric values for UI counters
                 estimated_amount: parseFloat(task.estimated_amount || 0).toFixed(2),
-                // Boolean flags for UI rendering
                 is_urgent: new Date(task.scheduled_date) <= new Date()
             };
         });
 
         res.json({
             success: true,
-            count: missionQueue.length,
+            meta: {
+                total_active: missionQueue.length,
+                total_liability: totalLiability.toFixed(2), // Match the UI Dashboard
+                currency: "BDT"
+            },
             data: missionQueue
         });
     } catch (err) {
@@ -766,25 +744,31 @@ export const getEarningsOverview = async (req, res, next) => {
         const userId = rider.user_id;
         const riderId = rider.id;
 
-        // 1. Fetch Wallet Balance
+        // 1. Fetch Liquid Wallet Balance (Rider's actual available funds)
         const [wallet] = await db.query(
-            "SELECT id, balance FROM wallet_accounts WHERE user_id = ?",
+            "SELECT balance FROM wallet_accounts WHERE user_id = ?",
             [userId]
         );
-        const walletId = wallet[0]?.id || null;
 
-        // 2. Fetch Cash in Hand (Unsettled Liability)
-        const [cashRows] = await db.query(
-            `SELECT COALESCE(SUM(rider_collected_cash), 0) as total_cash 
+        // 2. Fetch Liability (Cash in Hand - Collected but NOT yet paid to Agent)
+        const [liabilityRow] = await db.query(
+            `SELECT COALESCE(SUM(rider_collected_cash), 0) as total_liability 
              FROM pickups 
-             WHERE rider_id = ? AND status = 'completed' 
-             AND payment_method = 'cash' AND is_settled_to_hub = 0`,
+             WHERE rider_id = ? AND status = 'completed' AND is_settled_to_hub = 0`,
             [riderId]
         );
 
-        // 3. Monthly Earnings (Performance Metric)
-        const [monthlyRows] = await db.query(
-            `SELECT COALESCE(SUM(rider_commission_amount), 0) as monthly_total 
+        // 3. Fetch Total Settled (Total Physical Cash the rider HAS already handed to Agents)
+        const [settledRow] = await db.query(
+            `SELECT COALESCE(SUM(rider_collected_cash), 0) as total_paid_to_agent 
+             FROM pickups 
+             WHERE rider_id = ? AND status = 'completed' AND is_settled_to_hub = 1`,
+            [riderId]
+        );
+
+        // 4. Performance: Monthly Incentives (Commissions earned this month)
+        const [monthlyRow] = await db.query(
+            `SELECT COALESCE(SUM(rider_commission_amount), 0) as monthly_incentive 
              FROM pickups 
              WHERE rider_id = ? AND status = 'completed' 
              AND MONTH(completed_at) = MONTH(CURRENT_DATE())
@@ -792,53 +776,37 @@ export const getEarningsOverview = async (req, res, next) => {
             [riderId]
         );
 
-        // 4. SMART TRANSACTION LOG (Combined Logic)
-        // This query fetches both Wallet Credits (Commissions) AND 
-        // Pickup completions (Cash entries) so the list is always populated.
-        let transactions = [];
-        if (riderId) {
-            const [history] = await db.query(
-                `SELECT 
-                    p.id as transaction_id,
-                    'pickup' as type,
-                    p.booking_code,
-                    p.rider_collected_cash as amount,
-                    p.rider_commission_amount as commission,
-                    p.completed_at as date,
-                    p.payment_method,
-                    p.is_settled_to_hub,
-                    p.payment_mode_snapshot as mode
-                 FROM pickups p
-                 WHERE p.rider_id = ? AND p.status = 'completed'
-                 ORDER BY p.completed_at DESC LIMIT 20`,
-                [riderId]
-            );
-            transactions = history;
-        }
+        // 5. Audit Ledger (Recent Transactions)
+        const [history] = await db.query(
+            `SELECT 
+                p.id, p.booking_code, p.net_payable_amount, 
+                p.rider_collected_cash, p.rider_commission_amount, 
+                p.completed_at, p.is_settled_to_hub, p.payment_mode_snapshot
+             FROM pickups p
+             WHERE p.rider_id = ? AND p.status = 'completed'
+             ORDER BY p.completed_at DESC LIMIT 20`,
+            [riderId]
+        );
 
         res.json({
             success: true,
             stats: {
                 wallet_balance: parseFloat(wallet[0]?.balance || 0).toFixed(2),
-                cash_in_hand: parseFloat(cashRows[0]?.total_cash || 0).toFixed(2),
-                monthly_earnings: parseFloat(monthlyRows[0]?.monthly_total || 0).toFixed(2)
+                cash_in_hand: parseFloat(liabilityRow[0]?.total_liability || 0).toFixed(2),
+                total_paid_to_agent: parseFloat(settledRow[0]?.total_paid_to_agent || 0).toFixed(2),
+                monthly_incentives: parseFloat(monthlyRow[0]?.monthly_incentive || 0).toFixed(2)
             },
-            // Mapping the data to be UI-friendly
-            transactions: transactions.map(tx => ({
-                id: tx.transaction_id,
-                code: tx.booking_code,
-                // If it was cash, show the cash amount as the primary figure
-                amount: tx.payment_method === 'cash' ? tx.amount : tx.commission,
-                commission: tx.commission,
-                date: tx.date,
-                method: tx.payment_method,
+            ledger: history.map(tx => ({
+                id: tx.id,
+                booking_code: tx.booking_code,
+                total_collected: parseFloat(tx.rider_collected_cash).toFixed(2),
+                my_incentive: parseFloat(tx.rider_commission_amount).toFixed(2),
+                date: tx.completed_at,
                 is_settled: tx.is_settled_to_hub === 1,
-                mode: tx.mode,
-                label: tx.payment_method === 'cash' ? 'Cash Collection' : 'Wallet Payment'
+                protocol: tx.payment_mode_snapshot
             }))
         });
     } catch (err) {
-        console.error("Earnings API Error:", err);
         next(err);
     }
 };
