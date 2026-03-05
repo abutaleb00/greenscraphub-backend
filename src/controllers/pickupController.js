@@ -550,3 +550,5 @@ export const riderPickupList = async (req, res) => {
     const [rows] = await db.query("SELECT p.*, u.full_name AS customer_name FROM pickups p JOIN customers c ON c.id = p.customer_id JOIN users u ON u.id = c.user_id WHERE p.rider_id = ? AND p.status != 'completed' ORDER BY p.created_at DESC", [rider[0].id]);
     res.json({ success: true, data: rows });
 };
+
+

@@ -69,7 +69,7 @@ export const getPickupDetails = async (req, res, next) => {
              LEFT JOIN users r_u ON r.user_id = r_u.id
              LEFT JOIN agents ag ON p.agent_id = ag.id
              LEFT JOIN addresses addr ON p.customer_address_id = addr.id
-             WHERE p.id = ?`, 
+             WHERE p.id = ?`,
             [id]
         );
 
@@ -106,17 +106,17 @@ export const getPickupDetails = async (req, res, next) => {
         // Transform items to handle user-uploaded photos and catalog images
         const transformedItems = items.map(item => {
             let userPhotos = [];
-            
+
             // Handle photo_url stored in pickup_items (User uploads from checkout)
             if (item.photo_url) {
                 try {
                     // Try to parse if it's a JSON string, otherwise wrap in array
-                    const parsed = typeof item.photo_url === 'string' 
-                        ? JSON.parse(item.photo_url) 
+                    const parsed = typeof item.photo_url === 'string'
+                        ? JSON.parse(item.photo_url)
                         : item.photo_url;
-                    
-                    userPhotos = Array.isArray(parsed) 
-                        ? parsed.map(p => getFullUrl(p)) 
+
+                    userPhotos = Array.isArray(parsed)
+                        ? parsed.map(p => getFullUrl(p))
                         : [getFullUrl(parsed)];
                 } catch (e) {
                     // Fallback for plain string paths
@@ -317,6 +317,36 @@ export const getReceipt = async (req, res, next) => {
 
         res.json({ success: true, data: { pickup: pickup[0], items } });
     } catch (err) {
+        next(err);
+    }
+};
+
+
+export const getPickupTimeline = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        const query = `
+            SELECT 
+                pt.id,
+                pt.status,
+                pt.note,
+                pt.created_at,
+                COALESCE(u.full_name, 'System/Deleted User') as actor_name
+            FROM pickup_timeline pt
+            LEFT JOIN users u ON pt.changed_by = u.id
+            WHERE pt.pickup_id = ?
+            ORDER BY pt.created_at ASC
+        `;
+
+        const [rows] = await db.query(query, [id]);
+
+        res.json({
+            success: true,
+            data: rows
+        });
+    } catch (err) {
+        console.error("Timeline API Error:", err);
         next(err);
     }
 };

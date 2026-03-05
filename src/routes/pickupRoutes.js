@@ -22,7 +22,8 @@ import {
 import {
     completePickup,
     getReceipt,
-    getPickupDetails
+    getPickupDetails,
+    getPickupTimeline
 } from "../controllers/logistics/settlementController.js";
 
 // 4. Rewards: Points & Leaderboard
@@ -109,4 +110,5 @@ router.get("/rewards/leaderboard", auth(["customer", "agent", "rider", "admin"])
 /** @desc Detailed view of a pickup, items, and full activity timeline */
 router.get("/:id", auth(["customer", "agent", "rider", "admin"]), getPickupDetails);
 
+router.get("/:id/timeline", auth(["admin", "agent", "rider"]), getPickupTimeline);
 export default router;
