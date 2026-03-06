@@ -24,6 +24,7 @@ import {
     deleteItemAdmin,
     getRiderPriceList
 } from "../controllers/scrapCatalogController.js";
+import { getMarketOverview } from "../controllers/scrapItemController.js";
 
 const router = express.Router();
 
@@ -32,6 +33,7 @@ const router = express.Router();
     (Accessible by mobile app and guest users)
 ==================================================== */
 
+router.get("/market-overview", getMarketOverview);
 router.get("/categories", listPublicCategories);
 router.get("/categories/:categoryId/items", listPublicItemsByCategory);
 router.get("/items/:itemId", getPublicItemDetail);
