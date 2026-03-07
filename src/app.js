@@ -23,6 +23,8 @@ app.use(helmet({
 const allowedOrigins = [
   'http://localhost:3000', // Your Next.js Web Panel
   'http://localhost:3001', // Potential secondary dev port
+  'https://greenscrap-web.vercel.app', // Potential secondary dev port
+  'https://webapp.prosfata.space', // Potential secondary dev port
   // Add your production domain here later
 ];
 
