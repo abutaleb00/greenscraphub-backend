@@ -86,7 +86,7 @@ export async function getRiderDashboard(req, res, next) {
         // Helper for Avatar URL
         const getAvatarUrl = (path) => {
             if (!path) return null;
-            return path.startsWith('http') ? path : `${process.env.BASE_URL || 'http://localhost:4000'}${path}`;
+            return path.startsWith('http') ? path : `${process.env.BASE_URL || 'https://webapp.prosfata.space'}${path}`;
         };
 
         return res.json({
@@ -244,7 +244,7 @@ export const getTaskDetail = async (req, res, next) => {
         const getFullUrl = (path) => {
             if (!path) return null;
             if (path.startsWith('http')) return path;
-            const baseUrl = process.env.BASE_URL || 'http://localhost:4000';
+            const baseUrl = process.env.BASE_URL || 'https://webapp.prosfata.space';
             return `${baseUrl}/${path.replace(/^\//, '')}`;
         };
 

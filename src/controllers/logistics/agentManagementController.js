@@ -616,7 +616,7 @@ export const getAgentMissionDetail = async (req, res, next) => {
         const getFullUrl = (path) => {
             if (!path) return null;
             if (path.startsWith('http')) return path;
-            const baseUrl = process.env.BASE_URL || 'http://localhost:4000';
+            const baseUrl = process.env.BASE_URL || 'https://webapp.prosfata.space';
             return `${baseUrl}/${path.replace(/^\//, '')}`;
         };
 

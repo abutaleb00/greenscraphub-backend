@@ -83,7 +83,7 @@ export const getPickupDetails = async (req, res, next) => {
         const getFullUrl = (path) => {
             if (!path) return null;
             if (path.startsWith('http')) return path;
-            const baseUrl = process.env.BASE_URL || 'http://localhost:4000';
+            const baseUrl = process.env.BASE_URL || 'https://webapp.prosfata.space';
             // Ensure single leading slash
             const cleanPath = path.startsWith('/') ? path : `/${path}`;
             return `${baseUrl.replace(/\/$/, "")}${cleanPath}`;

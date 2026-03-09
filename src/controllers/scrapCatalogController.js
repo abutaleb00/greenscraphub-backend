@@ -32,7 +32,7 @@ import {
 const getFullUrl = (relativePath) => {
     if (!relativePath) return null;
     if (relativePath.startsWith('http')) return relativePath;
-    const baseUrl = process.env.BASE_URL || 'http://localhost:4000';
+    const baseUrl = process.env.BASE_URL || 'https://webapp.prosfata.space';
     return `${baseUrl.replace(/\/$/, "")}/${relativePath.replace(/^\//, "")}`;
 };
 

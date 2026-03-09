@@ -49,7 +49,7 @@ export const getMarketOverview = async (req, res, next) => {
 
         const getFullUrl = (path) => {
             if (!path) return null;
-            return path.startsWith('http') ? path : `${process.env.BASE_URL || 'http://localhost:4000'}${path}`;
+            return path.startsWith('http') ? path : `${process.env.BASE_URL || 'https://webapp.prosfata.space'}${path}`;
         };
 
         // 3. Format the data for strict Frontend consumption
