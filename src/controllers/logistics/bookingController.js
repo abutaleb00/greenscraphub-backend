@@ -1,10 +1,6 @@
 import db from "../../config/db.js";
 import ApiError from "../../utils/ApiError.js";
 
-/**
- * CREATE PICKUP REQUEST (FULL PRODUCTION VERSION)
- * Handles: Geo-validation, Hierarchical Pricing, and Multi-item Image Mapping.
- */
 export const createPickup = async (req, res, next) => {
     const conn = await db.getConnection();
     try {
@@ -14,24 +10,45 @@ export const createPickup = async (req, res, next) => {
         const userId = req.user.id;
         const {
             address_id,
-            items, // JSON string or Array
+            pickup_address, // New: Manual address text from mobile
+            latitude,       // New: Manual coordinates from mobile
+            longitude,      // New: Manual coordinates from mobile
+            items,          // JSON string or Array
             scheduled_date,
             scheduled_time_slot,
             customer_note,
             pickup_type
         } = req.body;
 
-        // 2. Fetch Geo-Data from Address Table (Critical for FK constraints)
-        const [addressRows] = await conn.query(
-            "SELECT division_id, district_id, upazila_id FROM addresses WHERE id = ? AND user_id = ?",
-            [address_id, userId]
-        );
+        // 2. Fetch Geo-Data (Flexible for Saved Address OR Live Location)
+        let div_id, dist_id, upz_id, final_address;
 
-        if (!addressRows.length) {
-            throw new ApiError(400, "Invalid address selected or unauthorized.");
+        if (address_id && address_id !== 'live') {
+            // Case A: User selected a saved address
+            const [addressRows] = await conn.query(
+                "SELECT division_id, district_id, upazila_id, address_line FROM addresses WHERE id = ? AND user_id = ?",
+                [address_id, userId]
+            );
+
+            if (!addressRows.length) {
+                throw new ApiError(400, "Invalid address selected or unauthorized.");
+            }
+            div_id = addressRows[0].division_id;
+            dist_id = addressRows[0].district_id;
+            upz_id = addressRows[0].upazila_id;
+            final_address = addressRows[0].address_line;
+        } else {
+            // Case B: User used "Live Location" on Mobile
+            if (!pickup_address || !latitude || !longitude) {
+                throw new ApiError(400, "Please provide complete location details.");
+            }
+            // Optional: Default to a specific region if coordinates are manual, 
+            // or let them be null if your DB allows it.
+            div_id = req.body.division_id || null; 
+            dist_id = req.body.district_id || null;
+            upz_id = req.body.upazila_id || null;
+            final_address = pickup_address;
         }
-
-        const { division_id, district_id, upazila_id } = addressRows[0];
 
         // 3. Verify Customer Profile
         const [customer] = await conn.query(
@@ -41,8 +58,7 @@ export const createPickup = async (req, res, next) => {
         if (!customer.length) throw new ApiError(404, "Customer profile not found.");
         const customerId = customer[0].id;
 
-        // 4. Parse Items & Handle Image Binary Mapping
-        // Note: Multer puts files in req.files (if using .any() or .array())
+        // 4. Parse Items
         const parsedItems = typeof items === 'string' ? JSON.parse(items) : items;
         const uploadedFiles = req.files || [];
 
@@ -51,20 +67,23 @@ export const createPickup = async (req, res, next) => {
         }
 
         // 5. Generate Booking Code
-        const bookingCode = `GS-${upazila_id || '0'}-${Date.now().toString().slice(-4)}`;
+        const bookingCode = `GS-${upz_id || 'LIVE'}-${Date.now().toString().slice(-4)}`;
 
         // 6. Insert Master Pickup Record
         const [pickupResult] = await conn.query(
             `INSERT INTO pickups (
                 booking_code, customer_id, customer_address_id, 
+                pickup_address, latitude, longitude,
                 division_id, district_id, upazila_id,
                 status, scheduled_date, scheduled_time_slot, 
                 customer_note, pickup_type, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, NOW(), NOW())`,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, NOW(), NOW())`,
             [
-                bookingCode, customerId, address_id,
-                division_id, district_id, upazila_id,
-                scheduled_date, scheduled_time_slot,
+                bookingCode, customerId, (address_id === 'live' ? null : address_id),
+                final_address, latitude || null, longitude || null,
+                div_id, dist_id, upz_id,
+                scheduled_date || new Date().toISOString().split('T')[0], 
+                scheduled_time_slot || '10:00 AM - 06:00 PM',
                 customer_note, pickup_type || 'scheduled'
             ]
         );
@@ -72,11 +91,11 @@ export const createPickup = async (req, res, next) => {
 
         let totalEstMin = 0;
 
-        // 7. Process Items, Pricing Hierarchy, and Image Paths
+        // 7. Process Items
         for (let i = 0; i < parsedItems.length; i++) {
             const item = parsedItems[i];
+            const itemId = item.item_id || item.scrap_item_id;
 
-            // Hierarchy Pricing Query
             const [priceData] = await conn.query(
                 `SELECT 
                     si.current_min_rate as global_rate, 
@@ -85,34 +104,22 @@ export const createPickup = async (req, res, next) => {
                  FROM scrap_items si
                  LEFT JOIN item_price_overrides ov ON si.id = ov.item_id 
                     AND ov.is_active = 1
-                    AND (
-                        ov.upazila_id = ? OR 
-                        ov.district_id = ? OR 
-                        ov.division_id = ? OR 
-                        (ov.upazila_id IS NULL AND ov.district_id IS NULL AND ov.division_id IS NULL)
-                    )
+                    AND (ov.upazila_id = ? OR ov.district_id = ? OR ov.division_id = ?)
                  WHERE si.id = ?
                  ORDER BY ov.upazila_id DESC, ov.district_id DESC, ov.division_id DESC LIMIT 1`,
-                [upazila_id, district_id, division_id, item.item_id || item.scrap_item_id]
+                [upz_id, dist_id, div_id, itemId]
             );
 
-            if (!priceData.length) continue;
-
-            const finalRate = priceData[0].override_rate || priceData[0].global_rate || 0;
-            const weight = parseFloat(item.estimated_weight) || 0;
+            const finalRate = priceData.length > 0 ? (priceData[0].override_rate || priceData[0].global_rate || 0) : 0;
+            const weight = parseFloat(item.estimated_weight || item.weight) || 0;
             const itemSubtotal = finalRate * weight;
             totalEstMin += itemSubtotal;
 
-            /**
-             * IMAGE MAPPING LOGIC:
-             * We associate the uploaded photos with the specific items.
-             * If you are using the 'item_photos[index]' pattern from the frontend:
-             */
+            // Handle images (matches mobile pattern: item_photos_0, item_photos_1...)
             const itemPhotos = uploadedFiles
-                .filter(file => file.fieldname === `item_photos[${i}]` || file.fieldname === 'photos')
+                .filter(file => file.fieldname === `item_photos_${i}` || file.fieldname === 'photos')
                 .map(file => `/uploads/pickups/${file.filename}`);
 
-            // 8. Insert Line Item with Photo Paths (JSON string)
             await conn.query(
                 `INSERT INTO pickup_items (
                     pickup_id, category_id, item_id, 
@@ -121,28 +128,25 @@ export const createPickup = async (req, res, next) => {
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
                 [
                     pickupId,
-                    priceData[0].category_id,
-                    item.item_id || item.scrap_item_id,
+                    priceData.length > 0 ? priceData[0].category_id : null,
+                    itemId,
                     weight,
                     finalRate,
                     itemSubtotal,
-                    JSON.stringify(itemPhotos) // Saving as JSON array string
+                    JSON.stringify(itemPhotos)
                 ]
             );
         }
 
-        // 9. Initialize Timeline
+        // 9. Initialize Timeline (🔥 FIXED: Added changed_by)
         await conn.query(
-            `INSERT INTO pickup_timeline (pickup_id, status, note, created_at) 
-             VALUES (?, 'pending', 'Shipment request created by customer', NOW())`,
-            [pickupId]
+            `INSERT INTO pickup_timeline (pickup_id, status, note, changed_by, created_at) 
+             VALUES (?, 'pending', 'Shipment request created by customer', ?, NOW())`,
+            [pickupId, userId]
         );
 
-        // 10. Update Total Amount on Master Record
-        await conn.query(
-            "UPDATE pickups SET base_amount = ? WHERE id = ?",
-            [totalEstMin, pickupId]
-        );
+        // 10. Finalize Master Amount
+        await conn.query("UPDATE pickups SET base_amount = ? WHERE id = ?", [totalEstMin, pickupId]);
 
         await conn.commit();
 
@@ -157,15 +161,11 @@ export const createPickup = async (req, res, next) => {
         });
 
     } catch (err) {
-        await conn.rollback();
+        if (conn) await conn.rollback();
         console.error("CRITICAL BOOKING ERROR:", err);
-
-        if (err.code === 'ER_NO_REFERENCED_ROW_2') {
-            return next(new ApiError(400, "Geographical mismatch. Please re-select your address."));
-        }
         next(err);
     } finally {
-        conn.release();
+        if (conn) conn.release();
     }
 };
 
