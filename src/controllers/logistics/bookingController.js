@@ -1,5 +1,5 @@
+import { ApiError } from "../../utils/ApiError.js";
 import db from "../../config/db.js";
-import ApiError from "../../utils/ApiError.js";
 
 export const createPickup = async (req, res, next) => {
     const conn = await db.getConnection();
@@ -10,21 +10,21 @@ export const createPickup = async (req, res, next) => {
         const userId = req.user.id;
         const {
             address_id,
-            pickup_address, // New: Manual address text from mobile
-            latitude,       // New: Manual coordinates from mobile
-            longitude,      // New: Manual coordinates from mobile
-            items,          // JSON string or Array
+            pickup_address, // Address string from mobile
+            latitude,
+            longitude,
+            items,
             scheduled_date,
             scheduled_time_slot,
             customer_note,
             pickup_type
         } = req.body;
 
-        // 2. Fetch Geo-Data (Flexible for Saved Address OR Live Location)
-        let div_id, dist_id, upz_id, final_address;
+        // 2. Fetch Geo-Data & Resolve Address
+        let div_id, dist_id, upz_id, final_address_text;
 
         if (address_id && address_id !== 'live') {
-            // Case A: User selected a saved address
+            // Case A: Saved Address
             const [addressRows] = await conn.query(
                 "SELECT division_id, district_id, upazila_id, address_line FROM addresses WHERE id = ? AND user_id = ?",
                 [address_id, userId]
@@ -36,18 +36,16 @@ export const createPickup = async (req, res, next) => {
             div_id = addressRows[0].division_id;
             dist_id = addressRows[0].district_id;
             upz_id = addressRows[0].upazila_id;
-            final_address = addressRows[0].address_line;
+            final_address_text = addressRows[0].address_line;
         } else {
-            // Case B: User used "Live Location" on Mobile
-            if (!pickup_address || !latitude || !longitude) {
-                throw new ApiError(400, "Please provide complete location details.");
+            // Case B: Live Location
+            if (!pickup_address) {
+                throw new ApiError(400, "Pickup address text is required.");
             }
-            // Optional: Default to a specific region if coordinates are manual, 
-            // or let them be null if your DB allows it.
-            div_id = req.body.division_id || null; 
+            div_id = req.body.division_id || null;
             dist_id = req.body.district_id || null;
             upz_id = req.body.upazila_id || null;
-            final_address = pickup_address;
+            final_address_text = pickup_address;
         }
 
         // 3. Verify Customer Profile
@@ -67,40 +65,46 @@ export const createPickup = async (req, res, next) => {
         }
 
         // 5. Generate Booking Code
-        const bookingCode = `GS-${upz_id || 'LIVE'}-${Date.now().toString().slice(-4)}`;
+        const bookingCode = `GS-${upz_id || '0'}-${Date.now().toString().slice(-4)}`;
 
         // 6. Insert Master Pickup Record
+        // 🔥 FIX: Changed 'pickup_address' to 'address_line' (Matches your address table naming)
+        // Verify your DB column name: if it is 'address', change 'address_line' to 'address' below.
         const [pickupResult] = await conn.query(
             `INSERT INTO pickups (
                 booking_code, customer_id, customer_address_id, 
-                pickup_address, latitude, longitude,
+                address_line, latitude, longitude,
                 division_id, district_id, upazila_id,
                 status, scheduled_date, scheduled_time_slot, 
                 customer_note, pickup_type, created_at, updated_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, NOW(), NOW())`,
             [
-                bookingCode, customerId, (address_id === 'live' ? null : address_id),
-                final_address, latitude || null, longitude || null,
-                div_id, dist_id, upz_id,
-                scheduled_date || new Date().toISOString().split('T')[0], 
+                bookingCode,
+                customerId,
+                (address_id === 'live' ? null : address_id),
+                final_address_text,
+                latitude || null,
+                longitude || null,
+                div_id,
+                dist_id,
+                upz_id,
+                scheduled_date || new Date().toISOString().split('T')[0],
                 scheduled_time_slot || '10:00 AM - 06:00 PM',
-                customer_note, pickup_type || 'scheduled'
+                customer_note,
+                pickup_type || 'scheduled'
             ]
         );
         const pickupId = pickupResult.insertId;
 
         let totalEstMin = 0;
 
-        // 7. Process Items
+        // 7. Process Items & Pricing
         for (let i = 0; i < parsedItems.length; i++) {
             const item = parsedItems[i];
             const itemId = item.item_id || item.scrap_item_id;
 
             const [priceData] = await conn.query(
-                `SELECT 
-                    si.current_min_rate as global_rate, 
-                    si.category_id,
-                    ov.min_rate as override_rate
+                `SELECT si.current_min_rate, si.category_id, ov.min_rate as override_rate
                  FROM scrap_items si
                  LEFT JOIN item_price_overrides ov ON si.id = ov.item_id 
                     AND ov.is_active = 1
@@ -110,12 +114,11 @@ export const createPickup = async (req, res, next) => {
                 [upz_id, dist_id, div_id, itemId]
             );
 
-            const finalRate = priceData.length > 0 ? (priceData[0].override_rate || priceData[0].global_rate || 0) : 0;
+            const finalRate = priceData.length > 0 ? (priceData[0].override_rate || priceData[0].current_min_rate || 0) : 0;
             const weight = parseFloat(item.estimated_weight || item.weight) || 0;
             const itemSubtotal = finalRate * weight;
             totalEstMin += itemSubtotal;
 
-            // Handle images (matches mobile pattern: item_photos_0, item_photos_1...)
             const itemPhotos = uploadedFiles
                 .filter(file => file.fieldname === `item_photos_${i}` || file.fieldname === 'photos')
                 .map(file => `/uploads/pickups/${file.filename}`);
@@ -126,26 +129,18 @@ export const createPickup = async (req, res, next) => {
                     estimated_weight, final_rate_per_unit, final_amount, 
                     photo_url, created_at
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
-                [
-                    pickupId,
-                    priceData.length > 0 ? priceData[0].category_id : null,
-                    itemId,
-                    weight,
-                    finalRate,
-                    itemSubtotal,
-                    JSON.stringify(itemPhotos)
-                ]
+                [pickupId, priceData[0]?.category_id || null, itemId, weight, finalRate, itemSubtotal, JSON.stringify(itemPhotos)]
             );
         }
 
-        // 9. Initialize Timeline (🔥 FIXED: Added changed_by)
+        // 8. Initialize Timeline (🔥 FIXED: Added changed_by)
         await conn.query(
             `INSERT INTO pickup_timeline (pickup_id, status, note, changed_by, created_at) 
              VALUES (?, 'pending', 'Shipment request created by customer', ?, NOW())`,
             [pickupId, userId]
         );
 
-        // 10. Finalize Master Amount
+        // 9. Finalize Master Amount
         await conn.query("UPDATE pickups SET base_amount = ? WHERE id = ?", [totalEstMin, pickupId]);
 
         await conn.commit();
