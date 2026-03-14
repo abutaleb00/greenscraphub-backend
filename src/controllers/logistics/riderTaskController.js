@@ -24,10 +24,25 @@ async function getRiderInfo(req) {
 }
 
 /**
- * 1. GET RIDER DASHBOARD
+ * 1. GET RIDER Status
  * Mobile optimized summary of tasks, performance, and cash.
  */
+export const updateStatus = async (req, res) => {
+    const { is_online } = req.body;
+    const riderId = req.user.id;
 
+    // 1. Update Database
+    await pool.query('UPDATE riders SET is_online = ? WHERE user_id = ?', [is_online, riderId]);
+
+    // 2. Trigger Socket (Admin Dashboard updates automatically)
+    const io = req.app.get('io');
+    io.to('active_riders_map').emit('rider_presence_changed', {
+        riderId,
+        is_online: !!is_online
+    });
+
+    res.json({ success: true, message: "Status updated" });
+};
 /**
  * GET RIDER DASHBOARD
  * Mobile-optimized LOC (Logistics Operations Center) data.

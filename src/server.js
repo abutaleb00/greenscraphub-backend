@@ -10,59 +10,87 @@ import pool from './config/db.js';
 
 const PORT = process.env.PORT || 4000;
 
-/**
- * 1. Create HTTP Server 
- * Socket.io requires a raw HTTP server to attach its listeners.
- */
 const server = http.createServer(app);
 
-/**
- * 2. Initialize Socket.io
- * Configured with CORS and standardized for Mobile + Web.
- */
 const io = new Server(server, {
   cors: {
     origin: "*",
     methods: ["GET", "POST"]
   },
-  pingTimeout: 60000, // Handle mobile sleep/wake cycles better
+  pingTimeout: 60000,
 });
 
 /**
- * 3. Real-Time Tracking & Notification Logic
+ * 3. Real-Time Tracking & Rider Management Logic
  */
 io.on('connection', (socket) => {
   console.log(`🔌 New Connection: ${socket.id}`);
 
-  // Customer/Rider joins a room based on the Pickup ID
-  socket.on('join_pickup', (pickupId) => {
-    socket.join(`pickup_${pickupId}`);
-    console.log(`📍 User joined room: pickup_${pickupId}`);
+  // --- RIDER SPECIFIC LOGIC ---
+
+  /**
+   * 🛰️ Event: Rider joins their own private room and the global "active_riders" room
+   */
+  socket.on('register_rider', (riderId) => {
+    socket.join(`rider_${riderId}`);
+    socket.join('active_riders_map'); // For Admin/Agent Dashboard
+    console.log(`🚛 Rider Registered: ${riderId} (Socket: ${socket.id})`);
   });
 
-  // Rider emits live coordinates
-  socket.on('update_location', (data) => {
-    // data: { pickupId, latitude, longitude, heading }
-    const { pickupId, latitude, longitude, heading } = data;
+  /**
+   * 🟢 Event: Rider Status Change (Online/Offline)
+   * This broadcasts to the Admin dashboard immediately.
+   */
+  socket.on('rider_status_update', (data) => {
+    // data: { riderId, is_online, location: { lat, lng } }
+    const { riderId, is_online, location } = data;
 
-    // Broadcast only to the customer in that specific pickup room
-    io.to(`pickup_${pickupId}`).emit('location_changed', {
+    // Broadcast to Admin/Agent room
+    io.to('active_riders_map').emit('rider_presence_changed', {
+      riderId,
+      is_online,
+      location,
+      last_updated: new Date()
+    });
+
+    console.log(`👤 Rider ${riderId} is now ${is_online ? 'ONLINE' : 'OFFLINE'}`);
+  });
+
+  /**
+   * 📍 Event: Periodic Location Update
+   * Updates the 'current_latitude' and 'current_longitude' for everyone watching
+   */
+  socket.on('update_location', (data) => {
+    // data: { riderId, pickupId, latitude, longitude, heading }
+    const { riderId, pickupId, latitude, longitude, heading } = data;
+
+    const payload = {
+      riderId,
       latitude,
       longitude,
       heading,
       timestamp: new Date()
-    });
+    };
+
+    // 1. Send to the specific customer assigned to this pickup
+    if (pickupId) {
+      io.to(`pickup_${pickupId}`).emit('location_changed', payload);
+    }
+
+    // 2. Send to Admin/Agent global map
+    io.to('active_riders_map').emit('rider_moved', payload);
   });
 
-  /**
-   * ✨ NEW: Status Update Broadcast
-   * Used when a pickup is marked 'completed' or 'arrived'.
-   * This triggers the "Points Earned" modal on the customer's phone.
-   */
-  socket.on('pickup_status_changed', (data) => {
-    // data: { pickupId, status, pointsEarned, netTotal }
-    const { pickupId, status } = data;
 
+  // --- CUSTOMER / PICKUP LOGIC ---
+
+  socket.on('join_pickup', (pickupId) => {
+    socket.join(`pickup_${pickupId}`);
+    console.log(`📍 Customer joined room: pickup_${pickupId}`);
+  });
+
+  socket.on('pickup_status_changed', (data) => {
+    const { pickupId, status } = data;
     io.to(`pickup_${pickupId}`).emit('status_updated', data);
     console.log(`📢 Status Update in room pickup_${pickupId}: ${status}`);
   });
@@ -73,15 +101,12 @@ io.on('connection', (socket) => {
 });
 
 /**
- * 4. Global IO Access
- * Attach the IO instance to the 'app' so we can use it inside 
- * our Controllers (like pickupController.js) via 'req.app.get("io")'.
+ * 4. Global IO Access for REST Controllers
  */
 app.set('io', io);
 
 /**
  * 5. Network Utility
- * Auto-detects your PC's IP to help connect your physical phone.
  */
 const getLocalIp = () => {
   const interfaces = os.networkInterfaces();
@@ -98,18 +123,16 @@ const getLocalIp = () => {
  */
 async function start() {
   try {
-    // Verify Database Connection
     await pool.query('SELECT 1');
     console.log('✅ MySQL Database Connected');
 
     const NETWORK_IP = getLocalIp();
 
-    // Start the Server
     server.listen(PORT, '0.0.0.0', () => {
       console.log(`\n🚀 GreenScrapHub Backend Initialized:`);
       console.log(`🔗 API URL:     http://localhost:${PORT}/api/v1`);
       console.log(`📱 Network URL: http://${NETWORK_IP}:${PORT}/api/v1`);
-      console.log(`🛰️ Socket.io:  Enabled for Live Rider Tracking & Points Alerts`);
+      console.log(`🛰️ Socket.io:  Rider Tracking & Admin Map Enabled`);
       console.log(`___________________________________________________________\n`);
     });
   } catch (err) {
