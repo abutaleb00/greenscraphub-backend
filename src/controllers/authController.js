@@ -348,35 +348,38 @@ export const forgotPasswordRequest = async (req, res, next) => {
       return next(new ApiError(404, 'No account found with this phone number'));
     }
 
-    if (!user.email) {
-      return next(new ApiError(400, 'No email linked to this account. Please contact support.'));
-    }
-
     // 2. Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // 3. Store in Memory (OTP Store)
+    // 3. Store in Memory
     otpStore.set(`reset_${phone}`, {
       phone,
       otp,
       expires: Date.now() + 300000 // 5 Minutes
     });
 
-    // 4. Send Email
+    // 4. Send Email (with fallback for testing)
     try {
-      await sendEmailOTP(user.email, otp);
-      console.log(`[AUTH] Reset OTP sent to ${user.email}: ${otp}`);
+      if (user.email && !user.email.includes('example.com')) {
+        await sendEmailOTP(user.email, otp);
+        console.log(`[AUTH] Reset OTP sent to ${user.email}`);
+      } else {
+        console.log(`[DEV MODE] Email is dummy. Manual OTP for ${phone}: ${otp}`);
+      }
     } catch (emailError) {
-      console.error("[MAIL ERROR]:", emailError); // This will show you WHY it failed in PM2 logs
-      return next(new ApiError(500, "Email service unavailable. Please try again later."));
+      // LOG THE OTP ANYWAY SO YOU CAN TEST
+      console.log(`[CRITICAL] Email failed, but use this OTP to test: ${otp}`);
+      console.error("[MAIL ERROR]:", emailError.message);
+
+      // OPTIONAL: During development, don't return 500 so you can keep testing the UI
+      // return next(new ApiError(500, "Email service unavailable."));
     }
 
     res.status(200).json({
       success: true,
-      message: "A 6-digit verification code has been sent to your registered email."
+      message: "If the phone is registered, a verification code has been sent."
     });
   } catch (err) {
-    console.error("[FORGOT_PWD_REQ_ERR]:", err);
     next(new ApiError(500, "An internal server error occurred."));
   }
 };
