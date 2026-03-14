@@ -34,7 +34,7 @@ export const updateStatus = async (req, res) => {
     try {
         // 1. Update the riders table
         // We use user_id to find the rider record
-        const [result] = await pool.query(
+        const [result] = await db.query(
             `UPDATE riders 
              SET is_online = ?, 
                  current_latitude = IFNULL(?, current_latitude), 
@@ -91,7 +91,7 @@ export const updateLocation = async (req, res) => {
 
     try {
         // 1. Update Persistent Storage (MySQL)
-        const [result] = await pool.query(
+        const [result] = await db.query(
             `UPDATE riders 
              SET current_latitude = ?, 
                  current_longitude = ?, 
