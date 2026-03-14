@@ -737,7 +737,7 @@ export const finalizePickup = async (req, res, next) => {
 
 /**
  * GET RIDER JOB HISTORY
- * Updated for Hybrid Logic: includes settlement status and payment mode snapshots
+ * Returns both completed and active missions for the mobile mission hub.
  */
 export const getRiderHistory = async (req, res, next) => {
     try {
@@ -748,12 +748,16 @@ export const getRiderHistory = async (req, res, next) => {
             SELECT 
                 p.id, 
                 p.booking_code, 
+                p.status, -- CRITICAL: Returned for frontend logic
                 p.completed_at, 
+                p.created_at,
                 -- Total scrap value collected
                 p.net_payable_amount as total_value,
+                -- Estimated value (for active tasks)
+                p.base_amount as estimated_amount,
                 -- Actual physical cash collected (if payment was cash)
                 p.rider_collected_cash,
-                -- The incentive earned (will be 0.00 for salary-based riders)
+                -- The incentive earned
                 p.rider_commission_amount as incentive,
                 p.payment_method,
                 -- Status of physical cash handover to Hub
@@ -767,17 +771,24 @@ export const getRiderHistory = async (req, res, next) => {
             JOIN users u ON c.user_id = u.id
             LEFT JOIN addresses adr ON p.customer_address_id = adr.id
             WHERE p.rider_id = ? 
-              AND p.status = 'completed'
-            ORDER BY p.completed_at DESC 
+              -- Include all statuses relevant to the rider's task list
+              AND p.status IN ('accepted', 'rider_on_way', 'arrived', 'weighing', 'completed', 'finalized')
+            ORDER BY 
+                CASE 
+                    WHEN p.status != 'completed' AND p.status != 'finalized' THEN 1 
+                    ELSE 2 
+                END, 
+                p.created_at DESC 
             LIMIT 50`, [riderId]);
 
         // Clean data for the Frontend
         const formattedHistory = history.map(item => ({
             ...item,
+            status: item.status || 'pending', // Fallback for safety
             total_value: parseFloat(item.total_value || 0).toFixed(2),
+            estimated_amount: parseFloat(item.estimated_amount || 0).toFixed(2),
             incentive: parseFloat(item.incentive || 0).toFixed(2),
             rider_collected_cash: parseFloat(item.rider_collected_cash || 0).toFixed(2),
-            // Ensure address isn't 'null' as a string
             address_line: item.address_line || "On-site collection"
         }));
 
