@@ -10,8 +10,14 @@ import pool from './config/db.js';
 
 const PORT = process.env.PORT || 4000;
 
+/**
+ * 1. Create HTTP Server 
+ */
 const server = http.createServer(app);
 
+/**
+ * 2. Initialize Socket.io
+ */
 const io = new Server(server, {
   cors: {
     origin: "*",
@@ -29,56 +35,76 @@ io.on('connection', (socket) => {
   // --- RIDER SPECIFIC LOGIC ---
 
   /**
-   * 🛰️ Event: Rider joins their own private room and the global "active_riders" room
+   * 🛰️ Event: Rider Registration
    */
   socket.on('register_rider', (riderId) => {
     socket.join(`rider_${riderId}`);
-    socket.join('active_riders_map'); // For Admin/Agent Dashboard
-    console.log(`🚛 Rider Registered: ${riderId} (Socket: ${socket.id})`);
+    socket.join('active_riders_map');
+    console.log(`🚛 Rider Registered: ${riderId}`);
   });
 
   /**
    * 🟢 Event: Rider Status Change (Online/Offline)
-   * This broadcasts to the Admin dashboard immediately.
+   * Syncs with Database + Broadcasts to Admin
    */
-  socket.on('rider_status_update', (data) => {
-    // data: { riderId, is_online, location: { lat, lng } }
+  socket.on('rider_status_update', async (data) => {
     const { riderId, is_online, location } = data;
 
-    // Broadcast to Admin/Agent room
-    io.to('active_riders_map').emit('rider_presence_changed', {
-      riderId,
-      is_online,
-      location,
-      last_updated: new Date()
-    });
+    try {
+      // Sync to Database
+      await pool.query(
+        'UPDATE riders SET is_online = ?, current_latitude = ?, current_longitude = ?, updated_at = NOW() WHERE user_id = ?',
+        [is_online ? 1 : 0, location?.lat || null, location?.lng || null, riderId]
+      );
 
-    console.log(`👤 Rider ${riderId} is now ${is_online ? 'ONLINE' : 'OFFLINE'}`);
+      // Broadcast to Admin Dashboard
+      io.to('active_riders_map').emit('rider_presence_changed', {
+        riderId,
+        is_online,
+        location,
+        last_updated: new Date()
+      });
+
+      console.log(`👤 Rider ${riderId} Database & Socket updated to ${is_online ? 'ONLINE' : 'OFFLINE'}`);
+    } catch (err) {
+      console.error("❌ Error updating rider status in DB:", err);
+    }
   });
 
   /**
    * 📍 Event: Periodic Location Update
-   * Updates the 'current_latitude' and 'current_longitude' for everyone watching
+   * Updates MySQL Coordinates + Broadcasts to Customer & Admin
    */
-  socket.on('update_location', (data) => {
-    // data: { riderId, pickupId, latitude, longitude, heading }
+  socket.on('update_location', async (data) => {
     const { riderId, pickupId, latitude, longitude, heading } = data;
 
-    const payload = {
-      riderId,
-      latitude,
-      longitude,
-      heading,
-      timestamp: new Date()
-    };
+    try {
+      // 1. Silent Database Sync (Keep records fresh)
+      // We do this every update to ensure 'current_latitude' is always accurate
+      await pool.query(
+        'UPDATE riders SET current_latitude = ?, current_longitude = ?, updated_at = NOW() WHERE user_id = ?',
+        [latitude, longitude, riderId]
+      );
 
-    // 1. Send to the specific customer assigned to this pickup
-    if (pickupId) {
-      io.to(`pickup_${pickupId}`).emit('location_changed', payload);
+      const payload = {
+        riderId,
+        latitude,
+        longitude,
+        heading,
+        timestamp: new Date()
+      };
+
+      // 2. Broadcast to specific customer (if on a trip)
+      if (pickupId) {
+        io.to(`pickup_${pickupId}`).emit('location_changed', payload);
+      }
+
+      // 3. Broadcast to global Admin map
+      io.to('active_riders_map').emit('rider_moved', payload);
+
+    } catch (err) {
+      console.error("❌ Error syncing location to DB:", err);
     }
-
-    // 2. Send to Admin/Agent global map
-    io.to('active_riders_map').emit('rider_moved', payload);
   });
 
 
@@ -101,7 +127,7 @@ io.on('connection', (socket) => {
 });
 
 /**
- * 4. Global IO Access for REST Controllers
+ * 4. Global IO Access
  */
 app.set('io', io);
 
@@ -132,7 +158,7 @@ async function start() {
       console.log(`\n🚀 GreenScrapHub Backend Initialized:`);
       console.log(`🔗 API URL:     http://localhost:${PORT}/api/v1`);
       console.log(`📱 Network URL: http://${NETWORK_IP}:${PORT}/api/v1`);
-      console.log(`🛰️ Socket.io:  Rider Tracking & Admin Map Enabled`);
+      console.log(`🛰️ Socket.io:  Rider DB Sync & Live Map Enabled`);
       console.log(`___________________________________________________________\n`);
     });
   } catch (err) {

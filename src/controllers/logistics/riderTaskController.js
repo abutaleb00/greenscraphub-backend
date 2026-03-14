@@ -28,20 +28,97 @@ async function getRiderInfo(req) {
  * Mobile optimized summary of tasks, performance, and cash.
  */
 export const updateStatus = async (req, res) => {
-    const { is_online } = req.body;
-    const riderId = req.user.id;
+    const { is_online, current_latitude, current_longitude } = req.body;
+    const userId = req.user.id; // From auth middleware
 
-    // 1. Update Database
-    await pool.query('UPDATE riders SET is_online = ? WHERE user_id = ?', [is_online, riderId]);
+    try {
+        // 1. Update the riders table
+        // We use user_id to find the rider record
+        const [result] = await pool.query(
+            `UPDATE riders 
+             SET is_online = ?, 
+                 current_latitude = IFNULL(?, current_latitude), 
+                 current_longitude = IFNULL(?, current_longitude),
+                 updated_at = NOW()
+             WHERE user_id = ?`,
+            [is_online, current_latitude, current_longitude, userId]
+        );
 
-    // 2. Trigger Socket (Admin Dashboard updates automatically)
-    const io = req.app.get('io');
-    io.to('active_riders_map').emit('rider_presence_changed', {
-        riderId,
-        is_online: !!is_online
-    });
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "Rider profile not found."
+            });
+        }
 
-    res.json({ success: true, message: "Status updated" });
+        // 2. Get the IO instance attached in server.js
+        const io = req.app.get('io');
+
+        // 3. Broadcast to Admin/Agent Dashboard (Live Map)
+        // This ensures the dot on the admin map changes color instantly
+        io.to('active_riders_map').emit('rider_status_update', {
+            riderId: userId,
+            is_online: is_online === 1,
+            location: current_latitude ? {
+                lat: current_latitude,
+                lng: current_longitude
+            } : null,
+            timestamp: new Date()
+        });
+
+        return res.json({
+            success: true,
+            message: is_online ? "You are now Online" : "You are now Offline",
+            data: { is_online: !!is_online }
+        });
+
+    } catch (error) {
+        console.error("Internal Server Error (updateStatus):", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to update status on server."
+        });
+    }
+};
+
+/**
+ * Updates Rider's Last Known Coordinates in Database
+ * This is called by the background task every 30-60 seconds.
+ */
+export const updateLocation = async (req, res) => {
+    const { latitude, longitude, heading, speed } = req.body;
+    const userId = req.user.id;
+
+    try {
+        // 1. Update Persistent Storage (MySQL)
+        const [result] = await pool.query(
+            `UPDATE riders 
+             SET current_latitude = ?, 
+                 current_longitude = ?, 
+                 updated_at = NOW()
+             WHERE user_id = ?`,
+            [latitude, longitude, userId]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, message: "Rider not found" });
+        }
+
+        // 2. Optional: If you want to trigger the Socket from the REST API instead of the App
+        // const io = req.app.get('io');
+        // io.to('active_riders_map').emit('rider_moved', {
+        //     riderId: userId,
+        //     latitude,
+        //     longitude,
+        //     heading
+        // });
+
+        return res.json({ success: true, message: "Location synced to DB" });
+
+    } catch (error) {
+        console.error("DB Location Sync Error:", error);
+        return res.status(500).json({ success: false });
+    }
 };
 /**
  * GET RIDER DASHBOARD

@@ -10,7 +10,9 @@ import {
     finalizePickup,
     getRiderHistory,
     getHistoryDetail,
-    getEarningsOverview
+    getEarningsOverview,
+    updateStatus,
+    updateLocation
 } from "../controllers/logistics/riderTaskController.js";
 
 const router = express.Router();
@@ -27,6 +29,8 @@ router.get("/dashboard", auth(["rider"]), getRiderDashboard);
 /** * @route   GET /api/v1/riders/earnings 
  * @desc    Personal wallet and commission breakdown
  */
+router.patch("/status", auth(["rider"]), updateStatus);
+router.patch("/location", auth(["rider"]), updateLocation);
 router.get("/earnings", auth(["rider"]), getRiderEarnings);
 
 
