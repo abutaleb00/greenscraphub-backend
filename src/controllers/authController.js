@@ -335,30 +335,49 @@ export const forgotPasswordRequest = async (req, res, next) => {
   try {
     const { phone } = req.body;
 
-    const [rows] = await db.query('SELECT email, full_name FROM users WHERE phone = ?', [phone]);
+    if (!phone) return next(new ApiError(400, 'Phone number is required'));
+
+    // 1. Check if user exists
+    const [rows] = await db.query(
+      'SELECT email, full_name FROM users WHERE phone = ? LIMIT 1',
+      [phone]
+    );
     const user = rows[0];
 
-    if (!user) return next(new ApiError(404, 'No account found with this phone number'));
-    if (!user.email) return next(new ApiError(400, 'No email linked to this account. Please contact support.'));
+    if (!user) {
+      return next(new ApiError(404, 'No account found with this phone number'));
+    }
 
+    if (!user.email) {
+      return next(new ApiError(400, 'No email linked to this account. Please contact support.'));
+    }
+
+    // 2. Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
+    // 3. Store in Memory (OTP Store)
     otpStore.set(`reset_${phone}`, {
       phone,
       otp,
       expires: Date.now() + 300000 // 5 Minutes
     });
 
-    await sendEmailOTP(user.email, otp);
-
-    console.log(`[RESET] OTP for ${phone} is: ${otp}`);
+    // 4. Send Email
+    try {
+      await sendEmailOTP(user.email, otp);
+      console.log(`[AUTH] Reset OTP sent to ${user.email}: ${otp}`);
+    } catch (emailError) {
+      console.error("[MAIL ERROR]:", emailError); // This will show you WHY it failed in PM2 logs
+      return next(new ApiError(500, "Email service unavailable. Please try again later."));
+    }
 
     res.status(200).json({
       success: true,
-      message: "Password reset code sent to your registered email."
+      message: "A 6-digit verification code has been sent to your registered email."
     });
   } catch (err) {
-    next(new ApiError(500, "Failed to send reset code."));
+    console.error("[FORGOT_PWD_REQ_ERR]:", err);
+    next(new ApiError(500, "An internal server error occurred."));
   }
 };
 
