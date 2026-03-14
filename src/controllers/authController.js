@@ -261,19 +261,22 @@ export const onboardCustomer = async (req, res, next) => {
   }
 };
 /* -----------------------------------------------------
-    LOGIN
+    LOGIN (Updated to include email)
 ----------------------------------------------------- */
 export const login = async (req, res, next) => {
   try {
     const { phone, password } = req.body;
 
+    // 1. Fetch user data including email
     const [rows] = await db.query(`
-            SELECT u.*, r.name as role_name 
+            SELECT u.id, u.full_name, u.phone, u.email, u.password_hash, u.is_active, r.name as role_name 
             FROM users u 
             JOIN roles r ON u.role_id = r.id 
             WHERE u.phone = ? AND u.is_active = 1`, [phone]);
 
     const user = rows[0];
+
+    // 2. Verify existence and password
     if (!user || !(await bcrypt.compare(password, user.password_hash))) {
       return next(new ApiError(401, 'Invalid phone number or password'));
     }
@@ -281,11 +284,18 @@ export const login = async (req, res, next) => {
     const role = user.role_name.toLowerCase();
     const token = jwt.sign({ id: user.id, role }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
+    // 3. Send response with email included in the user object
     res.json({
       success: true,
       data: {
         token,
-        user: { id: user.id, full_name: user.full_name, role, phone: user.phone }
+        user: {
+          id: user.id,
+          full_name: user.full_name,
+          role,
+          phone: user.phone,
+          email: user.email
+        }
       }
     });
   } catch (err) {
