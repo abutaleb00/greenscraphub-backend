@@ -25,6 +25,7 @@ const allowedOrigins = [
   'http://localhost:3001', // Potential secondary dev port
   'https://greenscrap-web.vercel.app', // Potential secondary dev port
   'https://webapp.prosfata.space', // Potential secondary dev port
+  'https://www.smartscrapbd.store', // Potential secondary dev port
   // Add your production domain here later
 ];
 
