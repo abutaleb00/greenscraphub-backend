@@ -3,7 +3,7 @@ import { body } from 'express-validator';
 import {
   registerRequest,
   verifyAndRegister,
-  onboardCustomer, // New Controller for Admin onboarding
+  onboardCustomer,
   login,
   getMe,
   forgotPasswordRequest,
@@ -16,16 +16,24 @@ import { auth } from '../middlewares/auth.js';
 const router = express.Router();
 
 /**
+ * CUSTOM VALIDATOR: BD Phone Number
+ * Checks if it's a valid 11-digit BD number starting with 01
+ */
+const phoneValidator = body('phone')
+  .trim()
+  .notEmpty().withMessage('Phone number is required')
+  .matches(/^(01)[3-9][0-9]{8}$/).withMessage('Invalid Bangladeshi phone number format');
+
+/**
  * 1. CUSTOMER REGISTRATION - STEP 1 (Request OTP)
- * For public/guest self-registration.
  */
 router.post(
   '/register',
   [
     body('full_name').trim().notEmpty().withMessage('Full name is required'),
-    body('phone').trim().notEmpty().withMessage('Phone is required'),
+    phoneValidator, // Used the custom validator
     body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-    body('email').optional().isEmail().withMessage('Invalid email format'),
+    body('email').optional({ checkFalsy: true }).isEmail().withMessage('Invalid email format'),
     body('referral_code').optional().trim(),
   ],
   registerRequest
@@ -37,7 +45,7 @@ router.post(
 router.post(
   '/verify-otp',
   [
-    body('phone').notEmpty().withMessage('Phone is required'),
+    phoneValidator,
     body('otp').isLength({ min: 6, max: 6 }).withMessage('OTP must be 6 digits'),
   ],
   verifyAndRegister
@@ -45,33 +53,20 @@ router.post(
 
 /**
  * 3. ADMIN/AGENT -> DIRECT CUSTOMER ONBOARDING
- * Bypasses OTP flow. Requires Admin/Agent authorization.
  */
 router.post(
   '/onboard/customer',
   auth(['admin', 'agent']),
   [
     body('full_name').trim().notEmpty().withMessage('Full name is required'),
-    body('phone').trim().notEmpty().withMessage('Phone is required'),
+    phoneValidator,
     body('password').isLength({ min: 6 }).withMessage('Initial password must be at least 6 characters'),
-
-    // Address Fields
     body('address_line').trim().notEmpty().withMessage('Street address is required'),
     body('division_id').notEmpty().withMessage('Division selection is required'),
     body('district_id').notEmpty().withMessage('District selection is required'),
     body('upazila_id').notEmpty().withMessage('Upazila selection is required'),
-
-    // Geospatial Fields - Ensure .isNumeric() is BEFORE .withMessage()
-    body('latitude')
-      .optional({ checkFalsy: true })
-      .isNumeric()
-      .withMessage('Latitude must be a valid coordinate'),
-
-    body('longitude')
-      .optional({ checkFalsy: true })
-      .isNumeric()
-      .withMessage('Longitude must be a valid coordinate'),
-
+    body('latitude').optional({ checkFalsy: true }).isNumeric().withMessage('Latitude must be numeric'),
+    body('longitude').optional({ checkFalsy: true }).isNumeric().withMessage('Longitude must be numeric'),
     body('email').optional({ checkFalsy: true }).isEmail().withMessage('Invalid email format'),
     body('referral_code').optional().trim(),
   ],
@@ -83,9 +78,7 @@ router.post(
  */
 router.post(
   '/forgot-password',
-  [
-    body('phone').notEmpty().withMessage('Registered phone number is required'),
-  ],
+  [phoneValidator], // Validates phone before triggering paid SMS
   forgotPasswordRequest
 );
 
@@ -95,7 +88,7 @@ router.post(
 router.post(
   '/reset-password',
   [
-    body('phone').notEmpty().withMessage('Phone is required'),
+    phoneValidator,
     body('otp').isLength({ min: 6, max: 6 }).withMessage('OTP must be 6 digits'),
     body('new_password').isLength({ min: 6 }).withMessage('New password must be at least 6 characters'),
   ],
@@ -103,12 +96,12 @@ router.post(
 );
 
 /**
- * 6. LOGIN - PHONE & PASSWORD
+ * 6. LOGIN
  */
 router.post(
   '/login',
   [
-    body('phone').notEmpty().withMessage('Phone is required'),
+    phoneValidator,
     body('password').notEmpty().withMessage('Password is required'),
   ],
   login
@@ -121,24 +114,23 @@ router.get('/me', auth(), getMe);
 
 /**
  * 8. UPDATE PROFILE (Role-Aware)
- * Handles updates for users, customers, and riders profiles.
  */
 router.patch(
   '/profile',
   auth(),
   [
     body('full_name').optional().trim().notEmpty().withMessage('Full name cannot be empty'),
-    body('email').optional().isEmail().withMessage('Invalid email format'),
+    body('email').optional({ checkFalsy: true }).isEmail().withMessage('Invalid email format'),
     body('default_address_id').optional().isNumeric(),
     body('vehicle_type').optional().notEmpty(),
-    body('is_online').optional().isBoolean(),
+    // Added specific validation for rider online status
+    body('is_online').optional().isNumeric().isIn([0, 1]).withMessage('Status must be 0 or 1'),
   ],
   updateProfile
 );
 
 /**
- * 9. CHANGE PASSWORD (Secure)
- * Dedicated route for logged-in users to update their password.
+ * 9. CHANGE PASSWORD
  */
 router.post(
   '/change-password',

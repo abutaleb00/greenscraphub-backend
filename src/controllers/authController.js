@@ -5,9 +5,44 @@ import nodemailer from 'nodemailer';
 import ApiError from '../utils/ApiError.js';
 import db from '../config/db.js';
 import { awardReferralBonus } from './pointController.js'; // Import the helper we created
-
+import axios from 'axios';
 // Temporary store for OTPs and registration data
 const otpStore = new Map();
+
+/* -----------------------------------------------------
+    HELPER: SEND SMS OTP (sms.net.bd)
+----------------------------------------------------- */
+const sendSMS = async (phone, otp) => {
+  try {
+    // Ensure phone starts with 880 as required by the API
+    let formattedPhone = phone.trim();
+    if (formattedPhone.startsWith('0')) {
+      formattedPhone = '88' + formattedPhone;
+    }
+
+    const apiKey = process.env.SMS_API_KEY;
+    const message = `Your Smart Scrap BD verification code is: ${otp}. Valid for 5 minutes.`;
+
+    const response = await axios.post('https://api.sms.net.bd/sendsms', {
+      api_key: apiKey,
+      msg: message,
+      to: formattedPhone
+    }, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+
+    if (response.data.error === 0) {
+      console.log(`[SMS] OTP sent successfully to ${formattedPhone}`);
+      return true;
+    } else {
+      console.error(`[SMS Error] API returned: ${response.data.msg}`);
+      return false;
+    }
+  } catch (error) {
+    console.error(`[SMS Critical Error] ${error.message}`);
+    return false;
+  }
+};
 
 /* -----------------------------------------------------
     HELPER: SEND EMAIL OTP
@@ -28,14 +63,14 @@ const sendEmailOTP = async (email, otp) => {
     to: email,
     subject: "Verification Code - Smart Scrap BD",
     html: `
-            <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-                <h2 style="color: #10B981;">Smart Scrap BD Verification</h2>
-                <p>Use the code below to verify your account. Valid for 5 minutes.</p>
-                <div style="background: #f4f4f4; padding: 20px; text-align: center; border-radius: 10px;">
-                    <h1 style="letter-spacing: 5px; color: #10B981; font-size: 40px;">${otp}</h1>
-                </div>
+        <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+            <h2 style="color: #10B981;">Smart Scrap BD Verification</h2>
+            <p>Use the code below to verify your account. Valid for 5 minutes.</p>
+            <div style="background: #f4f4f4; padding: 20px; text-align: center; border-radius: 10px;">
+                <h1 style="letter-spacing: 5px; color: #10B981; font-size: 40px;">${otp}</h1>
             </div>
-        `,
+        </div>
+    `,
   });
 };
 
@@ -46,16 +81,33 @@ export const registerRequest = async (req, res, next) => {
   try {
     const { phone, email, full_name, password, referral_code } = req.body;
 
-    const [exists] = await db.query("SELECT id FROM users WHERE phone = ? OR (email IS NOT NULL AND email = ?)", [phone, email]);
+    const [exists] = await db.query(
+      "SELECT id FROM users WHERE phone = ? OR (email IS NOT NULL AND email = ?)",
+      [phone, email]
+    );
     if (exists.length > 0) return next(new ApiError(400, 'Phone or Email already registered'));
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     otpStore.set(phone, { ...req.body, otp, expires: Date.now() + 300000 });
 
-    if (email) await sendEmailOTP(email, otp);
-    console.log(`[AUTH] OTP for ${phone}: ${otp}`);
+    // 1. Always send SMS
+    const smsSent = await sendSMS(phone, otp);
 
-    res.json({ success: true, message: "Verification code sent to your email/phone." });
+    // 2. Send Email if provided
+    if (email && !email.includes('example.com')) {
+      await sendEmailOTP(email, otp);
+    }
+
+    if (!smsSent) {
+      // In production, you might want to throw error if SMS fails. 
+      // During testing, we log it.
+      console.log(`[AUTH] SMS Failed. Manual OTP for ${phone}: ${otp}`);
+    }
+
+    res.json({
+      success: true,
+      message: "Verification code sent to your phone and email."
+    });
   } catch (err) {
     next(err);
   }
@@ -344,10 +396,8 @@ export const getMe = async (req, res, next) => {
 export const forgotPasswordRequest = async (req, res, next) => {
   try {
     const { phone } = req.body;
-
     if (!phone) return next(new ApiError(400, 'Phone number is required'));
 
-    // 1. Check if user exists
     const [rows] = await db.query(
       'SELECT email, full_name FROM users WHERE phone = ? LIMIT 1',
       [phone]
@@ -358,36 +408,27 @@ export const forgotPasswordRequest = async (req, res, next) => {
       return next(new ApiError(404, 'No account found with this phone number'));
     }
 
-    // 2. Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // 3. Store in Memory
     otpStore.set(`reset_${phone}`, {
       phone,
       otp,
-      expires: Date.now() + 300000 // 5 Minutes
+      expires: Date.now() + 300000
     });
 
-    // 4. Send Email (with fallback for testing)
-    try {
-      if (user.email && !user.email.includes('example.com')) {
-        await sendEmailOTP(user.email, otp);
-        console.log(`[AUTH] Reset OTP sent to ${user.email}`);
-      } else {
-        console.log(`[DEV MODE] Email is dummy. Manual OTP for ${phone}: ${otp}`);
-      }
-    } catch (emailError) {
-      // LOG THE OTP ANYWAY SO YOU CAN TEST
-      console.log(`[CRITICAL] Email failed, but use this OTP to test: ${otp}`);
-      console.error("[MAIL ERROR]:", emailError.message);
+    // Send via SMS
+    await sendSMS(phone, otp);
 
-      // OPTIONAL: During development, don't return 500 so you can keep testing the UI
-      // return next(new ApiError(500, "Email service unavailable."));
+    // Send via Email if available
+    if (user.email && !user.email.includes('example.com')) {
+      try {
+        await sendEmailOTP(user.email, otp);
+      } catch (e) { console.error("Mail failed during reset", e.message); }
     }
 
     res.status(200).json({
       success: true,
-      message: "If the phone is registered, a verification code has been sent."
+      message: "A verification code has been sent to your registered phone."
     });
   } catch (err) {
     next(new ApiError(500, "An internal server error occurred."));
