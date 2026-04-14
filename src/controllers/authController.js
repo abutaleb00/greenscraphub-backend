@@ -24,12 +24,12 @@ const sendEmailOTP = async (email, otp) => {
   });
 
   await transporter.sendMail({
-    from: `"GreenScrapHub Support" <${process.env.MAIL_USER}>`,
+    from: `"Smart Scrap BD Support" <${process.env.MAIL_USER}>`,
     to: email,
-    subject: "Verification Code - GreenScrapHub",
+    subject: "Verification Code - Smart Scrap BD",
     html: `
             <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-                <h2 style="color: #10B981;">GreenScrapHub Verification</h2>
+                <h2 style="color: #10B981;">Smart Scrap BD Verification</h2>
                 <p>Use the code below to verify your account. Valid for 5 minutes.</p>
                 <div style="background: #f4f4f4; padding: 20px; text-align: center; border-radius: 10px;">
                     <h1 style="letter-spacing: 5px; color: #10B981; font-size: 40px;">${otp}</h1>
