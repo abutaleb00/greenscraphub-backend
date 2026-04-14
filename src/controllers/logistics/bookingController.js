@@ -169,7 +169,7 @@ export const createPickup = async (req, res, next) => {
             let formattedPhone = customerPhone.trim();
             if (formattedPhone.startsWith('0')) formattedPhone = '88' + formattedPhone;
 
-            const smsMessage = `Hello ${customerName}, pickup request confirmed! Code: ${bookingCode}. Est. Value: ৳${totalEstMin.toFixed(0)}. - Smart Scrap BD`;
+            const smsMessage = `Your pickup request confirmed! Order Code: ${bookingCode}. - Smart Scrap BD`;
 
             await axios.post('https://api.sms.net.bd/sendsms', {
                 api_key: process.env.SMS_API_KEY,
