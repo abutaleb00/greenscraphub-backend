@@ -2,6 +2,9 @@ import db from "../../config/db.js";
 import ApiError from "../../utils/ApiError.js";
 import { sendPushNotification } from "../../utils/notificationHelper.js";
 
+/**
+ * 1. ASSIGN RIDER (DISPATCH)
+ */
 export const assignRiderController = async (req, res, next) => {
     const conn = await db.getConnection();
     try {
@@ -11,7 +14,6 @@ export const assignRiderController = async (req, res, next) => {
 
         await conn.beginTransaction();
 
-        // 1. Get Rider, Hub Info, and Customer FCM Token
         const [rows] = await conn.query(
             `SELECT r.id, r.agent_id, u.full_name as rider_name, 
                     cust_u.fcm_token as customer_fcm, p.booking_code
@@ -27,7 +29,6 @@ export const assignRiderController = async (req, res, next) => {
         if (!rows.length) throw new ApiError(404, "Data mismatch: Rider or Pickup not found");
         const data = rows[0];
 
-        // 2. Update Pickup
         const [updateResult] = await conn.query(
             `UPDATE pickups SET 
                 rider_id = ?, 
@@ -43,7 +44,6 @@ export const assignRiderController = async (req, res, next) => {
             throw new ApiError(400, "Pickup is already processed or completed.");
         }
 
-        // 3. Timeline
         await conn.query(
             "INSERT INTO pickup_timeline (pickup_id, status, changed_by, note) VALUES (?, 'accepted', ?, ?)",
             [pickupId, changerId, `Dispatched to Rider: ${data.rider_name}`]
@@ -51,14 +51,19 @@ export const assignRiderController = async (req, res, next) => {
 
         await conn.commit();
 
-        // 4. FIREBASE NOTIFICATION
+        // LOGGING FOR DEBUGGING
+        console.log(`[Dispatch] ID: ${pickupId} assigned to ${data.rider_name}`);
+
         if (data.customer_fcm) {
+            console.log(`[Push] Sending Assign Notification to Token: ${data.customer_fcm.substring(0, 30)}...`);
             await sendPushNotification(
                 data.customer_fcm,
                 "Rider Assigned! 🚚",
                 `${data.rider_name} has accepted your pickup request ${data.booking_code}.`,
                 { orderId: pickupId.toString(), type: "order_update" }
             );
+        } else {
+            console.warn(`[Push Skip] No token found for Pickup ID: ${pickupId}`);
         }
 
         res.json({ success: true, message: `Rider ${data.rider_name} has been dispatched.` });
@@ -70,6 +75,9 @@ export const assignRiderController = async (req, res, next) => {
     }
 };
 
+/**
+ * 2. UPDATE STATUS
+ */
 export const updatePickupStatus = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -78,7 +86,6 @@ export const updatePickupStatus = async (req, res, next) => {
 
         if (!allowedStatuses.includes(status)) throw new ApiError(400, "Invalid status transition");
 
-        // Fetch token and booking code before update
         const [pickupRows] = await db.query(
             `SELECT p.booking_code, u.fcm_token 
              FROM pickups p
@@ -94,7 +101,8 @@ export const updatePickupStatus = async (req, res, next) => {
             [id, status, note || `Status: ${status}`]
         );
 
-        // FIREBASE NOTIFICATION - STATUS UPDATE
+        console.log(`[StatusUpdate] Pickup ${id} changed to ${status}`);
+
         if (pickupRows.length && pickupRows[0].fcm_token) {
             const customerToken = pickupRows[0].fcm_token;
             const bCode = pickupRows[0].booking_code;
@@ -113,6 +121,7 @@ export const updatePickupStatus = async (req, res, next) => {
                 body = `Your request ${bCode} has been cancelled.`;
             }
 
+            console.log(`[Push] Sending Status Notification to Token: ${customerToken.substring(0, 30)}...`);
             await sendPushNotification(
                 customerToken,
                 title,
@@ -128,20 +137,13 @@ export const updatePickupStatus = async (req, res, next) => {
 };
 
 /**
- * AGENT PICKUP LIST
- * Shows all pickups assigned to a specific hub/agent
+ * 3. AGENT PICKUP LIST
  */
 export const agentPickupList = async (req, res, next) => {
     try {
-        // 1. Get Agent ID from the logged-in user
-        const [agent] = await db.query(
-            "SELECT id FROM agents WHERE owner_user_id = ?",
-            [req.user.id]
-        );
-
+        const [agent] = await db.query("SELECT id FROM agents WHERE owner_user_id = ?", [req.user.id]);
         if (!agent.length) return res.json({ success: true, data: [] });
 
-        // 2. Fetch pickups for this agent
         const [rows] = await db.query(
             `SELECT p.*, u.full_name AS customer_name, u.phone as customer_phone
              FROM pickups p 
@@ -151,28 +153,18 @@ export const agentPickupList = async (req, res, next) => {
              ORDER BY p.created_at DESC`,
             [agent[0].id]
         );
-
         res.json({ success: true, data: rows });
-    } catch (err) {
-        next(err);
-    }
+    } catch (err) { next(err); }
 };
 
 /**
- * RIDER PICKUP LIST
- * Shows active tasks assigned to the specific rider
+ * 4. RIDER PICKUP LIST
  */
 export const riderPickupList = async (req, res, next) => {
     try {
-        // 1. Get Rider ID from the logged-in user
-        const [rider] = await db.query(
-            "SELECT id FROM riders WHERE user_id = ?",
-            [req.user.id]
-        );
-
+        const [rider] = await db.query("SELECT id FROM riders WHERE user_id = ?", [req.user.id]);
         if (!rider.length) return res.json({ success: true, data: [] });
 
-        // 2. Fetch active (non-completed) pickups for this rider
         const [rows] = await db.query(
             `SELECT p.*, u.full_name AS customer_name, u.phone as customer_phone
              FROM pickups p 
@@ -182,15 +174,12 @@ export const riderPickupList = async (req, res, next) => {
              ORDER BY p.created_at DESC`,
             [rider[0].id]
         );
-
         res.json({ success: true, data: rows });
-    } catch (err) {
-        next(err);
-    }
+    } catch (err) { next(err); }
 };
 
 /**
- * REASSIGN SINGLE PICKUP
+ * 5. REASSIGN RIDER
  */
 export const reassignSinglePickup = async (req, res, next) => {
     const conn = await db.getConnection();
@@ -200,7 +189,6 @@ export const reassignSinglePickup = async (req, res, next) => {
 
         await conn.beginTransaction();
 
-        // Get Customer Token and Rider Name for context
         const [rows] = await conn.query(
             `SELECT p.booking_code, u.fcm_token, r_u.full_name as rider_name
              FROM pickups p
@@ -225,8 +213,10 @@ export const reassignSinglePickup = async (req, res, next) => {
 
         await conn.commit();
 
-        // FIREBASE NOTIFICATION
+        console.log(`[Reassign] Pickup ${id} reassigned to ${rows[0].rider_name}`);
+
         if (rows[0].fcm_token) {
+            console.log(`[Push] Sending Reassign Notification to: ${rows[0].fcm_token.substring(0, 30)}...`);
             await sendPushNotification(
                 rows[0].fcm_token,
                 "Rider Reassigned 🔄",
