@@ -78,7 +78,7 @@ export const updatePickupStatus = async (req, res, next) => {
 
         if (!allowedStatuses.includes(status)) throw new ApiError(400, "Invalid status transition");
 
-        // Fetch token and code before update
+        // Fetch token and booking code before update
         const [pickupRows] = await db.query(
             `SELECT p.booking_code, u.fcm_token 
              FROM pickups p
@@ -88,26 +88,33 @@ export const updatePickupStatus = async (req, res, next) => {
         );
 
         await db.query(`UPDATE pickups SET status = ?, updated_at = NOW() WHERE id = ?`, [status, id]);
+
         await db.query(
             "INSERT INTO pickup_timeline (pickup_id, status, p_timestamp, note) VALUES (?, ?, NOW(), ?)",
             [id, status, note || `Status: ${status}`]
         );
 
-        // FIREBASE NOTIFICATION
+        // FIREBASE NOTIFICATION - STATUS UPDATE
         if (pickupRows.length && pickupRows[0].fcm_token) {
+            const customerToken = pickupRows[0].fcm_token;
+            const bCode = pickupRows[0].booking_code;
+
             let title = "Pickup Update";
-            let body = `Your request ${pickupRows[0].booking_code} status is now: ${status.replace(/_/g, ' ')}`;
+            let body = `Your request ${bCode} status is now: ${status.replace(/_/g, ' ')}`;
 
             if (status === 'rider_on_way') {
                 title = "Rider is coming! 🛵";
-                body = `Your rider is on the way for request ${pickupRows[0].booking_code}.`;
+                body = `Your rider is on the way for request ${bCode}.`;
             } else if (status === 'arrived') {
                 title = "Rider Arrived! 📍";
-                body = "The rider has reached your location.";
+                body = `Our rider has arrived for your pickup ${bCode}.`;
+            } else if (status === 'cancelled') {
+                title = "Pickup Cancelled ❌";
+                body = `Your request ${bCode} has been cancelled.`;
             }
 
             await sendPushNotification(
-                pickupRows[0].fcm_token,
+                customerToken,
                 title,
                 body,
                 { orderId: id.toString(), type: "order_update" }
@@ -115,7 +122,9 @@ export const updatePickupStatus = async (req, res, next) => {
         }
 
         res.json({ success: true, message: `Status updated to ${status}` });
-    } catch (err) { next(err); }
+    } catch (err) {
+        next(err);
+    }
 };
 
 /**
