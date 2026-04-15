@@ -1,6 +1,7 @@
 import db from '../../config/db.js';
 import ApiError from '../../utils/ApiError.js';
 import { sendUnifiedReceipt } from '../../services/mailService.js';
+import { sendPushNotification } from '../../utils/notificationHelper.js';
 /**
  * Helper: Resolve rider_id and online status from logged-in user
  */
@@ -402,51 +403,65 @@ export const getTaskDetail = async (req, res, next) => {
 export const updateTaskStatus = async (req, res, next) => {
     const conn = await db.getConnection();
     try {
-        const { id } = req.params; // Pickup ID
+        const { id } = req.params;
         const { status } = req.body;
-        const changerId = req.user.id; // Logged-in Rider's User ID
+        const changerId = req.user.id;
 
-        // 1. Validate the lifecycle stages
+        console.log(`[RiderAction] Attempting status update for Pickup ${id} to ${status}`);
+
         const validStatuses = ['accepted', 'rider_on_way', 'arrived', 'weighing'];
-        if (!validStatuses.includes(status)) {
-            throw new ApiError(400, `Invalid transition: ${status}`);
-        }
+        if (!validStatuses.includes(status)) throw new ApiError(400, `Invalid transition: ${status}`);
 
         await conn.beginTransaction();
 
-        // 2. Update the Pickup Status and set specific timestamps if needed
-        // For example: if status is 'arrived', we update the rider_arrived_at column too
         let timestampQuery = "";
         if (status === 'arrived') timestampQuery = ", rider_arrived_at = NOW()";
         if (status === 'weighing') timestampQuery = ", weighing_started_at = NOW()";
 
         const [result] = await conn.query(
-            `UPDATE pickups SET status = ?, updated_at = NOW() ${timestampQuery} 
-             WHERE id = ?`,
+            `UPDATE pickups SET status = ?, updated_at = NOW() ${timestampQuery} WHERE id = ?`,
             [status, id]
         );
 
         if (result.affectedRows === 0) throw new ApiError(404, "Task node not found");
 
-        // 3. CRITICAL: Insert into pickup_timeline
-        // This creates the permanent audit trail for the Admin to see
         await conn.query(
-            `INSERT INTO pickup_timeline (pickup_id, status, changed_by, note) 
-             VALUES (?, ?, ?, ?)`,
-            [
-                id,
-                status,
-                changerId,
-                `Rider marked status as: ${status.replace(/_/g, ' ')}`
-            ]
+            `INSERT INTO pickup_timeline (pickup_id, status, changed_by, note) VALUES (?, ?, ?, ?)`,
+            [id, status, changerId, `Rider marked status as: ${status.replace(/_/g, ' ')}`]
+        );
+
+        // Fetch Customer Token for notification
+        const [customer] = await conn.query(
+            `SELECT u.fcm_token, p.booking_code 
+             FROM pickups p 
+             JOIN customers c ON p.customer_id = c.id 
+             JOIN users u ON c.user_id = u.id 
+             WHERE p.id = ?`, [id]
         );
 
         await conn.commit();
+        console.log(`[RiderAction] Transaction committed for Pickup ${id}`);
 
-        res.json({
-            success: true,
-            message: `Task progress updated to ${status.replace(/_/g, ' ')}`
-        });
+        // 2. TRIGGER NOTIFICATION
+        if (customer.length && customer[0].fcm_token) {
+            let title = "Pickup Update";
+            let body = `Your request ${customer[0].booking_code} is now: ${status.replace(/_/g, ' ')}`;
+
+            if (status === 'rider_on_way') {
+                title = "Rider is on the way! 🛵";
+                body = "The rider has started moving towards your location.";
+            } else if (status === 'arrived') {
+                title = "Rider Arrived! 📍";
+                body = "Our rider is outside. Please prepare your scrap items.";
+            }
+
+            await sendPushNotification(customer[0].fcm_token, title, body, {
+                orderId: id.toString(),
+                type: "order_update"
+            });
+        }
+
+        res.json({ success: true, message: `Task progress updated to ${status.replace(/_/g, ' ')}` });
 
     } catch (err) {
         await conn.rollback();
@@ -551,47 +566,32 @@ const updateWallet = async (conn, userId, amount, type, source, refType, refId, 
 export const finalizePickup = async (req, res, next) => {
     const conn = await db.getConnection();
     try {
-        await conn.beginTransaction();
-
         const { id: pickupId } = req.params;
         const { items, payment_method, note } = req.body;
+        console.log(`[RiderAction] Finalizing Pickup ${pickupId}...`);
 
-        // 1. Fetch Master Record with Hub & Rider Configuration
+        await conn.beginTransaction();
+
         const [p] = await conn.query(`
-            SELECT p.*, 
-                   c.user_id as customer_uid, 
-                   r.user_id as rider_uid, 
-                   r.payment_mode as rider_specific_mode,
-                   a.owner_user_id as agent_uid, 
-                   a.default_rider_mode as agent_default_mode,
+            SELECT p.*, c.user_id as customer_uid, cust_u.fcm_token as customer_fcm,
+                   r.user_id as rider_uid, r.payment_mode as rider_specific_mode,
+                   a.owner_user_id as agent_uid, a.default_rider_mode as agent_default_mode,
                    a.platform_fee_percent as hub_platform_fee_rate,
-                   a.hub_commission_value as hub_commission_rate,
-                   p.agent_id,
-                   wa.id as agent_wallet_id
+                   a.hub_commission_value as hub_commission_rate
             FROM pickups p
             JOIN customers c ON p.customer_id = c.id
+            JOIN users cust_u ON c.user_id = cust_u.id
             LEFT JOIN riders r ON p.rider_id = r.id
             LEFT JOIN agents a ON p.agent_id = a.id
-            LEFT JOIN wallet_accounts wa ON a.owner_user_id = wa.user_id
             WHERE p.id = ? FOR UPDATE`, [pickupId]);
 
-        if (!p.length) throw new ApiError(404, "Pickup request not found.");
+        if (!p.length) throw new ApiError(404, "Pickup not found.");
         const pickup = p[0];
 
-        // Ensure Agent Wallet exists (Fallback)
-        if (!pickup.agent_wallet_id && pickup.agent_uid) {
-            const [newW] = await conn.query("INSERT INTO wallet_accounts (user_id, balance) VALUES (?, 0)", [pickup.agent_uid]);
-            pickup.agent_wallet_id = newW.insertId;
-        }
-
-        // 2. Resolve Dynamic Payment Mode (Hierarchy: Rider Override > Agent Default)
         const activePaymentMode = pickup.rider_specific_mode === 'default'
-            ? pickup.agent_default_mode
-            : pickup.rider_specific_mode;
+            ? pickup.agent_default_mode : pickup.rider_specific_mode;
 
         let netPayableToCustomer = 0;
-
-        // 3. Process Items & Update Database
         for (const it of items) {
             const weight = parseFloat(it.actual_weight) || 0;
             const rate = parseFloat(it.final_rate) || 0;
@@ -599,133 +599,52 @@ export const finalizePickup = async (req, res, next) => {
             netPayableToCustomer += subtotal;
 
             if (it.id && !String(it.id).startsWith('new-')) {
-                // Update existing items booked by customer
-                await conn.query(`
-                    UPDATE pickup_items SET 
-                        actual_weight = ?, 
-                        final_rate_per_unit = ?, 
-                        final_amount = ? 
-                    WHERE id = ?`,
-                    [weight, rate, subtotal, it.id]
-                );
+                await conn.query(`UPDATE pickup_items SET actual_weight = ?, final_rate_per_unit = ?, final_amount = ? WHERE id = ?`, [weight, rate, subtotal, it.id]);
             } else {
-                // Insert new items found on-site by rider
-                await conn.query(`
-                    INSERT INTO pickup_items 
-                    (pickup_id, item_id, actual_weight, final_rate_per_unit, final_amount) 
-                    VALUES (?, ?, ?, ?, ?)`,
-                    [pickupId, it.item_id, weight, rate, subtotal]
-                );
+                await conn.query(`INSERT INTO pickup_items (pickup_id, item_id, actual_weight, final_rate_per_unit, final_amount) VALUES (?, ?, ?, ?, ?)`, [pickupId, it.item_id, weight, rate, subtotal]);
             }
         }
 
-        // 4. Calculate Financial Splits
         const platformFeeAmount = (netPayableToCustomer * (parseFloat(pickup.hub_platform_fee_rate) || 0)) / 100;
         const agentCommAmount = (netPayableToCustomer * (parseFloat(pickup.hub_commission_rate) || 0)) / 100;
+        let riderCommAmount = (activePaymentMode === 'commission') ? netPayableToCustomer * 0.02 : 0;
 
-        // Rider Commission only if mode is 'commission' (2% incentive)
-        let riderCommAmount = 0;
-        if (activePaymentMode === 'commission') {
-            riderCommAmount = netPayableToCustomer * 0.02;
-        }
-
-        // 5. Execute Wallet Transactions
-        // Customer Settlement
         if (payment_method === 'wallet') {
             await updateWallet(conn, pickup.customer_uid, netPayableToCustomer, 'credit', 'pickup_payment', 'pickup', pickupId, `Payment for ${pickup.booking_code}`);
-        } else {
-            // Physical Cash Collection Logging
-            await conn.query(`
-                INSERT INTO wallet_transactions 
-                (wallet_id, type, source, reference_type, reference_id, amount, balance_before, balance_after, status, description_en) 
-                VALUES (?, 'debit', 'cash_collection', 'pickup', ?, ?, 0, 0, 'completed', ?)`,
-                [pickup.agent_wallet_id, pickupId, netPayableToCustomer, `Cash collection recorded for ${pickup.booking_code}`]);
         }
 
-        // Pay Hub Agent
         if (pickup.agent_uid && agentCommAmount > 0) {
             await updateWallet(conn, pickup.agent_uid, agentCommAmount, 'credit', 'pickup_commission', 'pickup', pickupId, `Hub Commission: ${pickup.booking_code}`);
         }
 
-        // Pay Rider (Only if mode is commission)
         if (pickup.rider_uid && riderCommAmount > 0) {
             await updateWallet(conn, pickup.rider_uid, riderCommAmount, 'credit', 'pickup_commission', 'pickup', pickupId, `Rider Incentive: ${pickup.booking_code}`);
         }
 
-        // 6. Update Master Pickup Record
         await conn.query(`
-            UPDATE pickups SET 
-                status = 'completed', 
-                net_payable_amount = ?, 
-                rider_collected_cash = ?, 
-                rider_commission_amount = ?,
-                platform_fee_amount = ?,
-                agent_commission_amount = ?,
-                payment_mode_snapshot = ?,
-                payment_status = 'paid', 
-                completed_at = NOW(),
-                is_settled_to_hub = 0
-            WHERE id = ?`,
-            [
-                netPayableToCustomer,
-                (payment_method === 'cash' ? netPayableToCustomer : 0),
-                riderCommAmount,
-                platformFeeAmount,
-                agentCommAmount,
-                activePaymentMode,
-                pickupId
-            ]);
-
-        // 7. CRITICAL: LOG TO TIMELINE
-        // Tracks the exact moment the rider finished the weighing and settlement
-        await conn.query(`
-            INSERT INTO pickup_timeline (pickup_id, status, note, changed_by) 
-            VALUES (?, 'completed', ?, ?)`,
-            [
-                pickupId,
-                `Finalized. Settlement: ৳${netPayableToCustomer} via ${payment_method.toUpperCase()}. Mode: ${activePaymentMode}.`,
-                req.user.id
-            ]
+            UPDATE pickups SET status = 'completed', net_payable_amount = ?, rider_collected_cash = ?, 
+            rider_commission_amount = ?, platform_fee_amount = ?, agent_commission_amount = ?, 
+            payment_mode_snapshot = ?, payment_status = 'paid', completed_at = NOW() WHERE id = ?`,
+            [netPayableToCustomer, (payment_method === 'cash' ? netPayableToCustomer : 0), riderCommAmount, platformFeeAmount, agentCommAmount, activePaymentMode, pickupId]
         );
 
+        await conn.query(`INSERT INTO pickup_timeline (pickup_id, status, note, changed_by) VALUES (?, 'completed', ?, ?)`,
+            [pickupId, `Finalized. ৳${netPayableToCustomer} via ${payment_method.toUpperCase()}.`, req.user.id]);
+
         await conn.commit();
+        console.log(`[RiderAction] Pickup ${pickupId} fully finalized.`);
 
-        // 8. BACKGROUND: Receipt Generation (Non-blocking)
-        setImmediate(async () => {
-            try {
-                // Fetch full data for receipt
-                const [receiptInfo] = await db.query(`
-                    SELECT p.*, uc.full_name as customer_name, uc.email as customer_email, 
-                           ur.full_name as rider_name, a.business_name as hub_name
-                    FROM pickups p
-                    JOIN users uc ON p.customer_id = uc.id
-                    JOIN riders r ON p.rider_id = r.id JOIN users ur ON r.user_id = ur.id
-                    JOIN agents a ON p.agent_id = a.id
-                    WHERE p.id = ?`, [pickupId]);
+        // 3. TRIGGER NOTIFICATION - COMPLETION
+        if (pickup.customer_fcm) {
+            await sendPushNotification(
+                pickup.customer_fcm,
+                "Recycling Completed! 💰",
+                `Your pickup ${pickup.booking_code} is finished. You earned ৳${netPayableToCustomer.toFixed(2)}.`,
+                { orderId: pickupId.toString(), type: "order_update" }
+            );
+        }
 
-                const [receiptItems] = await db.query(`
-                    SELECT pi.*, si.name_en as item_name 
-                    FROM pickup_items pi 
-                    JOIN scrap_items si ON pi.item_id = si.id 
-                    WHERE pi.pickup_id = ?`, [pickupId]);
-
-                if (receiptInfo.length) {
-                    await sendUnifiedReceipt(receiptInfo[0], receiptItems);
-                }
-            } catch (err) {
-                console.error("Post-Finalization Receipt Error:", err);
-            }
-        });
-
-        res.json({
-            success: true,
-            message: "Pickup Successfully Finalized",
-            data: {
-                mode: activePaymentMode,
-                total: netPayableToCustomer,
-                incentive: riderCommAmount
-            }
-        });
+        res.json({ success: true, message: "Pickup Successfully Finalized" });
 
     } catch (err) {
         await conn.rollback();
