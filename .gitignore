@@ -5,3 +5,4 @@
 **/.env
 # Runtime uploads (do not commit)
 uploads/
+firebase-service-account.json
