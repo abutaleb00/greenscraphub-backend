@@ -140,3 +140,45 @@ export const getAdminWalletStats = async (req, res) => {
         res.status(500).json({ success: false, message: err.message });
     }
 };
+
+/**
+ * GET WALLET BALANCE
+ * Specific for Agent/Rider/Customer to see real-time balance + pending withdrawals
+ */
+export const getWalletBalance = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        // 1. Fetch main wallet data
+        const [wallets] = await db.query(
+            "SELECT balance, total_withdrawn FROM wallet_accounts WHERE user_id = ?",
+            [userId]
+        );
+
+        // If no wallet exists yet, return a clean zeroed object
+        if (!wallets.length) {
+            return res.json({
+                success: true,
+                data: { balance: 0, pending: 0, total_withdrawn: 0 }
+            });
+        }
+
+        // 2. Fetch pending payouts to calculate "Money in Transit"
+        const [pendingPayouts] = await db.query(
+            "SELECT SUM(amount) as pending FROM payout_requests WHERE user_id = ? AND status = 'pending'",
+            [userId]
+        );
+
+        res.json({
+            success: true,
+            data: {
+                balance: wallets[0].balance,
+                total_withdrawn: wallets[0].total_withdrawn,
+                pending: pendingPayouts[0].pending || 0
+            }
+        });
+    } catch (err) {
+        console.error("Wallet Balance Error:", err.message);
+        res.status(500).json({ success: false, message: "Server error fetching balance" });
+    }
+};

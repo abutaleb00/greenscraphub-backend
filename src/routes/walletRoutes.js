@@ -4,7 +4,8 @@ import { auth } from "../middlewares/auth.js";
 import {
     getWalletSummary,
     getWalletTransactions,
-    getAdminWalletStats
+    getAdminWalletStats,
+    getWalletBalance
 } from "../controllers/walletController.js";
 
 const router = express.Router();
@@ -14,6 +15,7 @@ const router = express.Router();
  * @desc    Get current balance and last 15 transactions
  * @access  Private (Customer, Rider, Agent)
  */
+router.get("/balance", auth(["customer", "rider", "agent"]), getWalletBalance);
 router.get(
     "/summary",
     auth(["customer", "rider", "agent"]),

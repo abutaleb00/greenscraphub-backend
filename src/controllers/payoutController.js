@@ -79,17 +79,28 @@ export const listUserPayouts = async (req, res) => {
     try {
         const { id: userId } = req.user;
 
+        // MATCHING SQL TO YOUR TABLE FIELDS:
+        // 'payment_method' becomes 'method'
+        // 'requested_at' becomes 'created_at'
         const [rows] = await db.query(
-            `SELECT id, amount, method, account_details, status, admin_note, transaction_id, created_at, processed_at 
-             FROM payout_requests 
-             WHERE user_id = ? 
-             ORDER BY created_at DESC`,
+            `SELECT 
+                p.id, 
+                p.amount, 
+                p.payment_method AS method, 
+                p.status, 
+                p.admin_note, 
+                p.transaction_id,
+                p.requested_at AS created_at 
+             FROM payout_requests p 
+             WHERE p.user_id = ? 
+             ORDER BY p.requested_at DESC`,
             [userId]
         );
 
         res.json({ success: true, data: rows });
     } catch (err) {
-        res.status(500).json({ success: false, message: "Failed to load payout history." });
+        console.error("PAYOUT_HISTORY_ERROR:", err.message);
+        res.status(500).json({ success: false, message: "Database error: " + err.message });
     }
 };
 
@@ -98,27 +109,43 @@ export const listUserPayouts = async (req, res) => {
  */
 export const adminListAllPayouts = async (req, res) => {
     try {
-        const { status } = req.query; // Optional filter: pending, completed, rejected
+        const { status } = req.query;
 
+        // Note: Change 'u.full_name' to 'u.name' if your users table uses 'name'
         let query = `
-            SELECT p.*, u.full_name, u.phone, w.balance as current_wallet_balance
+            SELECT 
+                p.*, 
+                u.full_name AS full_name, 
+                u.phone, 
+                COALESCE(w.balance, 0) as current_wallet_balance
             FROM payout_requests p 
             JOIN users u ON p.user_id = u.id 
-            JOIN wallet_accounts w ON u.id = w.user_id
+            LEFT JOIN wallet_accounts w ON u.id = w.user_id
         `;
 
         const params = [];
-        if (status) {
+        // Handle the 'all' case or specific status filters
+        if (status && status !== 'all') {
             query += " WHERE p.status = ?";
             params.push(status);
         }
 
-        query += " ORDER BY (p.status = 'pending') DESC, p.created_at DESC";
+        // Professional Sorting: Pending first, then by date
+        query += " ORDER BY (p.status = 'pending') DESC";
 
         const [rows] = await db.query(query, params);
-        res.json({ success: true, data: rows });
+
+        res.json({
+            success: true,
+            data: rows
+        });
     } catch (err) {
-        res.status(500).json({ success: false, message: "Server error." });
+        // Log the exact error to your terminal for debugging
+        console.error("ADMIN PAYOUT FETCH ERROR:", err.message);
+        res.status(500).json({
+            success: false,
+            message: "Internal Server Error: " + err.message
+        });
     }
 };
 
@@ -165,7 +192,7 @@ export const processPayout = async (req, res, next) => {
                 "UPDATE wallet_transactions SET status = 'completed' WHERE reference_id = ? AND reference_type = 'payout_request'",
                 [requestId]
             );
-        } 
+        }
         else if (status === 'rejected') {
             // REFUND LOGIC: Give money back to user wallet
             const [wallet] = await conn.query(
@@ -188,8 +215,8 @@ export const processPayout = async (req, res, next) => {
                 (wallet_id, type, source, reference_type, reference_id, amount, balance_before, balance_after, description_en, description_bn, status) 
                 VALUES (?, 'credit', 'refund', 'payout_request', ?, ?, ?, ?, ?, ?, 'completed')`,
                 [
-                    payout.wallet_id, requestId, refundAmount, balanceBefore, balanceAfter, 
-                    `Refund for rejected payout #${requestId}`, 
+                    payout.wallet_id, requestId, refundAmount, balanceBefore, balanceAfter,
+                    `Refund for rejected payout #${requestId}`,
                     `বাতিলকৃত পেমেন্ট #${requestId} এর রিফান্ড`
                 ]
             );
