@@ -381,6 +381,7 @@ export const updateFcmToken = async (req, res, next) => {
     next(err);
   }
 };
+
 /* -----------------------------------------------------
     GET ME (Comprehensive Profile)
 ----------------------------------------------------- */
@@ -392,12 +393,12 @@ export const getMe = async (req, res, next) => {
                 u.full_name, 
                 u.phone, 
                 u.email, 
+                u.profile_image, -- 1. Added profile_image column
                 r.name as role,
                 c.referral_code, 
                 c.total_points,
                 rd.is_online, 
                 rd.vehicle_number,
-                -- Use COALESCE to fallback to u.full_name if ag.business_name is null
                 COALESCE(ag.business_name, u.full_name) as business_name, 
                 ag.code as agent_code,
                 w.balance as wallet_balance
@@ -410,7 +411,19 @@ export const getMe = async (req, res, next) => {
             WHERE u.id = ?`, [req.user.id]);
 
     if (!rows.length) return next(new ApiError(404, 'User not found'));
-    res.json({ success: true, data: rows[0] });
+
+    const user = rows[0];
+
+    // 2. Format the profile image URL
+    // This ensures the mobile app gets a full clickable link
+    if (user.profile_image) {
+      const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+      user.profile_image = user.profile_image.startsWith('http')
+        ? user.profile_image
+        : `${baseUrl}${user.profile_image}`;
+    }
+
+    res.json({ success: true, data: user });
   } catch (err) {
     next(err);
   }
@@ -494,35 +507,36 @@ export const resetPassword = async (req, res, next) => {
 export const updateProfile = async (req, res, next) => {
   const conn = await db.getConnection();
   try {
-    const userId = req.user.id; // From auth middleware
-    const userRole = req.user.role; // From auth middleware (e.g., 'customer', 'rider')
+    const userId = req.user.id;
+    const userRole = req.user.role;
 
     const {
       full_name,
       email,
-      // Customer specific
       default_address_id,
-      // Rider specific
       vehicle_type,
       vehicle_number,
       emergency_contact,
       is_online,
     } = req.body;
 
+    // Check if a file was uploaded via Multer
+    const profile_image = req.file ? `/uploads/profiles/${req.file.filename}` : null;
+
     await conn.beginTransaction();
 
-    // 1. Update Base User Information
-    // Note: We don't usually allow phone updates here to prevent bypass of OTP verification
+    // 1. Update Base User Information (Added profile_image)
     const [userUpdate] = await conn.query(
       `UPDATE users SET 
         full_name = COALESCE(?, full_name), 
         email = COALESCE(?, email),
+        profile_image = COALESCE(?, profile_image),
         updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`,
-      [full_name, email, userId]
+      [full_name, email, profile_image, userId]
     );
 
-    // 2. Role-Based Profile Update
+    // 2. Role-Based Profile Update (Same as before)
     if (userRole === 'customer') {
       await conn.query(
         `UPDATE customers SET 
@@ -547,9 +561,9 @@ export const updateProfile = async (req, res, next) => {
 
     await conn.commit();
 
-    // 3. Fetch fresh data to return
+    // 3. Fetch fresh data to return (Added profile_image to SELECT)
     const [updatedRows] = await db.query(`
-        SELECT u.id, u.full_name, u.phone, u.email, r.name as role
+        SELECT u.id, u.full_name, u.phone, u.email, u.profile_image, r.name as role
         FROM users u
         INNER JOIN roles r ON u.role_id = r.id
         WHERE u.id = ?`,
@@ -564,8 +578,7 @@ export const updateProfile = async (req, res, next) => {
 
   } catch (err) {
     await conn.rollback();
-    console.error("Update Profile Error:", err);
-    next(new ApiError(500, "Failed to update profile."));
+    next(err);
   } finally {
     conn.release();
   }

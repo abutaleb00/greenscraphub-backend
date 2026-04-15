@@ -13,6 +13,7 @@ import {
   updateFcmToken
 } from '../controllers/authController.js';
 import { auth } from '../middlewares/auth.js';
+import { uploadProfile } from '../middlewares/profilePhoto.js';
 
 const router = express.Router();
 
@@ -114,6 +115,7 @@ router.get('/me', auth(), getMe);
 router.patch(
   '/profile',
   auth(),
+  uploadProfile.single('profile_image'),
   [
     body('full_name').optional().trim().notEmpty().withMessage('Full name cannot be empty'),
     body('email').optional({ checkFalsy: true }).isEmail().withMessage('Invalid email format'),
