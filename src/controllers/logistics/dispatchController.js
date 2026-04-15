@@ -79,6 +79,7 @@ export const assignRiderController = async (req, res, next) => {
  * 2. UPDATE STATUS
  */
 export const updatePickupStatus = async (req, res, next) => {
+    console.log("!!! CRITICAL: updatePickupStatus function reached !!!");
     try {
         const { id } = req.params;
         const { status, note } = req.body;
