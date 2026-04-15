@@ -3,7 +3,7 @@ import axios from "axios";
 import nodemailer from 'nodemailer';
 import ApiError from "../../utils/ApiError.js";
 import db from "../../config/db.js";
-
+import { sendPushNotification } from "../../utils/notificationHelper.js";
 /* -----------------------------------------------------
     HELPER: SEND PICKUP CONFIRMATION EMAIL
 ----------------------------------------------------- */
@@ -68,9 +68,9 @@ export const createPickup = async (req, res, next) => {
 
         const { division_id, district_id, upazila_id } = addressRows[0];
 
-        // 2. Fetch Customer Info (Email, Phone, Name)
+        // 2. Fetch Customer Info (Email, Phone, Name, AND FCM TOKEN)
         const [customerRows] = await conn.query(
-            `SELECT c.id, u.phone, u.full_name, u.email 
+            `SELECT c.id, u.phone, u.full_name, u.email, u.fcm_token 
              FROM customers c 
              JOIN users u ON c.user_id = u.id 
              WHERE u.id = ?`,
@@ -78,7 +78,13 @@ export const createPickup = async (req, res, next) => {
         );
         if (!customerRows.length) throw new ApiError(404, "Customer profile not found.");
 
-        const { id: customerId, phone: customerPhone, full_name: customerName, email: customerEmail } = customerRows[0];
+        const {
+            id: customerId,
+            phone: customerPhone,
+            full_name: customerName,
+            email: customerEmail,
+            fcm_token: customerFcmToken
+        } = customerRows[0];
 
         // 3. Parse Items
         const parsedItems = typeof items === 'string' ? JSON.parse(items) : items;
@@ -100,16 +106,11 @@ export const createPickup = async (req, res, next) => {
                 customer_note, pickup_type, created_at, updated_at
             ) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, NOW(), NOW())`,
             [
-                bookingCode,
-                customerId,
-                address_id,
-                division_id,
-                district_id,
-                upazila_id,
+                bookingCode, customerId, address_id,
+                division_id, district_id, upazila_id,
                 scheduled_date || new Date().toISOString().split('T')[0],
                 scheduled_time_slot || '10:00 AM - 06:00 PM',
-                customer_note,
-                pickup_type || 'scheduled'
+                customer_note, pickup_type || 'scheduled'
             ]
         );
         const pickupId = pickupResult.insertId;
@@ -162,10 +163,22 @@ export const createPickup = async (req, res, next) => {
 
         await conn.commit();
 
-        // 8. NOTIFICATION ENGINE (SMS & EMAIL)
-        // Wrapped in try/catch to ensure DB transaction success even if notifications fail
+        // 8. NOTIFICATION ENGINE (SMS, EMAIL & FIREBASE PUSH)
         try {
-            // A. Send SMS
+            // A. Send Firebase Push Notification
+            if (customerFcmToken) {
+                await sendPushNotification(
+                    customerFcmToken,
+                    "Pickup Requested! 📝",
+                    `Your request ${bookingCode} has been received and is pending.`,
+                    {
+                        orderId: pickupId.toString(),
+                        type: "order_update"
+                    }
+                );
+            }
+
+            // B. Send SMS
             let formattedPhone = customerPhone.trim();
             if (formattedPhone.startsWith('0')) formattedPhone = '88' + formattedPhone;
 
@@ -177,7 +190,7 @@ export const createPickup = async (req, res, next) => {
                 to: formattedPhone
             }, { headers: { 'Content-Type': 'multipart/form-data' } });
 
-            // B. Send Email
+            // C. Send Email
             if (customerEmail && !customerEmail.includes('example.com')) {
                 await sendPickupEmail(customerEmail, {
                     customerName,

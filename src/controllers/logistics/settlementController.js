@@ -1,5 +1,6 @@
 import db from "../../config/db.js";
 import ApiError from "../../utils/ApiError.js";
+import { sendPushNotification } from "../../utils/notificationHelper.js";
 
 const updateWallet = async (conn, userId, amount, type, source, refType, refId, descEn) => {
     // 1. Prevent Double Processing: Check if this reference transaction already exists
@@ -166,18 +167,21 @@ export const getPickupDetails = async (req, res, next) => {
 export const completePickup = async (req, res, next) => {
     const conn = await db.getConnection();
     const { id: pickupId } = req.params;
-
-    // items should be: [{ id: pickup_item_id, actual_weight: 10.5, final_rate: 45 }]
     const { items, payment_method, note } = req.body;
 
     try {
         await conn.beginTransaction();
 
-        // 1. Fetch Master Record with Locks
+        // 1. Fetch Master Record with Locks + Fetch Customer FCM Token
         const [p] = await conn.query(`
-            SELECT p.*, c.user_id as customer_uid, r.user_id as rider_uid, a.owner_user_id as agent_uid 
+            SELECT p.*, 
+                   c.user_id as customer_uid, 
+                   r.user_id as rider_uid, 
+                   a.owner_user_id as agent_uid,
+                   u.fcm_token as customer_fcm -- Added fcm_token
             FROM pickups p
             JOIN customers c ON p.customer_id = c.id
+            JOIN users u ON c.user_id = u.id -- Joined users table
             LEFT JOIN riders r ON p.rider_id = r.id
             LEFT JOIN agents a ON p.agent_id = a.id
             WHERE p.id = ? FOR UPDATE`, [pickupId]);
@@ -187,11 +191,10 @@ export const completePickup = async (req, res, next) => {
 
         const pickup = p[0];
 
-        // 2. Fetch System Commission Settings (Optional but recommended)
-        // Defaulting to your logic if settings table doesn't exist yet
-        const adminCommRate = 0.05; // 5%
-        const agentCommRate = 0.05; // 5%
-        const riderCommRate = 0.02; // 2% incentive
+        // 2. Fetch System Commission Settings
+        const adminCommRate = 0.05;
+        const agentCommRate = 0.05;
+        const riderCommRate = 0.02;
 
         let netPayable = 0;
         let totalWeight = 0;
@@ -223,19 +226,16 @@ export const completePickup = async (req, res, next) => {
         const riderComm = netPayable * riderCommRate;
 
         // 5. Financial Settlement (Wallets)
-        // Credit Agent Commission
         if (pickup.agent_uid) {
             await updateWallet(conn, pickup.agent_uid, agentComm, 'credit', 'pickup_commission', 'pickup', pickupId,
                 `Commission for Shipment #${pickup.booking_code}`);
         }
 
-        // Credit Rider Incentive
         if (pickup.rider_uid) {
             await updateWallet(conn, pickup.rider_uid, riderComm, 'credit', 'pickup_commission', 'pickup', pickupId,
                 `Incentive for Shipment #${pickup.booking_code}`);
         }
 
-        // Credit Customer (Only if payment method is wallet)
         if (payment_method === 'wallet') {
             await updateWallet(conn, pickup.customer_uid, netPayable, 'credit', 'pickup_payment', 'pickup', pickupId,
                 `Payment for Shipment #${pickup.booking_code}`);
@@ -259,26 +259,38 @@ export const completePickup = async (req, res, next) => {
                 updated_at = NOW()
             WHERE id = ?`,
             [
-                totalWeight,
-                netPayable,
-                adminComm,
-                agentComm,
-                riderComm,
-                payment_method,
-                (payment_method === 'wallet' ? 'paid' : 'pending'),
-                proofImage,
-                pickupId
+                totalWeight, netPayable, adminComm, agentComm, riderComm,
+                payment_method, (payment_method === 'wallet' ? 'paid' : 'pending'),
+                proofImage, pickupId
             ]
         );
 
         // 7. Log Final Timeline Event
         await conn.query(
-            `INSERT INTO pickup_timeline (pickup_id, status, note, created_at) 
-             VALUES (?, 'completed', ?, NOW())`,
-            [pickupId, note || 'Shipment verified and finalized by rider']
+            `INSERT INTO pickup_timeline (pickup_id, status, note, changed_by, created_at) 
+             VALUES (?, 'completed', ?, ?, NOW())`,
+            [pickupId, note || 'Shipment verified and finalized by rider', pickup.rider_uid]
         );
 
         await conn.commit();
+
+        // 8. FIREBASE NOTIFICATION (Triggered after successful commit)
+        if (pickup.customer_fcm) {
+            try {
+                await sendPushNotification(
+                    pickup.customer_fcm,
+                    "Earnings Confirmed! 💰",
+                    `Success! You earned ৳${netPayable.toFixed(2)} for request ${pickup.booking_code}. Thank you for recycling!`,
+                    {
+                        orderId: pickupId.toString(),
+                        type: "order_update",
+                        amount: netPayable.toString()
+                    }
+                );
+            } catch (notifErr) {
+                console.error("Post-Settlement Notification Error:", notifErr.message);
+            }
+        }
 
         res.json({
             success: true,

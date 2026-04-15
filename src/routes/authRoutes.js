@@ -9,7 +9,8 @@ import {
   forgotPasswordRequest,
   resetPassword,
   updateProfile,
-  changePassword
+  changePassword,
+  updateFcmToken
 } from '../controllers/authController.js';
 import { auth } from '../middlewares/auth.js';
 
@@ -17,7 +18,6 @@ const router = express.Router();
 
 /**
  * CUSTOM VALIDATOR: BD Phone Number
- * Checks if it's a valid 11-digit BD number starting with 01
  */
 const phoneValidator = body('phone')
   .trim()
@@ -31,7 +31,7 @@ router.post(
   '/register',
   [
     body('full_name').trim().notEmpty().withMessage('Full name is required'),
-    phoneValidator, // Used the custom validator
+    phoneValidator,
     body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
     body('email').optional({ checkFalsy: true }).isEmail().withMessage('Invalid email format'),
     body('referral_code').optional().trim(),
@@ -74,16 +74,12 @@ router.post(
 );
 
 /**
- * 4. FORGOT PASSWORD - STEP 1 (Request Reset OTP)
+ * 4. FORGOT PASSWORD - STEP 1
  */
-router.post(
-  '/forgot-password',
-  [phoneValidator], // Validates phone before triggering paid SMS
-  forgotPasswordRequest
-);
+router.post('/forgot-password', [phoneValidator], forgotPasswordRequest);
 
 /**
- * 5. FORGOT PASSWORD - STEP 2 (Verify & Reset)
+ * 5. FORGOT PASSWORD - STEP 2
  */
 router.post(
   '/reset-password',
@@ -113,7 +109,7 @@ router.post(
 router.get('/me', auth(), getMe);
 
 /**
- * 8. UPDATE PROFILE (Role-Aware)
+ * 8. UPDATE PROFILE
  */
 router.patch(
   '/profile',
@@ -123,7 +119,6 @@ router.patch(
     body('email').optional({ checkFalsy: true }).isEmail().withMessage('Invalid email format'),
     body('default_address_id').optional().isNumeric(),
     body('vehicle_type').optional().notEmpty(),
-    // Added specific validation for rider online status
     body('is_online').optional().isNumeric().isIn([0, 1]).withMessage('Status must be 0 or 1'),
   ],
   updateProfile
@@ -140,6 +135,19 @@ router.post(
     body('newPassword').isLength({ min: 6 }).withMessage('New password must be at least 6 characters'),
   ],
   changePassword
+);
+
+/**
+ * 10. UPDATE FCM TOKEN (Firebase Push Notifications)
+ * 2. Added the PATCH route for the mobile app to sync tokens
+ */
+router.patch(
+  '/fcm-token',
+  auth(),
+  [
+    body('token').notEmpty().withMessage('FCM Token is required')
+  ],
+  updateFcmToken
 );
 
 export default router;

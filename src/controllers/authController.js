@@ -356,6 +356,32 @@ export const login = async (req, res, next) => {
 };
 
 /* -----------------------------------------------------
+    UPDATE FCM TOKEN (Firebase Push Notifications)
+----------------------------------------------------- */
+export const updateFcmToken = async (req, res, next) => {
+  try {
+    const { token } = req.body;
+    const userId = req.user.id;
+
+    if (!token) {
+      return next(new ApiError(400, "FCM Token is required"));
+    }
+
+    // Update the token in the users table
+    await db.query("UPDATE users SET fcm_token = ?, updated_at = NOW() WHERE id = ?", [
+      token,
+      userId
+    ]);
+
+    res.json({
+      success: true,
+      message: "Push notification token synchronized successfully."
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+/* -----------------------------------------------------
     GET ME (Comprehensive Profile)
 ----------------------------------------------------- */
 export const getMe = async (req, res, next) => {

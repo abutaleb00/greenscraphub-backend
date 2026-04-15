@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { validationResult } from "express-validator";
 import ApiError from "../utils/ApiError.js";
 import db from "../config/db.js";
+import { sendPushNotification } from "../utils/notificationHelper.js";
 
 /* --------------------------------------------------
     INTERNAL HELPERS
@@ -524,19 +525,21 @@ export const assignPickupToAgent = async (req, res, next) => {
     const conn = await db.getConnection();
     try {
         const { pickup_id, agent_id } = req.body;
-
-        if (!pickup_id || !agent_id) {
-            throw new ApiError(400, "Pickup ID and Agent ID are required.");
-        }
-
         await conn.beginTransaction();
 
-        // 1. Verify pickup is still in 'pending' state
-        const [pickup] = await conn.query("SELECT id, status FROM pickups WHERE id = ?", [pickup_id]);
+        // 1. Verify pickup and Fetch Customer FCM Token
+        const [pickup] = await conn.query(`
+            SELECT p.id, p.booking_code, u.fcm_token, u.id as user_id 
+            FROM pickups p
+            JOIN customers c ON p.customer_id = c.id
+            JOIN users u ON c.user_id = u.id
+            WHERE p.id = ?
+        `, [pickup_id]);
+
         if (!pickup.length) throw new ApiError(404, "Pickup request not found.");
 
         // 2. Perform the assignment
-        const [result] = await conn.query(
+        await conn.query(
             `UPDATE pickups SET 
                 agent_id = ?, 
                 status = 'assigned', 
@@ -548,11 +551,17 @@ export const assignPickupToAgent = async (req, res, next) => {
 
         await conn.commit();
 
-        res.json({
-            success: true,
-            message: `Pickup ${pickup_id} manually assigned to Agent ${agent_id}.`
-        });
+        // 3. NOTIFY CUSTOMER via Firebase
+        if (pickup[0].fcm_token) {
+            await sendPushNotification(
+                pickup[0].fcm_token,
+                "Order Update 🚛",
+                `Your request ${pickup[0].booking_code} has been assigned to a local hub.`,
+                { orderId: pickup_id.toString(), type: "order_update" }
+            );
+        }
 
+        res.json({ success: true, message: "Assigned to Agent and Customer notified." });
     } catch (err) {
         await conn.rollback();
         next(err);
