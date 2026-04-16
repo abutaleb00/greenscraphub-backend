@@ -3,6 +3,26 @@ import db from '../config/db.js';
 import ApiError from '../utils/ApiError.js';
 
 /**
+ * NEW: GET WITHDRAWAL SETTINGS
+ * Fetches the dynamic minimum withdrawal amount from system_settings table.
+ */
+export const getWithdrawalSettings = async (req, res) => {
+    try {
+        const [rows] = await db.query(
+            "SELECT setting_value FROM system_settings WHERE setting_key = 'min_withdrawal_amount'"
+        );
+        // Fallback to 500 if not set in DB
+        const minAmount = rows.length ? parseFloat(rows[0].setting_value) : 500;
+
+        res.json({
+            success: true,
+            min_withdrawal_amount: minAmount
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+/**
  * 1. REQUEST WITHDRAWAL (Customer, Rider, Agent)
  * Deducts balance immediately to prevent double-spending.
  */
@@ -13,7 +33,17 @@ export const requestWithdrawal = async (req, res) => {
         const { id: userId } = req.user;
         const { amount, method, account_details } = req.body;
 
-        // 1. Fetch and Lock Wallet (Row Lock)
+        // A. Fetch Dynamic Minimum Limit
+        const [settings] = await conn.query(
+            "SELECT setting_value FROM system_settings WHERE setting_key = 'min_withdrawal_amount'"
+        );
+        const dynamicMin = settings.length ? parseFloat(settings[0].setting_value) : 500;
+
+        if (parseFloat(amount) < dynamicMin) {
+            throw new ApiError(400, `Minimum withdrawal amount is ৳${dynamicMin}`);
+        }
+
+        // B. Fetch and Lock Wallet
         const [wallet] = await conn.query(
             "SELECT id, balance FROM wallet_accounts WHERE user_id = ? FOR UPDATE",
             [userId]
@@ -27,32 +57,28 @@ export const requestWithdrawal = async (req, res) => {
         const withdrawAmount = parseFloat(amount);
         const balanceAfter = balanceBefore - withdrawAmount;
 
-        // 2. Create Payout Request
+        // C. Create Payout Request (Corrected Schema)
         const [request] = await conn.query(
             `INSERT INTO payout_requests 
-            (user_id, wallet_id, amount, method, account_details, status, created_at) 
-            VALUES (?, ?, ?, ?, ?, 'pending', NOW())`,
-            [userId, wallet[0].id, withdrawAmount, method, JSON.stringify(account_details)]
+            (user_id, amount, payment_method, account_details, status, requested_at) 
+            VALUES (?, ?, ?, ?, 'pending', NOW())`,
+            [userId, withdrawAmount, method, JSON.stringify(account_details)]
         );
         const requestId = request.insertId;
 
-        // 3. Update Wallet Balance Immediately
+        // D. Update Wallet Balance
         await conn.query(
             "UPDATE wallet_accounts SET balance = ?, updated_at = NOW() WHERE id = ?",
             [balanceAfter, wallet[0].id]
         );
 
-        // 4. Record Wallet Transaction (Bilingual)
+        // E. Record Transaction (wallet_transactions usually HAS wallet_id, so this stays)
         await conn.query(
             `INSERT INTO wallet_transactions 
             (wallet_id, type, source, reference_type, reference_id, amount, balance_before, balance_after, description_en, description_bn, status) 
             VALUES (?, 'debit', 'withdrawal', 'payout_request', ?, ?, ?, ?, ?, ?, 'pending')`,
             [
-                wallet[0].id,
-                requestId,
-                withdrawAmount,
-                balanceBefore,
-                balanceAfter,
+                wallet[0].id, requestId, withdrawAmount, balanceBefore, balanceAfter,
                 `Withdrawal request via ${method.toUpperCase()}`,
                 `${method.toUpperCase()} এর মাধ্যমে উত্তোলনের অনুরোধ`,
             ]
@@ -88,6 +114,7 @@ export const listUserPayouts = async (req, res) => {
                 p.amount, 
                 p.payment_method AS method, 
                 p.status, 
+                p.account_details AS account_details, 
                 p.admin_note, 
                 p.transaction_id,
                 p.requested_at AS created_at 
