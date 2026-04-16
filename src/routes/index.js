@@ -18,6 +18,7 @@ import customerDashboardRoutes from "./customerDashboardRoutes.js";
 import systemRoutes from "./systemRoutes.js";
 import agentRoutes from './agentRoutes.js';
 import receiptRoutes from './receiptRoutes.js';
+import inquiryRoutes from './inquiryRoutes.js';
 const router = express.Router();
 
 /**
@@ -81,5 +82,6 @@ router.use('/agents', agentRoutes);
  */
 router.use('/management', adminUserRoutes); // Onboarding Agents/Riders
 router.use('/system', systemRoutes);
+router.use('/inquiry', inquiryRoutes);
 
 export default router;
