@@ -822,3 +822,36 @@ export const permanentDeleteCustomer = async (req, res, next) => {
         conn.release();
     }
 }
+
+export const getActivityLogs = async (req, res) => {
+    try {
+        const query = `
+            SELECT 
+                al.id,
+                al.action,
+                al.platform,
+                al.browser,
+                al.os,
+                al.device,
+                al.ip_address,
+                al.metadata,
+                al.created_at,
+                u.full_name as user_name,
+                u.phone as user_phone
+            FROM activity_logs al
+            LEFT JOIN users u ON al.user_id = u.id
+            ORDER BY al.created_at DESC
+            LIMIT 250
+        `;
+
+        const [logs] = await db.execute(query);
+
+        return res.status(200).json({
+            success: true,
+            data: logs
+        });
+    } catch (error) {
+        console.error("Fetch Logs Error:", error);
+        return res.status(500).json({ success: false, message: "Error loading logs" });
+    }
+};

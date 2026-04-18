@@ -20,7 +20,8 @@ import {
     listCustomers,
     updateCustomer,
     permanentDeleteCustomer,
-    assignPickupToAgent
+    assignPickupToAgent,
+    getActivityLogs
 } from "../controllers/adminUserController.js";
 import { upsertPriceOverride, getItemOverrides, getAdminPriceIndex, getPriceHistory } from "../controllers/priceOverrideController.js";
 import { getCommissionSettings, updateAgentCommission } from '../controllers/commissionController.js';
@@ -189,4 +190,5 @@ router.post("/price-overrides", auth(["admin"]), upsertPriceOverride);
 router.get("/price-overrides/list", auth(["admin"]), getAdminPriceIndex);
 router.get("/prices/history/:item_id", auth(["admin"]), getPriceHistory);
 router.get("/price-overrides/:item_id", auth(["admin"]), getItemOverrides);
+router.get("/activity-logs", auth(["admin"]), getActivityLogs);
 export default router;
