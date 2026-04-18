@@ -4,17 +4,48 @@ import { validationResult } from 'express-validator';
 import nodemailer from 'nodemailer';
 import ApiError from '../utils/ApiError.js';
 import db from '../config/db.js';
-import { awardReferralBonus } from './pointController.js'; // Import the helper we created
+import { awardReferralBonus } from './pointController.js';
 import axios from 'axios';
+import useragent from 'useragent';
+import requestIp from 'request-ip';
 // Temporary store for OTPs and registration data
 const otpStore = new Map();
 
+const logActivity = async (req, userId, action, metadata = {}) => {
+  try {
+    const agent = useragent.parse(req.headers['user-agent']);
+    const ip = requestIp.getClientIp(req);
+
+    // Platform detection (Mobile App should send x-platform header)
+    const platform = req.headers['x-platform'] || (req.headers['user-agent'].includes('Postman') ? 'API' : 'WEB');
+
+    const query = `
+        INSERT INTO activity_logs 
+        (user_id, action, platform, browser, os, device, ip_address, metadata, created_at) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+    `;
+
+    const values = [
+      userId,
+      action,
+      platform,
+      agent.toAgent(),
+      agent.os.toString(),
+      agent.device.toString(),
+      ip,
+      JSON.stringify(metadata)
+    ];
+
+    await db.query(query, values);
+  } catch (error) {
+    console.error("[Activity Log Error]", error.message);
+  }
+};
 /* -----------------------------------------------------
     HELPER: SEND SMS OTP (sms.net.bd)
 ----------------------------------------------------- */
 const sendSMS = async (phone, otp) => {
   try {
-    // Ensure phone starts with 880 as required by the API
     let formattedPhone = phone.trim();
     if (formattedPhone.startsWith('0')) {
       formattedPhone = '88' + formattedPhone;
@@ -32,7 +63,6 @@ const sendSMS = async (phone, otp) => {
     });
 
     if (response.data.error === 0) {
-      console.log(`[SMS] OTP sent successfully to ${formattedPhone}`);
       return true;
     } else {
       console.error(`[SMS Error] API returned: ${response.data.msg}`);
@@ -90,18 +120,10 @@ export const registerRequest = async (req, res, next) => {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     otpStore.set(phone, { ...req.body, otp, expires: Date.now() + 300000 });
 
-    // 1. Always send SMS
     const smsSent = await sendSMS(phone, otp);
 
-    // 2. Send Email if provided
     if (email && !email.includes('example.com')) {
       await sendEmailOTP(email, otp);
-    }
-
-    if (!smsSent) {
-      // In production, you might want to throw error if SMS fails. 
-      // During testing, we log it.
-      console.log(`[AUTH] SMS Failed. Manual OTP for ${phone}: ${otp}`);
     }
 
     res.json({
@@ -130,36 +152,34 @@ export const verifyAndRegister = async (req, res, next) => {
 
     const password_hash = await bcrypt.hash(data.password, 10);
 
-    // 1. Create Base User (Role 4 = Customer)
     const [u] = await conn.query(
       "INSERT INTO users (full_name, phone, email, password_hash, role_id) VALUES (?, ?, ?, ?, 4)",
       [data.full_name, data.phone, data.email || null, password_hash]
     );
     const userId = u.insertId;
 
-    // 2. Resolve Referrer (Check if referral_code exists)
     let referredByCustomerId = null;
     if (data.referral_code) {
       const [ref] = await conn.query("SELECT id FROM customers WHERE referral_code = ?", [data.referral_code]);
       if (ref.length > 0) {
         referredByCustomerId = ref[0].id;
-        // AWARD BONUS TO REFERRER
         await awardReferralBonus(referredByCustomerId, conn);
       }
     }
 
-    // 3. Setup Customer Profile (GS + 5 random chars)
     const refCode = 'GS' + Math.random().toString(36).substring(2, 7).toUpperCase();
     await conn.query(
       "INSERT INTO customers (user_id, referral_code, referred_by, total_points) VALUES (?, ?, ?, 20)",
       [userId, refCode, referredByCustomerId]
     );
 
-    // 4. Initialize Wallet
     await conn.query("INSERT INTO wallet_accounts (user_id, balance) VALUES (?, 0)", [userId]);
 
     await conn.commit();
     otpStore.delete(phone);
+
+    // LOG ACTIVITY: SIGNUP
+    await logActivity(req, userId, 'SIGNUP', { method: 'Self-Registration' });
 
     const token = jwt.sign({ id: userId, role: 'customer' }, process.env.JWT_SECRET, { expiresIn: '7d' });
     res.status(201).json({
@@ -319,7 +339,6 @@ export const login = async (req, res, next) => {
   try {
     const { phone, password } = req.body;
 
-    // 1. Fetch user data including email
     const [rows] = await db.query(`
             SELECT u.id, u.full_name, u.phone, u.email, u.password_hash, u.is_active, r.name as role_name 
             FROM users u 
@@ -328,7 +347,6 @@ export const login = async (req, res, next) => {
 
     const user = rows[0];
 
-    // 2. Verify existence and password
     if (!user || !(await bcrypt.compare(password, user.password_hash))) {
       return next(new ApiError(401, 'Invalid phone number or password'));
     }
@@ -336,7 +354,9 @@ export const login = async (req, res, next) => {
     const role = user.role_name.toLowerCase();
     const token = jwt.sign({ id: user.id, role }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
-    // 3. Send response with email included in the user object
+    // LOG ACTIVITY: LOGIN
+    await logActivity(req, user.id, 'LOGIN', { status: 'success' });
+
     res.json({
       success: true,
       data: {
@@ -362,21 +382,10 @@ export const updateFcmToken = async (req, res, next) => {
   try {
     const { token } = req.body;
     const userId = req.user.id;
+    if (!token) return next(new ApiError(400, "FCM Token is required"));
 
-    if (!token) {
-      return next(new ApiError(400, "FCM Token is required"));
-    }
-
-    // Update the token in the users table
-    await db.query("UPDATE users SET fcm_token = ?, updated_at = NOW() WHERE id = ?", [
-      token,
-      userId
-    ]);
-
-    res.json({
-      success: true,
-      message: "Push notification token synchronized successfully."
-    });
+    await db.query("UPDATE users SET fcm_token = ?, updated_at = NOW() WHERE id = ?", [token, userId]);
+    res.json({ success: true, message: "Push notification token synchronized." });
   } catch (err) {
     next(err);
   }
@@ -389,19 +398,11 @@ export const getMe = async (req, res, next) => {
   try {
     const [rows] = await db.query(`
             SELECT 
-                u.id, 
-                u.full_name, 
-                u.phone, 
-                u.email, 
-                u.profile_image, -- 1. Added profile_image column
-                r.name as role,
-                c.referral_code, 
-                c.total_points,
-                rd.is_online, 
-                rd.vehicle_number,
+                u.id, u.full_name, u.phone, u.email, u.profile_image, 
+                r.name as role, c.referral_code, c.total_points,
+                rd.is_online, rd.vehicle_number,
                 COALESCE(ag.business_name, u.full_name) as business_name, 
-                ag.code as agent_code,
-                w.balance as wallet_balance
+                ag.code as agent_code, w.balance as wallet_balance
             FROM users u
             JOIN roles r ON u.role_id = r.id
             LEFT JOIN customers c ON u.id = c.user_id
@@ -414,8 +415,6 @@ export const getMe = async (req, res, next) => {
 
     const user = rows[0];
 
-    // 2. Format the profile image URL
-    // This ensures the mobile app gets a full clickable link
     if (user.profile_image) {
       const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
       user.profile_image = user.profile_image.startsWith('http')
@@ -438,7 +437,7 @@ export const forgotPasswordRequest = async (req, res, next) => {
     if (!phone) return next(new ApiError(400, 'Phone number is required'));
 
     const [rows] = await db.query(
-      'SELECT email, full_name FROM users WHERE phone = ? LIMIT 1',
+      'SELECT id, email, full_name FROM users WHERE phone = ? LIMIT 1',
       [phone]
     );
     const user = rows[0];
@@ -455,15 +454,16 @@ export const forgotPasswordRequest = async (req, res, next) => {
       expires: Date.now() + 300000
     });
 
-    // Send via SMS
     await sendSMS(phone, otp);
 
-    // Send via Email if available
     if (user.email && !user.email.includes('example.com')) {
       try {
         await sendEmailOTP(user.email, otp);
       } catch (e) { console.error("Mail failed during reset", e.message); }
     }
+
+    // LOG ACTIVITY: PASSWORD RESET REQUESTED
+    await logActivity(req, user.id, 'PASSWORD_RESET_REQUEST');
 
     res.status(200).json({
       success: true,
@@ -488,9 +488,15 @@ export const resetPassword = async (req, res, next) => {
 
     const password_hash = await bcrypt.hash(new_password, 10);
 
+    const [user] = await db.query('SELECT id FROM users WHERE phone = ?', [phone]);
     await db.query('UPDATE users SET password_hash = ? WHERE phone = ?', [password_hash, phone]);
 
     otpStore.delete(`reset_${phone}`);
+
+    // LOG ACTIVITY: PASSWORD RESET COMPLETED
+    if (user.length > 0) {
+      await logActivity(req, user[0].id, 'PASSWORD_RESET_SUCCESS');
+    }
 
     res.status(200).json({
       success: true,
@@ -509,24 +515,13 @@ export const updateProfile = async (req, res, next) => {
   try {
     const userId = req.user.id;
     const userRole = req.user.role;
+    const { full_name, email, default_address_id, vehicle_type, vehicle_number, emergency_contact, is_online } = req.body;
 
-    const {
-      full_name,
-      email,
-      default_address_id,
-      vehicle_type,
-      vehicle_number,
-      emergency_contact,
-      is_online,
-    } = req.body;
-
-    // Check if a file was uploaded via Multer
     const profile_image = req.file ? `/uploads/profiles/${req.file.filename}` : null;
 
     await conn.beginTransaction();
 
-    // 1. Update Base User Information (Added profile_image)
-    const [userUpdate] = await conn.query(
+    await conn.query(
       `UPDATE users SET 
         full_name = COALESCE(?, full_name), 
         email = COALESCE(?, email),
@@ -536,7 +531,6 @@ export const updateProfile = async (req, res, next) => {
       [full_name, email, profile_image, userId]
     );
 
-    // 2. Role-Based Profile Update (Same as before)
     if (userRole === 'customer') {
       await conn.query(
         `UPDATE customers SET 
@@ -561,7 +555,9 @@ export const updateProfile = async (req, res, next) => {
 
     await conn.commit();
 
-    // 3. Fetch fresh data to return (Added profile_image to SELECT)
+    // LOG ACTIVITY: PROFILE_UPDATE
+    await logActivity(req, userId, 'PROFILE_UPDATE');
+
     const [updatedRows] = await db.query(`
         SELECT u.id, u.full_name, u.phone, u.email, u.profile_image, r.name as role
         FROM users u
@@ -592,22 +588,31 @@ export const changePassword = async (req, res, next) => {
     const { currentPassword, newPassword } = req.body;
     const userId = req.user.id;
 
-    // Fetch user hash
     const [users] = await db.query("SELECT password_hash FROM users WHERE id = ?", [userId]);
     if (!users.length) return next(new ApiError(404, "User not found"));
 
-    // Verify current
     const isMatch = await bcrypt.compare(currentPassword, users[0].password_hash);
     if (!isMatch) return next(new ApiError(401, "Current password is incorrect"));
 
-    // Hash new
     const password_hash = await bcrypt.hash(newPassword, 10);
     await db.query("UPDATE users SET password_hash = ? WHERE id = ?", [password_hash, userId]);
+
+    // LOG ACTIVITY: SECURITY_PASSWORD_CHANGE
+    await logActivity(req, userId, 'PASSWORD_CHANGE');
 
     res.status(200).json({
       success: true,
       message: "Password changed successfully."
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const logout = async (req, res, next) => {
+  try {
+    await logActivity(req, req.user.id, 'LOGOUT');
+    res.json({ success: true, message: "Logged out from session." });
   } catch (err) {
     next(err);
   }

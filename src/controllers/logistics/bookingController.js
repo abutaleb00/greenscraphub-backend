@@ -1,9 +1,46 @@
-// 1. Fix the Import (Removed curly braces assuming it's a default export)
+// 1. Fix the Import
 import axios from "axios";
 import nodemailer from 'nodemailer';
 import ApiError from "../../utils/ApiError.js";
 import db from "../../config/db.js";
 import { sendPushNotification } from "../../utils/notificationHelper.js";
+import useragent from 'useragent';
+import requestIp from 'request-ip';
+
+/* -----------------------------------------------------
+    HELPER: LOG ACTIVITY (Device & Platform Tracking)
+----------------------------------------------------- */
+const logActivity = async (req, userId, action, metadata = {}) => {
+    try {
+        const agent = useragent.parse(req.headers['user-agent']);
+        const ip = requestIp.getClientIp(req);
+
+        // Platform detection (Mobile App should send x-platform header)
+        const platform = req.headers['x-platform'] || (req.headers['user-agent'].includes('Postman') ? 'API' : 'WEB');
+
+        const query = `
+            INSERT INTO activity_logs 
+            (user_id, action, platform, browser, os, device, ip_address, metadata, created_at) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        `;
+
+        const values = [
+            userId,
+            action,
+            platform,
+            agent.toAgent(),
+            agent.os.toString(),
+            agent.device.toString(),
+            ip,
+            JSON.stringify(metadata)
+        ];
+
+        await db.query(query, values);
+    } catch (error) {
+        console.error("[Activity Log Error]", error.message);
+    }
+};
+
 /* -----------------------------------------------------
     HELPER: SEND PICKUP CONFIRMATION EMAIL
 ----------------------------------------------------- */
@@ -68,7 +105,7 @@ export const createPickup = async (req, res, next) => {
 
         const { division_id, district_id, upazila_id } = addressRows[0];
 
-        // 2. Fetch Customer Info (Email, Phone, Name, AND FCM TOKEN)
+        // 2. Fetch Customer Info
         const [customerRows] = await conn.query(
             `SELECT c.id, u.phone, u.full_name, u.email, u.fcm_token 
              FROM customers c 
@@ -163,7 +200,14 @@ export const createPickup = async (req, res, next) => {
 
         await conn.commit();
 
-        // 8. NOTIFICATION ENGINE (SMS, EMAIL & FIREBASE PUSH)
+        // 🔥 8. LOG ACTIVITY: CREATE PICKUP
+        await logActivity(req, userId, 'CREATE_PICKUP', {
+            booking_code: bookingCode,
+            pickup_id: pickupId,
+            estimated_value: totalEstMin.toFixed(2)
+        });
+
+        // 9. NOTIFICATION ENGINE (SMS, EMAIL & FIREBASE PUSH)
         try {
             // A. Send Firebase Push Notification
             if (customerFcmToken) {
@@ -181,9 +225,7 @@ export const createPickup = async (req, res, next) => {
             // B. Send SMS
             let formattedPhone = customerPhone.trim();
             if (formattedPhone.startsWith('0')) formattedPhone = '88' + formattedPhone;
-
             const smsMessage = `Your pickup request confirmed! Order Code: ${bookingCode}. - Smart Scrap BD`;
-
             await axios.post('https://api.sms.net.bd/sendsms', {
                 api_key: process.env.SMS_API_KEY,
                 msg: smsMessage,
@@ -252,12 +294,8 @@ export const listAllPickupsAdmin = async (req, res, next) => {
         ag.business_name as agent_business_name,
         r_u.full_name as rider_name
     FROM pickups p 
-    -- 1. Join to Customers table first to bridge to the User
     LEFT JOIN customers c ON p.customer_id = c.id
-    -- 2. Join to Users table to get Name and Phone
     LEFT JOIN users u ON c.user_id = u.id
-    
-    -- 3. The rest of your joins
     LEFT JOIN addresses addr ON p.customer_address_id = addr.id
     LEFT JOIN divisions divs ON p.division_id = divs.id
     LEFT JOIN districts dist ON p.district_id = dist.id
@@ -265,7 +303,6 @@ export const listAllPickupsAdmin = async (req, res, next) => {
     LEFT JOIN agents ag ON p.agent_id = ag.id
     LEFT JOIN riders r ON p.rider_id = r.id
     LEFT JOIN users r_u ON r.user_id = r_u.id
-    
     WHERE p.is_deleted = 0
 `;
 

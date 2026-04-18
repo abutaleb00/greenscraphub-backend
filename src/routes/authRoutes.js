@@ -5,6 +5,7 @@ import {
   verifyAndRegister,
   onboardCustomer,
   login,
+  logout, // Added logout
   getMe,
   forgotPasswordRequest,
   resetPassword,
@@ -105,12 +106,17 @@ router.post(
 );
 
 /**
- * 7. GET AUTHENTICATED USER
+ * 7. LOGOUT (Clears session and logs activity)
+ */
+router.post('/logout', auth(), logout);
+
+/**
+ * 8. GET AUTHENTICATED USER
  */
 router.get('/me', auth(), getMe);
 
 /**
- * 8. UPDATE PROFILE
+ * 9. UPDATE PROFILE
  */
 router.patch(
   '/profile',
@@ -127,7 +133,7 @@ router.patch(
 );
 
 /**
- * 9. CHANGE PASSWORD
+ * 10. CHANGE PASSWORD
  */
 router.post(
   '/change-password',
@@ -140,8 +146,7 @@ router.post(
 );
 
 /**
- * 10. UPDATE FCM TOKEN (Firebase Push Notifications)
- * 2. Added the PATCH route for the mobile app to sync tokens
+ * 11. UPDATE FCM TOKEN (Firebase Push Notifications)
  */
 router.patch(
   '/fcm-token',
