@@ -6,7 +6,10 @@ import { uploadPickupPhotos } from "../middlewares/pickupUpload.js";
 import {
     createPickup,
     listCustomerPickups,
-    listAllPickupsAdmin
+    listAllPickupsAdmin,
+    archivePickup,
+    deletePickupAdmin,
+    bulkDeletePickups
 } from "../controllers/logistics/bookingController.js";
 
 // 2. Logistics: Dispatch & Rider Assignment
@@ -111,4 +114,11 @@ router.get("/rewards/leaderboard", auth(["customer", "agent", "rider", "admin"])
 router.get("/:id", auth(["customer", "agent", "rider", "admin"]), getPickupDetails);
 
 router.get("/:id/timeline", auth(["admin", "agent", "rider"]), getPickupTimeline);
+
+// Archive a single pickup request (Soft delete)
+router.patch('/admin/archive/:id', auth(["admin"]), archivePickup);
+router.delete('/admin/delete/:id', auth(["admin"]), deletePickupAdmin);
+
+// Start Fresh: Archive all active/unnecessary pickup requests
+router.post('/admin/bulk-cleanup', auth(["admin"]), bulkDeletePickups);
 export default router;

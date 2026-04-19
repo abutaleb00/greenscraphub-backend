@@ -138,7 +138,7 @@ export const updatePickupStatus = async (req, res, next) => {
 };
 
 /**
- * 3. AGENT PICKUP LIST
+ * 3. AGENT PICKUP LIST (Cleaned for Admin Fresh Start)
  */
 export const agentPickupList = async (req, res, next) => {
     try {
@@ -151,15 +151,20 @@ export const agentPickupList = async (req, res, next) => {
              JOIN customers c ON c.id = p.customer_id 
              JOIN users u ON u.id = c.user_id 
              WHERE p.agent_id = ? 
+             AND p.is_archived = 0 
+             AND p.is_deleted = 0
              ORDER BY p.created_at DESC`,
             [agent[0].id]
         );
+
         res.json({ success: true, data: rows });
-    } catch (err) { next(err); }
+    } catch (err) {
+        next(err);
+    }
 };
 
 /**
- * 4. RIDER PICKUP LIST
+ * 4. RIDER PICKUP LIST (Cleaned for Admin Fresh Start)
  */
 export const riderPickupList = async (req, res, next) => {
     try {
@@ -171,12 +176,18 @@ export const riderPickupList = async (req, res, next) => {
              FROM pickups p 
              JOIN customers c ON c.id = p.customer_id 
              JOIN users u ON u.id = c.user_id 
-             WHERE p.rider_id = ? AND p.status != 'completed' 
+             WHERE p.rider_id = ? 
+             AND p.status != 'completed'
+             AND p.is_archived = 0 
+             AND p.is_deleted = 0
              ORDER BY p.created_at DESC`,
             [rider[0].id]
         );
+
         res.json({ success: true, data: rows });
-    } catch (err) { next(err); }
+    } catch (err) {
+        next(err);
+    }
 };
 
 /**

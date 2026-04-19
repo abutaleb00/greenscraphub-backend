@@ -267,46 +267,72 @@ export const createPickup = async (req, res, next) => {
 };
 
 export const listCustomerPickups = async (req, res) => {
-    const [rows] = await db.query(
-        `SELECT p.*, upz.name_en as upazila_name 
-         FROM pickups p 
-         JOIN customers c ON p.customer_id = c.id 
-         LEFT JOIN upazilas upz ON p.upazila_id = upz.id
-         WHERE c.user_id = ? ORDER BY p.created_at DESC`, [req.user.id]
-    );
-    res.json({ success: true, data: rows });
+    try {
+        const [rows] = await db.query(
+            `SELECT p.*, upz.name_en as upazila_name 
+             FROM pickups p 
+             JOIN customers c ON p.customer_id = c.id 
+             LEFT JOIN upazilas upz ON p.upazila_id = upz.id
+             WHERE c.user_id = ? 
+             AND p.is_archived = 0 
+             AND p.is_deleted = 0 
+             ORDER BY p.created_at DESC`,
+            [req.user.id]
+        );
+
+        res.json({
+            success: true,
+            data: rows
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Failed to fetch pickups"
+        });
+    }
 };
 
 export const listAllPickupsAdmin = async (req, res, next) => {
     try {
-        const { status, page = 1, limit = 10 } = req.query;
+        // Added showArchived to the destructuring
+        const { status, page = 1, limit = 10, showArchived = 'false' } = req.query;
         const offset = (page - 1) * limit;
 
         let query = `
-    SELECT 
-        p.*, 
-        u.full_name as customer_name, 
-        u.phone as customer_phone,
-        addr.address_line,
-        divs.name_en as division_name,
-        dist.name_en as district_name,
-        upz.name_en as upazila_name,
-        ag.business_name as agent_business_name,
-        r_u.full_name as rider_name
-    FROM pickups p 
-    LEFT JOIN customers c ON p.customer_id = c.id
-    LEFT JOIN users u ON c.user_id = u.id
-    LEFT JOIN addresses addr ON p.customer_address_id = addr.id
-    LEFT JOIN divisions divs ON p.division_id = divs.id
-    LEFT JOIN districts dist ON p.district_id = dist.id
-    LEFT JOIN upazilas upz ON p.upazila_id = upz.id
-    LEFT JOIN agents ag ON p.agent_id = ag.id
-    LEFT JOIN riders r ON p.rider_id = r.id
-    LEFT JOIN users r_u ON r.user_id = r_u.id
-    WHERE p.is_deleted = 0
-`;
+            SELECT 
+                p.*, 
+                u.full_name as customer_name, 
+                u.phone as customer_phone,
+                addr.address_line,
+                divs.name_en as division_name,
+                dist.name_en as district_name,
+                upz.name_en as upazila_name,
+                ag.business_name as agent_business_name,
+                r_u.full_name as rider_name
+            FROM pickups p 
+            LEFT JOIN customers c ON p.customer_id = c.id
+            LEFT JOIN users u ON c.user_id = u.id
+            LEFT JOIN addresses addr ON p.customer_address_id = addr.id
+            LEFT JOIN divisions divs ON p.division_id = divs.id
+            LEFT JOIN districts dist ON p.district_id = dist.id
+            LEFT JOIN upazilas upz ON p.upazila_id = upz.id
+            LEFT JOIN agents ag ON p.agent_id = ag.id
+            LEFT JOIN riders r ON p.rider_id = r.id
+            LEFT JOIN users r_u ON r.user_id = r_u.id
+            WHERE p.is_deleted = 0
+        `;
 
         const params = [];
+
+        // --- FILTER: ARCHIVED STATUS ---
+        // By default, only show non-archived items (is_archived = 0)
+        if (showArchived === 'true') {
+            query += " AND p.is_archived = 1";
+        } else {
+            query += " AND p.is_archived = 0";
+        }
+
+        // --- FILTER: ORDER STATUS ---
         if (status && status !== 'all') {
             query += " AND p.status = ?";
             params.push(status);
@@ -317,11 +343,104 @@ export const listAllPickupsAdmin = async (req, res, next) => {
 
         const [rows] = await db.query(query, params);
 
+        // Get total count for pagination (optional but recommended for a "Start Fresh" UI)
+        const [totalRows] = await db.query(
+            `SELECT COUNT(*) as count FROM pickups WHERE is_deleted = 0 AND is_archived = ${showArchived === 'true' ? 1 : 0}`,
+            []
+        );
+
         res.json({
             success: true,
-            data: rows
+            data: rows,
+            meta: {
+                total: totalRows[0].count,
+                page: parseInt(page),
+                limit: parseInt(limit)
+            }
         });
     } catch (err) {
         next(err);
+    }
+};
+
+// 1. ARCHIVE (Updates is_archived to 1)
+export const archivePickup = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const [result] = await db.query('UPDATE pickups SET is_archived = 1 WHERE id = ?', [id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, message: "Pickup not found" });
+        }
+
+        await logActivity(req, req.user.id, 'ADMIN_ARCHIVE', `Archived Pickup ID: ${id}`);
+        res.json({ success: true, message: "Moved to system archive." });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+// 2. HARD DELETE (Permanently removes from DB)
+export const deletePickupAdmin = async (req, res) => {
+    const { id } = req.params;
+
+    // We use a transaction to ensure data integrity
+    const connection = await db.getConnection();
+
+    try {
+        await connection.beginTransaction();
+
+        // 1. Delete all "Children" first (pickup_items)
+        // This clears the foreign key constraint block
+        await connection.query('DELETE FROM pickup_items WHERE pickup_id = ?', [id]);
+
+        // 2. (Optional) Delete associated photos from storage if necessary
+        // You would fetch photo_urls before step 1 and trigger FS/S3 delete here
+
+        // 3. Delete the "Parent" (pickups)
+        const [result] = await connection.query('DELETE FROM pickups WHERE id = ?', [id]);
+
+        if (result.affectedRows === 0) {
+            await connection.rollback();
+            return res.status(404).json({
+                success: false,
+                message: "Pickup record not found."
+            });
+        }
+
+        // 4. Record this action in the System Activity Logs
+        await logActivity(req, req.user.id, 'ADMIN_HARD_DELETE', `Deleted Pickup ID: ${id} and all related pickup_items`);
+
+        // If everything is successful, commit changes
+        await connection.commit();
+
+        return res.status(200).json({
+            success: true,
+            message: "Pickup and all related items have been permanently removed."
+        });
+
+    } catch (err) {
+        // If anything fails, undo all changes made during this function
+        await connection.rollback();
+        console.error("Critical Delete Error:", err);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to delete record. " + err.message
+        });
+    } finally {
+        // Always release the connection back to the pool
+        connection.release();
+    }
+};
+
+// 3. BULK CLEANUP (Archives all currently active orders)
+export const bulkDeletePickups = async (req, res) => {
+    try {
+        await db.query('UPDATE pickups SET is_archived = 1 WHERE is_archived = 0');
+        await logActivity(req, req.user.id, 'ADMIN_BULK_CLEANUP', `Performed system-wide archive cleanup`);
+
+        res.json({ success: true, message: "All active pickups have been archived." });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
     }
 };

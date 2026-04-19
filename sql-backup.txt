@@ -439,15 +439,4 @@ cd /var/www/greenscraphub-backend
 pm2 restart greenscraphub-api --update-env
 
 
-CREATE TABLE activity_logs (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT,
-    action VARCHAR(100),
-    platform VARCHAR(50),
-    browser VARCHAR(100),
-    os VARCHAR(100),
-    device VARCHAR(100),
-    ip_address VARCHAR(45),
-    metadata TEXT, -- To store JSON as a string
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+ALTER TABLE pickups ADD COLUMN is_archived BOOLEAN DEFAULT FALSE;
