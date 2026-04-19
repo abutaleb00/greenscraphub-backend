@@ -426,6 +426,7 @@ mysql -u root -p greenscraphub_db < /home/abutaleb/greenscraphub_db.sql
 
 sudo systemctl status mysql
 
+mysqldump -u root -p greenscraphub_db > /home/abutaleb/greenscraphub_db_backup-19-04-2026-latest.sql
 mysql -u root -p
 USE greenscraphub_db;
 SELECT DATABASE();
@@ -439,4 +440,4 @@ cd /var/www/greenscraphub-backend
 pm2 restart greenscraphub-api --update-env
 
 
-ALTER TABLE pickups ADD COLUMN is_archived BOOLEAN DEFAULT FALSE;
+ALTER TABLE pickups ADD COLUMN created_by_admin BOOLEAN DEFAULT FALSE;

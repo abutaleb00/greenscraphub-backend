@@ -198,3 +198,34 @@ export const deleteAddress = async (req, res, next) => {
         next(err);
     }
 };
+
+/**
+ * 6. Get all addresses for a SPECIFIC user (Admin/Staff use)
+ */
+export const getAddressesByUserId = async (req, res, next) => {
+    try {
+        const targetUserId = req.params.userId;
+
+        const [rows] = await db.query(`
+            SELECT a.*, 
+                   dvs.name_en as division_name, 
+                   dis.name_en as district_name, 
+                   upz.name_en as upazila_name
+            FROM addresses a
+            LEFT JOIN divisions dvs ON a.division_id = dvs.id
+            LEFT JOIN districts dis ON a.district_id = dis.id
+            LEFT JOIN upazilas upz ON a.upazila_id = upz.id
+            WHERE a.user_id = ? 
+            ORDER BY a.is_default DESC, a.created_at DESC`,
+            [targetUserId]
+        );
+
+        res.status(200).json({
+            success: true,
+            count: rows.length,
+            data: rows
+        });
+    } catch (err) {
+        next(err);
+    }
+};

@@ -21,7 +21,8 @@ import {
     updateCustomer,
     permanentDeleteCustomer,
     assignPickupToAgent,
-    getActivityLogs
+    getActivityLogs,
+    getCustomerDetails
 } from "../controllers/adminUserController.js";
 import { upsertPriceOverride, getItemOverrides, getAdminPriceIndex, getPriceHistory } from "../controllers/priceOverrideController.js";
 import { getCommissionSettings, updateAgentCommission } from '../controllers/commissionController.js';
@@ -182,6 +183,7 @@ router.post(
 );
 
 // Customer Management
+router.get("/customers/:id", auth(["admin", "agent", "rider"]), getCustomerDetails);
 router.get("/customers", auth(["admin", "agent"]), listCustomers);
 router.put("/customers/:id", auth(["admin"]), updateCustomer); // Also handles deactivation
 router.delete("/customers/:id/permanent", auth(["admin"]), permanentDeleteCustomer);

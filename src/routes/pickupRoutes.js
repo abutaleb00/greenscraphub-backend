@@ -9,7 +9,8 @@ import {
     listAllPickupsAdmin,
     archivePickup,
     deletePickupAdmin,
-    bulkDeletePickups
+    bulkDeletePickups,
+    createOrderAsAdmin
 } from "../controllers/logistics/bookingController.js";
 
 // 2. Logistics: Dispatch & Rider Assignment
@@ -121,4 +122,5 @@ router.delete('/admin/delete/:id', auth(["admin"]), deletePickupAdmin);
 
 // Start Fresh: Archive all active/unnecessary pickup requests
 router.post('/admin/bulk-cleanup', auth(["admin"]), bulkDeletePickups);
+router.post('/admin/place-order', auth(["admin"]), uploadPickupPhotos.any(), createOrderAsAdmin);
 export default router;

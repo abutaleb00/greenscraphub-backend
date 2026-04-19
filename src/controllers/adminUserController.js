@@ -855,3 +855,52 @@ export const getActivityLogs = async (req, res) => {
         return res.status(500).json({ success: false, message: "Error loading logs" });
     }
 };
+
+/**
+ * GET SINGLE CUSTOMER DETAILS
+ * Accessible by Admin, Agent, and Rider
+ */
+export const getCustomerDetails = async (req, res, next) => {
+    try {
+        const { id } = req.params; // This is the User ID (u.id)
+
+        const query = `
+            SELECT 
+                u.id, u.full_name, u.phone, u.email, u.is_active, u.created_at,
+                c.referral_code, c.total_points,
+                w.balance,
+                -- Address Details
+                addr.address_line,
+                addr.latitude,
+                addr.longitude,
+                divs.name_en as division_name,
+                dist.name_en as district_name,
+                upz.name_en as upazila_name,
+                -- Order Stats
+                (SELECT COUNT(*) FROM pickups WHERE customer_id = c.id) as total_bookings,
+                (SELECT MAX(created_at) FROM pickups WHERE customer_id = c.id) as last_order_date
+            FROM users u
+            JOIN customers c ON u.id = c.user_id
+            LEFT JOIN wallet_accounts w ON u.id = w.user_id
+            -- Fetch the primary/default address
+            LEFT JOIN addresses addr ON u.id = addr.user_id AND addr.is_default = 1
+            LEFT JOIN divisions divs ON addr.division_id = divs.id
+            LEFT JOIN districts dist ON addr.district_id = dist.id
+            LEFT JOIN upazilas upz ON addr.upazila_id = upz.id
+            WHERE u.id = ? AND u.role_id = 4
+        `;
+
+        const [rows] = await db.query(query, [id]);
+
+        if (rows.length === 0) {
+            throw new ApiError(404, "Customer not found");
+        }
+
+        res.json({
+            success: true,
+            data: rows[0]
+        });
+    } catch (err) {
+        next(err);
+    }
+};

@@ -551,4 +551,3 @@ export const riderPickupList = async (req, res) => {
     res.json({ success: true, data: rows });
 };
 
-

@@ -5,7 +5,8 @@ import {
     addAddress,
     updateAddress,
     setDefaultAddress,
-    deleteAddress
+    deleteAddress,
+    getAddressesByUserId
 } from '../controllers/addressController.js';
 import { auth } from '../middlewares/auth.js';
 
@@ -75,5 +76,11 @@ router.patch('/:id/default', setDefaultAddress);
  * @access  Private
  */
 router.delete('/:id', deleteAddress);
+/**
+ * @route   GET /api/v1/addresses/user/:userId
+ * @desc    Get all addresses for a specific user ID (For Admin/Agent use)
+ * @access  Private (Restricted to Admin/Agent)
+ */
+router.get('/user/:userId', auth(['admin', 'agent']), getAddressesByUserId);
 
 export default router;

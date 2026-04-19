@@ -7,6 +7,7 @@ import { sendPushNotification } from "../../utils/notificationHelper.js";
 import useragent from 'useragent';
 import requestIp from 'request-ip';
 
+
 /* -----------------------------------------------------
     HELPER: LOG ACTIVITY (Device & Platform Tracking)
 ----------------------------------------------------- */
@@ -442,5 +443,170 @@ export const bulkDeletePickups = async (req, res) => {
         res.json({ success: true, message: "All active pickups have been archived." });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+export const createOrderAsAdmin = async (req, res, next) => {
+    const conn = await db.getConnection();
+    try {
+        await conn.beginTransaction();
+
+        const adminId = req.user.id; // Logged-in Admin
+        const {
+            customer_id, // Target Customer
+            address_id,
+            items,
+            scheduled_date,
+            scheduled_time_slot,
+            pickup_note,
+            pickup_type
+        } = req.body;
+
+        // 1. Fetch Geo-Data & Verify Address belongs to the TARGET CUSTOMER
+        const [addressRows] = await conn.query(
+            "SELECT division_id, district_id, upazila_id FROM addresses WHERE id = ? AND user_id = ?",
+            [address_id, customer_id]
+        );
+
+        if (!addressRows.length) {
+            throw new ApiError(400, "Invalid address selection for the specified customer.");
+        }
+
+        const { division_id, district_id, upazila_id } = addressRows[0];
+
+        // 2. Fetch Target Customer Info for Notifications
+        const [customerRows] = await conn.query(
+            `SELECT c.id as customerId, u.phone, u.full_name, u.email, u.fcm_token 
+             FROM customers c 
+             JOIN users u ON c.user_id = u.id 
+             WHERE u.id = ?`,
+            [customer_id]
+        );
+        if (!customerRows.length) throw new ApiError(404, "Target customer profile not found.");
+
+        const customer = customerRows[0];
+
+        // 3. Parse Items & Files
+        const parsedItems = typeof items === 'string' ? JSON.parse(items) : items;
+        const uploadedFiles = req.files || [];
+
+        if (!parsedItems || parsedItems.length === 0) {
+            throw new ApiError(400, "At least one scrap item is required.");
+        }
+
+        // 4. Generate Booking Code (Internal Admin Prefix 'ADM')
+        const bookingCode = `GS-ADM-${upazila_id || '0'}-${Date.now().toString().slice(-4)}`;
+
+        // 5. Insert Master Pickup Record (created_by_admin = 1)
+        const [pickupResult] = await conn.query(
+            `INSERT INTO pickups (
+                booking_code, customer_id, customer_address_id, 
+                division_id, district_id, upazila_id,
+                status, scheduled_date, scheduled_time_slot, 
+                customer_note, pickup_type, created_by_admin, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, 1, NOW(), NOW())`,
+            [
+                bookingCode, customer.customerId, address_id,
+                division_id, district_id, upazila_id,
+                scheduled_date || new Date().toISOString().split('T')[0],
+                scheduled_time_slot || '10:00 AM - 06:00 PM',
+                pickup_note || "Order placed by Support Team",
+                pickup_type || 'scheduled'
+            ]
+        );
+        const pickupId = pickupResult.insertId;
+
+        let totalEstMin = 0;
+
+        // 6. Process Items & Pricing (Same algorithm as Customer controller)
+        for (let i = 0; i < parsedItems.length; i++) {
+            const item = parsedItems[i];
+            const itemId = item.item_id;
+
+            const [priceData] = await conn.query(
+                `SELECT si.current_min_rate, si.category_id, ov.min_rate as override_rate
+                 FROM scrap_items si
+                 LEFT JOIN item_price_overrides ov ON si.id = ov.item_id 
+                    AND ov.is_active = 1
+                    AND (ov.upazila_id = ? OR ov.district_id = ? OR ov.division_id = ?)
+                 WHERE si.id = ?
+                 ORDER BY ov.upazila_id DESC, ov.district_id DESC, ov.division_id DESC LIMIT 1`,
+                [upazila_id, district_id, division_id, itemId]
+            );
+
+            const finalRate = priceData.length > 0 ? (priceData[0].override_rate || priceData[0].current_min_rate || 0) : 0;
+            const weight = parseFloat(item.estimated_weight) || 0;
+            const itemSubtotal = finalRate * weight;
+            totalEstMin += itemSubtotal;
+
+            // Map photos if any provided by admin
+            const itemPhotos = uploadedFiles
+                .filter(file => file.fieldname === `item_photos_${i}` || file.fieldname === 'photos')
+                .map(file => `/uploads/pickups/${file.filename}`);
+
+            await conn.query(
+                `INSERT INTO pickup_items (
+                    pickup_id, category_id, item_id, 
+                    estimated_weight, final_rate_per_unit, final_amount, 
+                    photo_url, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
+                [pickupId, priceData[0]?.category_id || null, itemId, weight, finalRate, itemSubtotal, JSON.stringify(itemPhotos)]
+            );
+        }
+
+        // 7. Update Totals & Timeline
+        await conn.query("UPDATE pickups SET base_amount = ? WHERE id = ?", [totalEstMin, pickupId]);
+
+        await conn.query(
+            `INSERT INTO pickup_timeline (pickup_id, status, note, changed_by, created_at) 
+             VALUES (?, 'pending', 'Order placed on behalf of customer by Admin', ?, NOW())`,
+            [pickupId, adminId]
+        );
+
+        await conn.commit();
+
+        // 8. LOG ACTIVITY: Admin Proxy Order
+        await logActivity(req, adminId, 'ADMIN_PROXY_ORDER', {
+            target_customer: customer.full_name,
+            booking_code: bookingCode,
+            pickup_id: pickupId
+        });
+
+        // 9. NOTIFICATION ENGINE (Notify the Customer)
+        try {
+            if (customer.fcm_token) {
+                await sendPushNotification(
+                    customer.fcm_token,
+                    "Order Scheduled! 🚛",
+                    `Our team has scheduled a pickup ${bookingCode} for you.`,
+                    { orderId: pickupId.toString(), type: "order_update" }
+                );
+            }
+
+            let formattedPhone = customer.phone.trim();
+            if (formattedPhone.startsWith('0')) formattedPhone = '88' + formattedPhone;
+            const smsMessage = `Pickup request confirmed by Admin! Code: ${bookingCode}. View in app. - Smart Scrap BD`;
+
+            await axios.post('https://api.sms.net.bd/sendsms', {
+                api_key: process.env.SMS_API_KEY,
+                msg: smsMessage,
+                to: formattedPhone
+            }, { headers: { 'Content-Type': 'multipart/form-data' } });
+
+        } catch (notifyErr) {
+            console.error("[NOTIFY ERROR] Proxy order notification failed:", notifyErr.message);
+        }
+
+        res.status(201).json({
+            success: true,
+            message: "Proxy order created successfully!",
+            data: { booking_code: bookingCode, pickup_id: pickupId }
+        });
+
+    } catch (err) {
+        if (conn) await conn.rollback();
+        next(err);
+    } finally {
+        if (conn) conn.release();
     }
 };
