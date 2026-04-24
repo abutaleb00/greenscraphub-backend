@@ -206,6 +206,7 @@ export const deleteAddress = async (req, res, next) => {
         const addressId = req.params.id;
         const userId = req.user.id;
 
+        // 1. Check if this is the default address
         const [customer] = await db.query(
             "SELECT id FROM customers WHERE default_address_id = ? AND user_id = ?",
             [addressId, userId]
@@ -215,6 +216,17 @@ export const deleteAddress = async (req, res, next) => {
             throw new ApiError(400, "Cannot delete primary address. Please set another default first.");
         }
 
+        // 2. OPTIONAL: Prevent deleting the last remaining address
+        const [allAddresses] = await db.query(
+            "SELECT COUNT(*) as total FROM addresses WHERE user_id = ?",
+            [userId]
+        );
+
+        if (allAddresses[0].total <= 1) {
+            throw new ApiError(400, "You must have at least one address saved.");
+        }
+
+        // 3. Delete the address
         const [result] = await db.query(
             "DELETE FROM addresses WHERE id = ? AND user_id = ?",
             [addressId, userId]
