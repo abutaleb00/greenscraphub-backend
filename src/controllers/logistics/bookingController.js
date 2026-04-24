@@ -114,15 +114,15 @@ export const createPickup = async (req, res, next) => {
             scheduled_time_slot, customer_note, pickup_type
         } = req.body;
 
+        // 1. Validate Address
         const [addressRows] = await conn.query(
             "SELECT division_id, district_id, upazila_id FROM addresses WHERE id = ? AND user_id = ?",
             [address_id, userId]
         );
-
         if (!addressRows.length) throw new ApiError(400, "Invalid address selected.");
-
         const { division_id, district_id, upazila_id } = addressRows[0];
 
+        // 2. Fetch Customer Data
         const [customerRows] = await conn.query(
             `SELECT c.id, u.phone, u.full_name, u.email, u.fcm_token 
              FROM customers c 
@@ -139,9 +139,9 @@ export const createPickup = async (req, res, next) => {
 
         const parsedItems = typeof items === 'string' ? JSON.parse(items) : items;
         const uploadedFiles = req.files || [];
-
         const bookingCode = `GS-${upazila_id || '0'}-${Date.now().toString().slice(-4)}`;
 
+        // 3. Create Main Pickup Entry
         const [pickupResult] = await conn.query(
             `INSERT INTO pickups (
                 booking_code, customer_id, customer_address_id, 
@@ -157,8 +157,8 @@ export const createPickup = async (req, res, next) => {
         );
         const pickupId = pickupResult.insertId;
 
+        // 4. Process Items and Calculate Value
         let totalEstMin = 0;
-
         for (let i = 0; i < parsedItems.length; i++) {
             const item = parsedItems[i];
             const itemId = item.item_id || item.scrap_item_id;
@@ -193,8 +193,8 @@ export const createPickup = async (req, res, next) => {
             );
         }
 
+        // 5. Finalize Database
         await conn.query("UPDATE pickups SET base_amount = ? WHERE id = ?", [totalEstMin, pickupId]);
-
         await conn.query(
             `INSERT INTO pickup_timeline (pickup_id, status, note, changed_by, created_at) 
              VALUES (?, 'pending', 'Shipment request created by customer', ?, NOW())`,
@@ -203,30 +203,66 @@ export const createPickup = async (req, res, next) => {
 
         // 🔥 PERSISTENT DB NOTIFICATION
         await saveNotification(conn, userId, 'notif_pickup_created_title', 'notif_pickup_created_body', { bookingCode }, 'success', `/(home)/activity/${pickupId}`);
+
         await conn.commit();
 
-        // LOG ACTIVITY
+        // 6. LOG ACTIVITY
         await logActivity(req, userId, 'CREATE_PICKUP', { booking_code: bookingCode, pickup_id: pickupId, estimated_value: totalEstMin.toFixed(2) });
 
-        // ASYNC NOTIFICATIONS
-        try {
-            if (customerFcmToken) {
-                await sendPushNotification(customerFcmToken, "Pickup Requested! 📝", `Your request ${bookingCode} has been received.`, { orderId: pickupId.toString(), type: "order_update" });
+        // ✅ STEP 7: SEND API SUCCESS FIRST
+        // This ensures the user's app transitions to the success screen before the notification pops up.
+        res.status(201).json({
+            success: true,
+            message: "Pickup created successfully!",
+            data: {
+                booking_code: bookingCode,
+                pickup_id: pickupId,
+                estimated_value: totalEstMin.toFixed(2)
             }
+        });
 
-            let formattedPhone = customerPhone.trim();
-            if (formattedPhone.startsWith('0')) formattedPhone = '88' + formattedPhone;
-            const smsMessage = `Your pickup request confirmed! Order Code: ${bookingCode}. - Smart Scrap BD`;
-            await axios.post('https://api.sms.net.bd/sendsms', { api_key: process.env.SMS_API_KEY, msg: smsMessage, to: formattedPhone }, { headers: { 'Content-Type': 'multipart/form-data' } });
+        // ✅ STEP 8: ASYNC NOTIFICATIONS (Executes after res.json)
+        // Wrapped in setImmediate to ensure the process doesn't block the connection closure
+        setImmediate(async () => {
+            try {
+                // Push Notification
+                if (customerFcmToken) {
+                    await sendPushNotification(
+                        customerFcmToken,
+                        "পিকআপ অনুরোধ সফল! 📝",
+                        `আপনার অনুরোধ ${bookingCode} গ্রহণ করা হয়েছে।`,
+                        { orderId: pickupId.toString(), type: "order_update" }
+                    );
+                }
 
-            if (customerEmail && !customerEmail.includes('example.com')) {
-                await sendPickupEmail(customerEmail, { customerName, customerPhone, bookingCode, totalEstMin: totalEstMin.toFixed(2), scheduledDate: scheduled_date, timeSlot: scheduled_time_slot });
+                // SMS Notification
+                let formattedPhone = customerPhone.trim();
+                if (formattedPhone.startsWith('0')) formattedPhone = '88' + formattedPhone;
+                const smsMessage = `পিকআপ অনুরোধ নিশ্চিত! অর্ডার কোড: ${bookingCode}. - Smart Scrap BD`;
+
+                await axios.post('https://api.sms.net.bd/sendsms', {
+                    api_key: process.env.SMS_API_KEY,
+                    msg: smsMessage,
+                    to: formattedPhone
+                }, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+
+                // Email Notification
+                if (customerEmail && !customerEmail.includes('example.com')) {
+                    await sendPickupEmail(customerEmail, {
+                        customerName,
+                        customerPhone,
+                        bookingCode,
+                        totalEstMin: totalEstMin.toFixed(2),
+                        scheduledDate: scheduled_date,
+                        timeSlot: scheduled_time_slot
+                    });
+                }
+            } catch (notifyErr) {
+                console.error("[BACKGROUND NOTIFICATION ERROR]", notifyErr.message);
             }
-        } catch (notifyErr) {
-            console.error("[NOTIFICATION ERROR]", notifyErr.message);
-        }
-
-        res.status(201).json({ success: true, message: "Pickup created successfully!", data: { booking_code: bookingCode, pickup_id: pickupId, estimated_value: totalEstMin.toFixed(2) } });
+        });
 
     } catch (err) {
         if (conn) await conn.rollback();

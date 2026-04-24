@@ -14,10 +14,10 @@ const otpStore = new Map();
 const logActivity = async (req, userId, action, metadata = {}) => {
   try {
     const agent = useragent.parse(req.headers['user-agent']);
-
+    
     // Improved IP detection
     let ip = requestIp.getClientIp(req);
-
+    
     // If you are behind a proxy (like Nginx), request-ip usually handles it, 
     // but we can force a clean-up if it returns a list or IPv6 prefix
     if (ip && ip.startsWith('::ffff:')) {
