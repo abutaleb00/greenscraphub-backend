@@ -2,6 +2,26 @@ import db from "../../config/db.js";
 import ApiError from "../../utils/ApiError.js";
 import { sendPushNotification } from "../../utils/notificationHelper.js";
 
+/* -----------------------------------------------------
+    HELPER: SAVE TO NOTIFICATIONS TABLE (DB Persistent)
+    Mapped to ENUM('info', 'alert', 'success', 'warning')
+----------------------------------------------------- */
+const saveNotification = async (conn, userId, titleKey, bodyKey, placeholders = {}, type = 'info', action = null) => {
+    try {
+        const validTypes = ['info', 'alert', 'success', 'warning'];
+        const finalType = validTypes.includes(type) ? type : 'info';
+
+        await conn.query(`
+            INSERT INTO notifications (
+                user_id, title_key, body_key, body_placeholders, 
+                notification_type, click_action, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+            [userId, titleKey, bodyKey, JSON.stringify(placeholders), finalType, action]
+        );
+    } catch (err) {
+        console.error("[DB NOTIFICATION ERROR]", err.message);
+    }
+};
 const updateWallet = async (conn, userId, amount, type, source, refType, refId, descEn) => {
     // 1. Prevent Double Processing: Check if this reference transaction already exists
     const [existing] = await conn.query(
@@ -43,26 +63,29 @@ const updateWallet = async (conn, userId, amount, type, source, refType, refId, 
 };
 
 /**
- * GET PICKUP DETAILS
- * Provides a comprehensive view of a single pickup for the UI
+ * GET PICKUP DETAILS (Real-App Tracking Logic)
+ * Provides dynamic coordinates based on the current state of the pickup
+ */
+
+/**
+ * GET PICKUP DETAILS (Real-App Tracking Logic)
+ * Fixed: Corrected coordinate mapping to use Address table and updated fallbacks to Khulna.
  */
 export const getPickupDetails = async (req, res, next) => {
     try {
         const { id } = req.params;
 
-        // 1. Fetch main pickup info with Customer, Rider, Hub, and Address details
+        // 1. Fetch main pickup info with Address Coordinates
         const [pickupRows] = await db.query(
             `SELECT 
                 p.*, 
-                u.full_name as customer_name, 
-                u.phone as customer_phone, 
-                r_u.full_name as rider_name,
-                r_u.phone as rider_phone,
-                ag.business_name as hub_name,
-                addr.address_line,
-                addr.house_no,
-                addr.road_no,
-                addr.landmark
+                u.full_name as customer_name, u.phone as customer_phone, 
+                r_u.full_name as rider_name, r_u.phone as rider_phone,
+                r.current_latitude as rider_live_lat, r.current_longitude as rider_live_lng,
+                ag.business_name as hub_name, ag.latitude as hub_lat, ag.longitude as hub_lng,
+                addr.address_line, addr.house_no, addr.road_no, addr.landmark,
+                addr.latitude as addr_lat, addr.longitude as addr_lng, -- Added specific address coords
+                dns.name_en as division_name, dist.name_en as district_name, upz.name_en as upazila_name
              FROM pickups p 
              JOIN customers c ON p.customer_id = c.id 
              JOIN users u ON c.user_id = u.id
@@ -70,96 +93,103 @@ export const getPickupDetails = async (req, res, next) => {
              LEFT JOIN users r_u ON r.user_id = r_u.id
              LEFT JOIN agents ag ON p.agent_id = ag.id
              LEFT JOIN addresses addr ON p.customer_address_id = addr.id
+             LEFT JOIN divisions dns ON addr.division_id = dns.id
+             LEFT JOIN districts dist ON addr.district_id = dist.id
+             LEFT JOIN upazilas upz ON addr.upazila_id = upz.id
              WHERE p.id = ?`,
             [id]
         );
 
-        if (!pickupRows.length) {
-            throw new ApiError(404, "Pickup request not found");
-        }
+        if (!pickupRows.length) throw new ApiError(404, "Pickup request not found");
 
         const pickup = pickupRows[0];
 
-        // Helper to format full URLs for images (handles both local paths and external links)
+        // 2. Real-App Tracking Logic
+        // Khulna Default Fallback: 22.8456, 89.5403
+        let tracking = {
+            origin: {
+                latitude: parseFloat(pickup.hub_lat) || 22.8456,
+                longitude: parseFloat(pickup.hub_lng) || 89.5403,
+                label: 'Hub'
+            },
+            destination: {
+                // Priority: 1. Address Lat/Lng, 2. Pickup Lat/Lng, 3. Khulna Default
+                latitude: parseFloat(pickup.addr_lat) || parseFloat(pickup.latitude) || 22.8456,
+                longitude: parseFloat(pickup.addr_lng) || parseFloat(pickup.longitude) || 89.5403,
+                label: 'Customer'
+            },
+            current_focus: 'agent'
+        };
+
+        // Switch origin to Rider Live Location if they are currently moving
+        if (['rider_on_way', 'arrived', 'weighing'].includes(pickup.status?.toLowerCase()) && pickup.rider_live_lat) {
+            tracking.origin = {
+                latitude: parseFloat(pickup.rider_live_lat),
+                longitude: parseFloat(pickup.rider_live_lng),
+                label: 'Rider'
+            };
+            tracking.current_focus = 'rider';
+        }
+
+        // 3. Image URL Helper
         const getFullUrl = (path) => {
             if (!path) return null;
             if (path.startsWith('http')) return path;
             const baseUrl = process.env.BASE_URL || 'https://webapp.prosfata.space';
-            // Ensure single leading slash
-            const cleanPath = path.startsWith('/') ? path : `/${path}`;
-            return `${baseUrl.replace(/\/$/, "")}${cleanPath}`;
+            return `${baseUrl.replace(/\/$/, "")}/${path.replace(/^\//, "")}`;
         };
 
-        // 2. Fetch Itemized List with Catalog Images (Product Images)
+        // 4. Fetch Items with photos
         const [items] = await db.query(
-            `SELECT 
-                pi.*, 
-                si.name_en, 
-                si.name_bn, 
-                si.unit,
-                si.image_url as product_image
+            `SELECT pi.*, si.name_en, si.name_bn, si.unit, si.image_url as product_image
              FROM pickup_items pi 
              JOIN scrap_items si ON pi.item_id = si.id 
              WHERE pi.pickup_id = ?`,
             [id]
         );
 
-        // Transform items to handle user-uploaded photos and catalog images
         const transformedItems = items.map(item => {
-            let userPhotos = [];
-
-            // Handle photo_url stored in pickup_items (User uploads from checkout)
+            let photos = [];
             if (item.photo_url) {
                 try {
-                    // Try to parse if it's a JSON string, otherwise wrap in array
-                    const parsed = typeof item.photo_url === 'string'
-                        ? JSON.parse(item.photo_url)
-                        : item.photo_url;
-
-                    userPhotos = Array.isArray(parsed)
-                        ? parsed.map(p => getFullUrl(p))
-                        : [getFullUrl(parsed)];
+                    const parsed = typeof item.photo_url === 'string' ? JSON.parse(item.photo_url) : item.photo_url;
+                    photos = Array.isArray(parsed) ? parsed.map(p => getFullUrl(p)) : [getFullUrl(parsed)];
                 } catch (e) {
-                    // Fallback for plain string paths
-                    userPhotos = [getFullUrl(item.photo_url)];
+                    photos = [getFullUrl(item.photo_url)];
                 }
             }
-
             return {
                 ...item,
-                product_image: getFullUrl(item.product_image), // Image from catalog
-                user_photos: userPhotos // Proof images uploaded by user
+                product_image: getFullUrl(item.product_image),
+                user_photos: photos
             };
         });
 
-        // 3. Fetch Event Timeline with Changer Name
+        // 5. Fetch Timeline
         const [timeline] = await db.query(
-            `SELECT 
-                pt.*, 
-                u.full_name as changer_name
-             FROM pickup_timeline pt
+            `SELECT pt.*, u.full_name as changer_name FROM pickup_timeline pt
              LEFT JOIN users u ON pt.changed_by = u.id
-             WHERE pt.pickup_id = ? 
-             ORDER BY pt.created_at DESC`, // Latest updates first
+             WHERE pt.pickup_id = ? ORDER BY pt.created_at DESC`,
             [id]
         );
 
-        // 4. Transform top-level pickup images (proof_image_before/after)
-        pickup.proof_image_before = getFullUrl(pickup.proof_image_before);
-        pickup.proof_image_after = getFullUrl(pickup.proof_image_after);
-
-        // Final Response
         res.json({
             success: true,
             data: {
-                pickup: pickup,
+                pickup: {
+                    ...pickup,
+                    proof_image_before: getFullUrl(pickup.proof_image_before),
+                    proof_image_after: getFullUrl(pickup.proof_image_after),
+                    rider_image: null
+                },
+                tracking,
                 items: transformedItems,
-                timeline: timeline
+                timeline
             }
         });
 
     } catch (err) {
-        console.error("Detailed Pickup Error:", err);
+        console.error("Tracking API Error:", err);
         next(err);
     }
 };
@@ -172,16 +202,16 @@ export const completePickup = async (req, res, next) => {
     try {
         await conn.beginTransaction();
 
-        // 1. Fetch Master Record with Locks + Fetch Customer FCM Token
+        // 1. Fetch Master Record with Locks
         const [p] = await conn.query(`
             SELECT p.*, 
                    c.user_id as customer_uid, 
                    r.user_id as rider_uid, 
                    a.owner_user_id as agent_uid,
-                   u.fcm_token as customer_fcm -- Added fcm_token
+                   u.fcm_token as customer_fcm
             FROM pickups p
             JOIN customers c ON p.customer_id = c.id
-            JOIN users u ON c.user_id = u.id -- Joined users table
+            JOIN users u ON c.user_id = u.id
             LEFT JOIN riders r ON p.rider_id = r.id
             LEFT JOIN agents a ON p.agent_id = a.id
             WHERE p.id = ? FOR UPDATE`, [pickupId]);
@@ -191,7 +221,7 @@ export const completePickup = async (req, res, next) => {
 
         const pickup = p[0];
 
-        // 2. Fetch System Commission Settings
+        // 2. Settlement Settings
         const adminCommRate = 0.05;
         const agentCommRate = 0.05;
         const riderCommRate = 0.02;
@@ -220,30 +250,19 @@ export const completePickup = async (req, res, next) => {
             );
         }
 
-        // 4. Calculate Commissions
-        const adminComm = netPayable * adminCommRate;
-        const agentComm = netPayable * agentCommRate;
-        const riderComm = netPayable * riderCommRate;
-
-        // 5. Financial Settlement (Wallets)
+        // 4. Financial Transfers
         if (pickup.agent_uid) {
-            await updateWallet(conn, pickup.agent_uid, agentComm, 'credit', 'pickup_commission', 'pickup', pickupId,
-                `Commission for Shipment #${pickup.booking_code}`);
+            await updateWallet(conn, pickup.agent_uid, (netPayable * agentCommRate), 'credit', 'pickup_commission', 'pickup', pickupId, `Commission for Shipment #${pickup.booking_code}`);
         }
-
         if (pickup.rider_uid) {
-            await updateWallet(conn, pickup.rider_uid, riderComm, 'credit', 'pickup_commission', 'pickup', pickupId,
-                `Incentive for Shipment #${pickup.booking_code}`);
+            await updateWallet(conn, pickup.rider_uid, (netPayable * riderCommRate), 'credit', 'pickup_commission', 'pickup', pickupId, `Incentive for Shipment #${pickup.booking_code}`);
         }
-
         if (payment_method === 'wallet') {
-            await updateWallet(conn, pickup.customer_uid, netPayable, 'credit', 'pickup_payment', 'pickup', pickupId,
-                `Payment for Shipment #${pickup.booking_code}`);
+            await updateWallet(conn, pickup.customer_uid, netPayable, 'credit', 'pickup_payment', 'pickup', pickupId, `Payment for Shipment #${pickup.booking_code}`);
         }
 
-        // 6. Finalize Master Record
+        // 5. Finalize Record
         const proofImage = req.file ? `/uploads/pickups/${req.file.filename}` : null;
-
         await conn.query(
             `UPDATE pickups SET 
                 status = 'completed', 
@@ -258,53 +277,50 @@ export const completePickup = async (req, res, next) => {
                 completed_at = NOW(),
                 updated_at = NOW()
             WHERE id = ?`,
-            [
-                totalWeight, netPayable, adminComm, agentComm, riderComm,
-                payment_method, (payment_method === 'wallet' ? 'paid' : 'pending'),
-                proofImage, pickupId
-            ]
+            [totalWeight, netPayable, (netPayable * adminCommRate), (netPayable * agentCommRate), (netPayable * riderCommRate), payment_method, (payment_method === 'wallet' ? 'paid' : 'pending'), proofImage, pickupId]
         );
 
-        // 7. Log Final Timeline Event
+        // 6. Timeline Entry
         await conn.query(
             `INSERT INTO pickup_timeline (pickup_id, status, note, changed_by, created_at) 
              VALUES (?, 'completed', ?, ?, NOW())`,
-            [pickupId, note || 'Shipment verified and finalized by rider', pickup.rider_uid]
+            [pickupId, note || 'Shipment verified and finalized', req.user.id]
+        );
+
+        // 🔥 DB NOTIFICATION: Earnings Confirmed
+        await saveNotification(
+            conn,
+            pickup.customer_uid,
+            'notif_earnings_confirmed_title',
+            'notif_earnings_confirmed_body',
+            { bookingCode: pickup.booking_code, amount: netPayable.toFixed(2) },
+            'success',
+            `/(home)/activity/${pickupId}`
         );
 
         await conn.commit();
 
-        // 8. FIREBASE NOTIFICATION (Triggered after successful commit)
+        // 8. FIREBASE PUSH
         if (pickup.customer_fcm) {
             try {
                 await sendPushNotification(
                     pickup.customer_fcm,
                     "Earnings Confirmed! 💰",
-                    `Success! You earned ৳${netPayable.toFixed(2)} for request ${pickup.booking_code}. Thank you for recycling!`,
-                    {
-                        orderId: pickupId.toString(),
-                        type: "order_update",
-                        amount: netPayable.toString()
-                    }
+                    `Success! You earned ৳${netPayable.toFixed(2)} for request ${pickup.booking_code}.`,
+                    { orderId: pickupId.toString(), type: "order_update" }
                 );
             } catch (notifErr) {
-                console.error("Post-Settlement Notification Error:", notifErr.message);
+                console.error("FCM Error:", notifErr.message);
             }
         }
 
-        res.json({
-            success: true,
-            message: "Shipment finalized successfully!",
-            total_weight: totalWeight,
-            net_amount: netPayable
-        });
+        res.json({ success: true, message: "Shipment finalized successfully!", net_amount: netPayable });
 
     } catch (err) {
-        await conn.rollback();
-        console.error("Settlement Error:", err);
+        if (conn) await conn.rollback();
         next(err);
     } finally {
-        conn.release();
+        if (conn) conn.release();
     }
 };
 

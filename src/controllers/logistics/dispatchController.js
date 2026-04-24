@@ -2,6 +2,23 @@ import db from "../../config/db.js";
 import ApiError from "../../utils/ApiError.js";
 import { sendPushNotification } from "../../utils/notificationHelper.js";
 
+/* -----------------------------------------------------
+    HELPER: SAVE TO NOTIFICATIONS TABLE (DB Persistent)
+    Mapped to ENUM('info', 'alert', 'success', 'warning')
+----------------------------------------------------- */
+const saveNotification = async (conn, userId, titleKey, bodyKey, placeholders = {}, type = 'info', action = null) => {
+    try {
+        await conn.query(`
+            INSERT INTO notifications (
+                user_id, title_key, body_key, body_placeholders, 
+                notification_type, click_action, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+            [userId, titleKey, bodyKey, JSON.stringify(placeholders), type, action]
+        );
+    } catch (err) {
+        console.error("[DB NOTIFICATION ERROR]", err.message);
+    }
+};
 /**
  * 1. ASSIGN RIDER (DISPATCH)
  */
@@ -16,7 +33,7 @@ export const assignRiderController = async (req, res, next) => {
 
         const [rows] = await conn.query(
             `SELECT r.id, r.agent_id, u.full_name as rider_name, 
-                    cust_u.fcm_token as customer_fcm, p.booking_code
+                    cust_u.id as target_user_id, cust_u.fcm_token as customer_fcm, p.booking_code
              FROM pickups p
              JOIN riders r ON r.id = ?
              JOIN users u ON r.user_id = u.id
@@ -49,21 +66,26 @@ export const assignRiderController = async (req, res, next) => {
             [pickupId, changerId, `Dispatched to Rider: ${data.rider_name}`]
         );
 
+        // 🔥 DB NOTIFICATION: Rider Assigned
+        await saveNotification(
+            conn,
+            data.target_user_id,
+            'notif_rider_assigned_title',
+            'notif_rider_assigned_body',
+            { riderName: data.rider_name, bookingCode: data.booking_code },
+            'success',
+            `/(home)/activity/${pickupId}`
+        );
+
         await conn.commit();
 
-        // LOGGING FOR DEBUGGING
-        console.log(`[Dispatch] ID: ${pickupId} assigned to ${data.rider_name}`);
-
         if (data.customer_fcm) {
-            console.log(`[Push] Sending Assign Notification to Token: ${data.customer_fcm.substring(0, 30)}...`);
             await sendPushNotification(
                 data.customer_fcm,
                 "Rider Assigned! 🚚",
                 `${data.rider_name} has accepted your pickup request ${data.booking_code}.`,
                 { orderId: pickupId.toString(), type: "order_update" }
             );
-        } else {
-            console.warn(`[Push Skip] No token found for Pickup ID: ${pickupId}`);
         }
 
         res.json({ success: true, message: `Rider ${data.rider_name} has been dispatched.` });
@@ -79,7 +101,7 @@ export const assignRiderController = async (req, res, next) => {
  * 2. UPDATE STATUS
  */
 export const updatePickupStatus = async (req, res, next) => {
-    console.log("!!! CRITICAL: updatePickupStatus function reached !!!");
+    const conn = await db.getConnection();
     try {
         const { id } = req.params;
         const { status, note } = req.body;
@@ -87,53 +109,63 @@ export const updatePickupStatus = async (req, res, next) => {
 
         if (!allowedStatuses.includes(status)) throw new ApiError(400, "Invalid status transition");
 
-        const [pickupRows] = await db.query(
-            `SELECT p.booking_code, u.fcm_token 
+        await conn.beginTransaction();
+
+        const [pickupRows] = await conn.query(
+            `SELECT p.booking_code, u.id as target_user_id, u.fcm_token 
              FROM pickups p
              JOIN customers c ON p.customer_id = c.id
              JOIN users u ON c.user_id = u.id
              WHERE p.id = ?`, [id]
         );
 
-        await db.query(`UPDATE pickups SET status = ?, updated_at = NOW() WHERE id = ?`, [status, id]);
+        await conn.query(`UPDATE pickups SET status = ?, updated_at = NOW() WHERE id = ?`, [status, id]);
 
-        await db.query(
+        await conn.query(
             "INSERT INTO pickup_timeline (pickup_id, status, p_timestamp, note) VALUES (?, ?, NOW(), ?)",
             [id, status, note || `Status: ${status}`]
         );
 
-        console.log(`[StatusUpdate] Pickup ${id} changed to ${status}`);
+        // 🔥 DB NOTIFICATION: Dynamic Status Mapping
+        let titleKey = 'notif_status_update_title';
+        let bodyKey = 'notif_status_update_body';
+        let notifType = 'info';
+
+        if (status === 'rider_on_way') notifType = 'success';
+        if (status === 'cancelled') notifType = 'alert';
+
+        await saveNotification(
+            conn,
+            pickupRows[0].target_user_id,
+            `notif_${status}_title`, // Dynamic keys like notif_arrived_title
+            `notif_${status}_body`,
+            { bookingCode: pickupRows[0].booking_code },
+            notifType,
+            `/(home)/activity/${id}`
+        );
+
+        await conn.commit();
 
         if (pickupRows.length && pickupRows[0].fcm_token) {
             const customerToken = pickupRows[0].fcm_token;
             const bCode = pickupRows[0].booking_code;
 
             let title = "Pickup Update";
-            let body = `Your request ${bCode} status is now: ${status.replace(/_/g, ' ')}`;
+            let body = `Your request ${bCode} is now: ${status.replace(/_/g, ' ')}`;
 
-            if (status === 'rider_on_way') {
-                title = "Rider is coming! 🛵";
-                body = `Your rider is on the way for request ${bCode}.`;
-            } else if (status === 'arrived') {
-                title = "Rider Arrived! 📍";
-                body = `Our rider has arrived for your pickup ${bCode}.`;
-            } else if (status === 'cancelled') {
-                title = "Pickup Cancelled ❌";
-                body = `Your request ${bCode} has been cancelled.`;
-            }
+            if (status === 'rider_on_way') { title = "Rider is coming! 🛵"; body = `Your rider is on the way for ${bCode}.`; }
+            else if (status === 'arrived') { title = "Rider Arrived! 📍"; body = `Our rider has arrived for ${bCode}.`; }
+            else if (status === 'cancelled') { title = "Pickup Cancelled ❌"; body = `Your request ${bCode} has been cancelled.`; }
 
-            console.log(`[Push] Sending Status Notification to Token: ${customerToken.substring(0, 30)}...`);
-            await sendPushNotification(
-                customerToken,
-                title,
-                body,
-                { orderId: id.toString(), type: "order_update" }
-            );
+            await sendPushNotification(customerToken, title, body, { orderId: id.toString(), type: "order_update" });
         }
 
         res.json({ success: true, message: `Status updated to ${status}` });
     } catch (err) {
+        await conn.rollback();
         next(err);
+    } finally {
+        conn.release();
     }
 };
 
@@ -202,7 +234,7 @@ export const reassignSinglePickup = async (req, res, next) => {
         await conn.beginTransaction();
 
         const [rows] = await conn.query(
-            `SELECT p.booking_code, u.fcm_token, r_u.full_name as rider_name
+            `SELECT p.booking_code, u.id as target_user_id, u.fcm_token, r_u.full_name as rider_name
              FROM pickups p
              JOIN customers c ON p.customer_id = c.id
              JOIN users u ON c.user_id = u.id
@@ -223,12 +255,20 @@ export const reassignSinglePickup = async (req, res, next) => {
             [id, `Job reassigned to Rider: ${rows[0].rider_name}`]
         );
 
+        // 🔥 DB NOTIFICATION: Job Reassigned
+        await saveNotification(
+            conn,
+            rows[0].target_user_id,
+            'notif_rider_reassigned_title',
+            'notif_rider_reassigned_body',
+            { riderName: rows[0].rider_name, bookingCode: rows[0].booking_code },
+            'warning',
+            `/(home)/activity/${id}`
+        );
+
         await conn.commit();
 
-        console.log(`[Reassign] Pickup ${id} reassigned to ${rows[0].rider_name}`);
-
         if (rows[0].fcm_token) {
-            console.log(`[Push] Sending Reassign Notification to: ${rows[0].fcm_token.substring(0, 30)}...`);
             await sendPushNotification(
                 rows[0].fcm_token,
                 "Rider Reassigned 🔄",

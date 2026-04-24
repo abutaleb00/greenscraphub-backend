@@ -14,9 +14,16 @@ const otpStore = new Map();
 const logActivity = async (req, userId, action, metadata = {}) => {
   try {
     const agent = useragent.parse(req.headers['user-agent']);
-    const ip = requestIp.getClientIp(req);
 
-    // Platform detection (Mobile App should send x-platform header)
+    // Improved IP detection
+    let ip = requestIp.getClientIp(req);
+
+    // If you are behind a proxy (like Nginx), request-ip usually handles it, 
+    // but we can force a clean-up if it returns a list or IPv6 prefix
+    if (ip && ip.startsWith('::ffff:')) {
+      ip = ip.replace('::ffff:', '');
+    }
+
     const platform = req.headers['x-platform'] || (req.headers['user-agent'].includes('Postman') ? 'API' : 'WEB');
 
     const query = `
@@ -32,7 +39,7 @@ const logActivity = async (req, userId, action, metadata = {}) => {
       agent.toAgent(),
       agent.os.toString(),
       agent.device.toString(),
-      ip,
+      ip === '::1' ? '127.0.0.1' : ip, // Normalize localhost
       JSON.stringify(metadata)
     ];
 

@@ -36,6 +36,7 @@ io.on('connection', (socket) => {
 
   /**
    * 🛰️ Event: Rider Registration
+   * Join a private room and the global monitoring room
    */
   socket.on('register_rider', (riderId) => {
     socket.join(`rider_${riderId}`);
@@ -45,15 +46,15 @@ io.on('connection', (socket) => {
 
   /**
    * 🟢 Event: Rider Status Change (Online/Offline)
-   * Syncs with Database + Broadcasts to Admin
    */
   socket.on('rider_status_update', async (data) => {
     const { riderId, is_online, location } = data;
 
     try {
-      // Sync to Database
+      // FIX: Use 'id' instead of 'user_id' if your app is sending the Rider Table ID
+      // We update both cases to be safe or you can standardize on Rider ID.
       await pool.query(
-        'UPDATE riders SET is_online = ?, current_latitude = ?, current_longitude = ?, updated_at = NOW() WHERE user_id = ?',
+        'UPDATE riders SET is_online = ?, current_latitude = ?, current_longitude = ?, updated_at = NOW() WHERE id = ?',
         [is_online ? 1 : 0, location?.lat || null, location?.lng || null, riderId]
       );
 
@@ -65,7 +66,7 @@ io.on('connection', (socket) => {
         last_updated: new Date()
       });
 
-      console.log(`👤 Rider ${riderId} Database & Socket updated to ${is_online ? 'ONLINE' : 'OFFLINE'}`);
+      console.log(`👤 Rider ${riderId} is now ${is_online ? 'ONLINE' : 'OFFLINE'}`);
     } catch (err) {
       console.error("❌ Error updating rider status in DB:", err);
     }
@@ -73,28 +74,30 @@ io.on('connection', (socket) => {
 
   /**
    * 📍 Event: Periodic Location Update
-   * Updates MySQL Coordinates + Broadcasts to Customer & Admin
+   * Updates coordinates + Broadcasts to Customer & Admin
    */
   socket.on('update_location', async (data) => {
     const { riderId, pickupId, latitude, longitude, heading } = data;
 
+    if (!latitude || !longitude) return;
+
     try {
-      // 1. Silent Database Sync (Keep records fresh)
-      // We do this every update to ensure 'current_latitude' is always accurate
+      // 1. Database Sync (Using 'id' as the primary reference)
       await pool.query(
-        'UPDATE riders SET current_latitude = ?, current_longitude = ?, updated_at = NOW() WHERE user_id = ?',
+        'UPDATE riders SET current_latitude = ?, current_longitude = ?, updated_at = NOW() WHERE id = ?',
         [latitude, longitude, riderId]
       );
 
       const payload = {
         riderId,
-        latitude,
-        longitude,
-        heading,
+        latitude: parseFloat(latitude),
+        longitude: parseFloat(longitude),
+        heading: heading || 0,
         timestamp: new Date()
       };
 
-      // 2. Broadcast to specific customer (if on a trip)
+      // 2. Broadcast to Customer
+      // Room name matches what the Customer joins: pickup_{id}
       if (pickupId) {
         io.to(`pickup_${pickupId}`).emit('location_changed', payload);
       }
@@ -110,15 +113,32 @@ io.on('connection', (socket) => {
 
   // --- CUSTOMER / PICKUP LOGIC ---
 
+  /**
+   * 📍 Event: Join Pickup Room
+   * Customers join this to receive 'location_changed' events
+   */
   socket.on('join_pickup', (pickupId) => {
+    // Leave previous pickup rooms to prevent memory leaks/duplicate tracking
+    Array.from(socket.rooms).forEach(room => {
+      if (room.startsWith('pickup_')) socket.leave(room);
+    });
+
     socket.join(`pickup_${pickupId}`);
-    console.log(`📍 Customer joined room: pickup_${pickupId}`);
+    console.log(`📍 User ${socket.id} joined room: pickup_${pickupId}`);
   });
 
+  /**
+   * 📢 Event: Status Change
+   * Notifies customer when status goes from 'accepted' to 'rider_on_way'
+   */
   socket.on('pickup_status_changed', (data) => {
     const { pickupId, status } = data;
-    io.to(`pickup_${pickupId}`).emit('status_updated', data);
-    console.log(`📢 Status Update in room pickup_${pickupId}: ${status}`);
+    io.to(`pickup_${pickupId}`).emit('status_updated', {
+      pickupId,
+      status,
+      timestamp: new Date()
+    });
+    console.log(`📢 Status Update for pickup_${pickupId}: ${status}`);
   });
 
   socket.on('disconnect', () => {
@@ -149,16 +169,17 @@ const getLocalIp = () => {
  */
 async function start() {
   try {
-    await pool.query('SELECT 1');
+    // Test DB Connection
+    const [rows] = await pool.query('SELECT 1 + 1 AS result');
     console.log('✅ MySQL Database Connected');
 
     const NETWORK_IP = getLocalIp();
 
     server.listen(PORT, '0.0.0.0', () => {
       console.log(`\n🚀 GreenScrapHub Backend Initialized:`);
-      console.log(`🔗 API URL:     http://localhost:${PORT}/api/v1`);
-      console.log(`📱 Network URL: http://${NETWORK_IP}:${PORT}/api/v1`);
-      console.log(`🛰️ Socket.io:  Rider DB Sync & Live Map Enabled`);
+      console.log(`🔗 Local API:   http://localhost:${PORT}/api/v1`);
+      console.log(`📱 Network API: http://${NETWORK_IP}:${PORT}/api/v1`);
+      console.log(`🛰️ Socket.io:  Rider Tracking Rooms Enabled`);
       console.log(`___________________________________________________________\n`);
     });
   } catch (err) {

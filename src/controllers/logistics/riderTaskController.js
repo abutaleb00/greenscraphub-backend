@@ -2,6 +2,27 @@ import db from '../../config/db.js';
 import ApiError from '../../utils/ApiError.js';
 import { sendUnifiedReceipt } from '../../services/mailService.js';
 import { sendPushNotification } from '../../utils/notificationHelper.js';
+
+/* -----------------------------------------------------
+    HELPER: SAVE TO NOTIFICATIONS TABLE (DB Persistent)
+    Mapped to ENUM('info', 'alert', 'success', 'warning')
+----------------------------------------------------- */
+const saveNotification = async (conn, userId, titleKey, bodyKey, placeholders = {}, type = 'info', action = null) => {
+    try {
+        const validTypes = ['info', 'alert', 'success', 'warning'];
+        const finalType = validTypes.includes(type) ? type : 'info';
+
+        await conn.query(`
+            INSERT INTO notifications (
+                user_id, title_key, body_key, body_placeholders, 
+                notification_type, click_action, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+            [userId, titleKey, bodyKey, JSON.stringify(placeholders), finalType, action]
+        );
+    } catch (err) {
+        console.error("[DB NOTIFICATION ERROR]", err.message);
+    }
+};
 /**
  * Helper: Resolve rider_id and online status from logged-in user
  */
@@ -407,14 +428,13 @@ export const updateTaskStatus = async (req, res, next) => {
         const { status } = req.body;
         const changerId = req.user.id;
 
-        console.log(`[RiderAction] Attempting status update for Pickup ${id} to ${status}`);
-
         const validStatuses = ['accepted', 'rider_on_way', 'arrived', 'weighing'];
         if (!validStatuses.includes(status)) throw new ApiError(400, `Invalid transition: ${status}`);
 
         await conn.beginTransaction();
 
         let timestampQuery = "";
+        if (status === 'accepted') timestampQuery = ", rider_assigned_at = NOW()"; // Track when rider accepted
         if (status === 'arrived') timestampQuery = ", rider_arrived_at = NOW()";
         if (status === 'weighing') timestampQuery = ", weighing_started_at = NOW()";
 
@@ -423,51 +443,78 @@ export const updateTaskStatus = async (req, res, next) => {
             [status, id]
         );
 
-        if (result.affectedRows === 0) throw new ApiError(404, "Task node not found");
+        if (result.affectedRows === 0) throw new ApiError(404, "Task not found");
 
+        // Add to history timeline
         await conn.query(
             `INSERT INTO pickup_timeline (pickup_id, status, changed_by, note) VALUES (?, ?, ?, ?)`,
             [id, status, changerId, `Rider marked status as: ${status.replace(/_/g, ' ')}`]
         );
 
-        // Fetch Customer Token for notification
+        // Fetch Customer Data for notifications
         const [customer] = await conn.query(
-            `SELECT u.fcm_token, p.booking_code 
+            `SELECT u.id as target_user_id, u.fcm_token, p.booking_code 
              FROM pickups p 
              JOIN customers c ON p.customer_id = c.id 
              JOIN users u ON c.user_id = u.id 
              WHERE p.id = ?`, [id]
         );
 
-        await conn.commit();
-        console.log(`[RiderAction] Transaction committed for Pickup ${id}`);
+        const target = customer[0];
 
-        // 2. TRIGGER NOTIFICATION
-        if (customer.length && customer[0].fcm_token) {
-            let title = "Pickup Update";
-            let body = `Your request ${customer[0].booking_code} is now: ${status.replace(/_/g, ' ')}`;
+        if (target) {
+            // 🔥 Persistently save the notification in DB
+            // We map the status to the translation keys used in the frontend
+            let titleKey = `notif_${status}_title`;
+            let bodyKey = `notif_${status}_body`;
 
-            if (status === 'rider_on_way') {
-                title = "Rider is on the way! 🛵";
-                body = "The rider has started moving towards your location.";
-            } else if (status === 'arrived') {
-                title = "Rider Arrived! 📍";
-                body = "Our rider is outside. Please prepare your scrap items.";
+            // Fix for status mismatch (accepted maps to rider_assigned in your UI)
+            if (status === 'accepted') {
+                titleKey = 'notif_rider_assigned_title';
+                bodyKey = 'notif_rider_assigned_body';
             }
 
-            await sendPushNotification(customer[0].fcm_token, title, body, {
-                orderId: id.toString(),
-                type: "order_update"
-            });
+            let notifType = 'info';
+            if (status === 'rider_on_way' || status === 'arrived') notifType = 'success';
+            if (status === 'weighing') notifType = 'warning';
+
+            await saveNotification(
+                conn,
+                target.target_user_id,
+                titleKey,
+                bodyKey,
+                { bookingCode: target.booking_code },
+                notifType,
+                `/(home)/activity/${id}`
+            );
         }
 
-        res.json({ success: true, message: `Task progress updated to ${status.replace(/_/g, ' ')}` });
+        await conn.commit();
+
+        // 2. TRIGGER REAL-TIME PUSH (Optional but recommended)
+        if (target && target.fcm_token) {
+            let pushTitle = "Pickup Update";
+            let pushBody = `Your request ${target.booking_code} is now ${status.replace(/_/g, ' ')}`;
+
+            if (status === 'rider_on_way') {
+                pushTitle = "Rider is on the way! 🛵";
+                pushBody = "The rider is moving towards your location.";
+            } else if (status === 'arrived') {
+                pushTitle = "Rider Arrived! 📍";
+                pushBody = "Our rider is at your location. Please get ready.";
+            }
+
+            await sendPushNotification(target.fcm_token, pushTitle, pushBody, { orderId: id.toString(), type: "order_update" });
+        }
+
+        res.json({ success: true, message: `Status updated to ${status}` });
 
     } catch (err) {
-        await conn.rollback();
+        if (conn) await conn.rollback();
+        console.error("Task Update Error:", err);
         next(err);
     } finally {
-        conn.release();
+        if (conn) conn.release();
     }
 };
 
@@ -568,7 +615,6 @@ export const finalizePickup = async (req, res, next) => {
     try {
         const { id: pickupId } = req.params;
         const { items, payment_method, note } = req.body;
-        console.log(`[RiderAction] Finalizing Pickup ${pickupId}...`);
 
         await conn.beginTransaction();
 
@@ -609,14 +655,13 @@ export const finalizePickup = async (req, res, next) => {
         const agentCommAmount = (netPayableToCustomer * (parseFloat(pickup.hub_commission_rate) || 0)) / 100;
         let riderCommAmount = (activePaymentMode === 'commission') ? netPayableToCustomer * 0.02 : 0;
 
+        // Wallet Transfers
         if (payment_method === 'wallet') {
             await updateWallet(conn, pickup.customer_uid, netPayableToCustomer, 'credit', 'pickup_payment', 'pickup', pickupId, `Payment for ${pickup.booking_code}`);
         }
-
         if (pickup.agent_uid && agentCommAmount > 0) {
             await updateWallet(conn, pickup.agent_uid, agentCommAmount, 'credit', 'pickup_commission', 'pickup', pickupId, `Hub Commission: ${pickup.booking_code}`);
         }
-
         if (pickup.rider_uid && riderCommAmount > 0) {
             await updateWallet(conn, pickup.rider_uid, riderCommAmount, 'credit', 'pickup_commission', 'pickup', pickupId, `Rider Incentive: ${pickup.booking_code}`);
         }
@@ -631,10 +676,20 @@ export const finalizePickup = async (req, res, next) => {
         await conn.query(`INSERT INTO pickup_timeline (pickup_id, status, note, changed_by) VALUES (?, 'completed', ?, ?)`,
             [pickupId, `Finalized. ৳${netPayableToCustomer} via ${payment_method.toUpperCase()}.`, req.user.id]);
 
-        await conn.commit();
-        console.log(`[RiderAction] Pickup ${pickupId} fully finalized.`);
+        // 🔥 DB NOTIFICATION: Completion History
+        await saveNotification(
+            conn,
+            pickup.customer_uid,
+            'notif_pickup_completed_title',
+            'notif_pickup_completed_body',
+            { bookingCode: pickup.booking_code, amount: netPayableToCustomer.toFixed(2) },
+            'success',
+            `/(home)/activity/${pickupId}`
+        );
 
-        // 3. TRIGGER NOTIFICATION - COMPLETION
+        await conn.commit();
+
+        // 3. TRIGGER PUSH NOTIFICATION
         if (pickup.customer_fcm) {
             await sendPushNotification(
                 pickup.customer_fcm,
@@ -647,10 +702,10 @@ export const finalizePickup = async (req, res, next) => {
         res.json({ success: true, message: "Pickup Successfully Finalized" });
 
     } catch (err) {
-        await conn.rollback();
+        if (conn) await conn.rollback();
         next(err);
     } finally {
-        conn.release();
+        if (conn) conn.release();
     }
 };
 
