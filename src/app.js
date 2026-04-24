@@ -15,9 +15,9 @@ const __dirname = path.dirname(__filename);
 const app = express();
 
 /**
- * 1. PROXY CONFIGURATION (Critical for Public IP)
- * Enabling 'trust proxy' tells Express to trust the X-Forwarded-For header.
- * Set to true or 1 since you are using a cPanel/Nginx proxy.
+ * 1. PROXY CONFIGURATION
+ * Set to 1 to trust the first proxy (cPanel/Nginx/Cloudflare) 
+ * to get the correct User IP for rate limiting.
  */
 app.set('trust proxy', 1);
 
@@ -28,30 +28,40 @@ app.use(helmet({
 }));
 
 /**
- * 3. RATE LIMITING CONFIGURATION
- * Prevents automated scripts and bots from crashing your server.
+ * 3. TIERED RATE LIMITING CONFIGURATION
  */
-// General limiter: 100 requests per 15 minutes per IP
-const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
+
+// A. Passive Limiter: For background syncs (Push Tokens, Dashboard, Profile Me)
+// These are called automatically by the app, so we allow a much higher limit.
+const passiveLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 1000, // Allow 1000 hits per 10 mins (prevents Dev Fast Refresh blocks)
   standardHeaders: true,
   legacyHeaders: false,
-  message: {
-    success: false,
-    message: "Too many requests from this IP, please try again after 15 minutes."
-  }
+  message: { success: false, message: "Background sync limit exceeded." }
 });
 
-// Stricter limiter for Auth: 10 attempts per hour (prevents brute-force)
+// B. Auth Limiter: Stricter security for Login/Register/Forgot Password
 const authLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 15,
+  max: 30, // Increased to 30 for easier testing/usage
   standardHeaders: true,
   legacyHeaders: false,
   message: {
     success: false,
     message: "Too many authentication attempts. Please try again in an hour."
+  }
+});
+
+// C. Global Limiter: General fallback for all other API routes
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 500, // Increased from 100 to 500 for a smoother user experience
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: "Too many requests from this IP, please try again after 15 minutes."
   }
 });
 
@@ -69,8 +79,9 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: function (origin, callback) {
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+      // Allow mobile apps (no origin) and development
+      if (!origin || process.env.NODE_ENV === 'development') return callback(null, true);
+      if (allowedOrigins.indexOf(origin) !== -1) {
         callback(null, true);
       } else {
         callback(new Error('Not allowed by CORS'));
@@ -87,14 +98,23 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 app.use(morgan(':remote-addr :method :url :status :res[content-length] - :response-time ms'));
 
-// 6. Apply Rate Limiters
-// Apply global limiter to all /api routes
-app.use('/api/', globalLimiter);
+/**
+ * 6. APPLY RATE LIMITERS STRATEGICALLY
+ * Order matters! Specific routes must come before general ones.
+ */
 
-// Apply strict limiter to sensitive Auth routes
+// Tier 1: Background Passive Routes (Dashboard, Tokens)
+app.use('/api/v1/notifications/sync-token', passiveLimiter);
+app.use('/api/v1/customers/dashboard', passiveLimiter);
+app.use('/api/v1/auth/me', passiveLimiter);
+
+// Tier 2: Strict Auth Routes
 app.use('/api/v1/auth/login', authLimiter);
 app.use('/api/v1/auth/register', authLimiter);
 app.use('/api/v1/auth/forgot-password', authLimiter);
+
+// Tier 3: Global Catch-all for API
+app.use('/api/', globalLimiter);
 
 // 7. Static Folders
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
