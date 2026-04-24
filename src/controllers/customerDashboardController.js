@@ -29,33 +29,54 @@ export async function getCustomerDashboard(req, res, next) {
         const userId = req.user.id;
 
         /* ------------------------------------------------------------
-            1) IMPACT & LOYALTY SUMMARY
-            Mapped to: net_payable_amount and total_weight_kg (calculated)
+            1) PROFILE & TOTAL IMPACT SUMMARY
         ------------------------------------------------------------ */
-        const [profile] = await pool.query(
+        const [profileRows] = await pool.query(
             `
             SELECT 
                 c.total_points,
                 c.referral_code,
                 (SELECT balance FROM wallet_accounts WHERE user_id = ?) AS wallet_balance,
                 (SELECT COUNT(*) FROM customers WHERE referred_by = c.id) AS total_referrals,
-                COALESCE(SUM(p.net_payable_amount), 0) AS total_earned,
-                -- We sum weight from completed pickups
-                (SELECT COALESCE(SUM(pi.actual_weight), 0) 
-                 FROM pickup_items pi 
-                 JOIN pickups p2 ON pi.pickup_id = p2.id 
-                 WHERE p2.customer_id = ? AND p2.status = 'completed') AS total_weight_recycled
+                (SELECT COALESCE(SUM(net_payable_amount), 0) FROM pickups WHERE customer_id = c.id AND status = 'completed') AS total_earned,
+                (SELECT COALESCE(SUM(total_weight), 0) FROM pickups WHERE customer_id = c.id AND status = 'completed') AS total_weight_recycled
             FROM customers c
-            LEFT JOIN pickups p ON c.id = p.customer_id AND p.status = 'completed'
             WHERE c.id = ?
-            GROUP BY c.id
             `,
-            [userId, customerId, customerId]
+            [userId, customerId]
         );
 
+        const profile = profileRows[0];
+
         /* ------------------------------------------------------------
-            2) ACTIVE PICKUPS (Live Tracking)
-            Shows status and assigned rider info
+            2) DYNAMIC CHART DATA (Last 6 Months)
+            This generates a realistic trend for the Line Chart
+        ------------------------------------------------------------ */
+        const [monthlyRows] = await pool.query(
+            `
+            SELECT 
+                m.month_idx,
+                COALESCE(SUM(p.total_weight), 0) AS weight
+            FROM (
+                SELECT 0 AS month_idx UNION SELECT 1 UNION SELECT 2 UNION 
+                SELECT 3 UNION SELECT 4 UNION SELECT 5
+            ) m
+            LEFT JOIN pickups p ON 
+                p.customer_id = ? AND 
+                p.status = 'completed' AND 
+                MONTH(p.completed_at) = MONTH(CURRENT_DATE - INTERVAL m.month_idx MONTH) AND
+                YEAR(p.completed_at) = YEAR(CURRENT_DATE - INTERVAL m.month_idx MONTH)
+            GROUP BY m.month_idx
+            ORDER BY m.month_idx DESC
+            `,
+            [customerId]
+        );
+
+        // Map weights to a simple array for the frontend chart [oldest -> newest]
+        const monthlyStats = monthlyRows.map(row => parseFloat(row.weight));
+
+        /* ------------------------------------------------------------
+            3) ACTIVE PICKUPS (Live Tracking)
         ------------------------------------------------------------ */
         const [activePickups] = await pool.query(
             `
@@ -75,7 +96,7 @@ export async function getCustomerDashboard(req, res, next) {
         );
 
         /* ------------------------------------------------------------
-            3) STATUS-WISE COUNTS (Order Journey)
+            4) STATUS-WISE COUNTS
         ------------------------------------------------------------ */
         const [statusStats] = await pool.query(
             `
@@ -90,7 +111,7 @@ export async function getCustomerDashboard(req, res, next) {
         );
 
         /* ------------------------------------------------------------
-            4) RECENT HISTORY PREVIEW
+            5) RECENT HISTORY PREVIEW
         ------------------------------------------------------------ */
         const [recentHistory] = await pool.query(
             `
@@ -105,11 +126,9 @@ export async function getCustomerDashboard(req, res, next) {
         );
 
         /* ------------------------------------------------------------
-            5) ENVIRONMENTAL IMPACT CALCULATION
-            1kg scrap ≈ 1.2kg CO2 saved
-            10kg scrap ≈ 0.5 tree offset equivalent
+            6) ENVIRONMENTAL IMPACT CALCULATION
         ------------------------------------------------------------ */
-        const totalKg = parseFloat(profile[0]?.total_weight_recycled || 0);
+        const totalKg = parseFloat(profile?.total_weight_recycled || 0);
         const co2Saved = (totalKg * 1.2).toFixed(2);
         const treesSaved = (totalKg * 0.05).toFixed(1);
 
@@ -120,16 +139,17 @@ export async function getCustomerDashboard(req, res, next) {
             success: true,
             data: {
                 profile: {
-                    wallet_balance: parseFloat(profile[0]?.wallet_balance || 0),
-                    green_points: profile[0]?.total_points || 0,
-                    referral_code: profile[0]?.referral_code,
-                    referral_count: profile[0]?.total_referrals || 0,
-                    total_earned: parseFloat(profile[0]?.total_earned || 0)
+                    wallet_balance: parseFloat(profile?.wallet_balance || 0),
+                    green_points: profile?.total_points || 0,
+                    referral_code: profile?.referral_code,
+                    referral_count: profile?.total_referrals || 0,
+                    total_earned: parseFloat(profile?.total_earned || 0)
                 },
                 impact: {
                     total_kg_recycled: totalKg,
                     co2_saved_kg: co2Saved,
-                    trees_saved_equivalent: treesSaved
+                    trees_saved_equivalent: treesSaved,
+                    monthly_stats: monthlyStats // 🔥 New dynamic array for the chart
                 },
                 orders: {
                     active: activePickups,
