@@ -139,7 +139,7 @@ export async function getCustomerDashboard(req, res, next) {
                     history_preview: recentHistory
                 },
                 meta: {
-                    hub_region: "Noapara, Khulna",
+                    hub_region: "Khulna",
                     server_time: new Date()
                 }
             }
