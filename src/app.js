@@ -16,10 +16,10 @@ const app = express();
 
 /**
  * 1. PROXY CONFIGURATION
- * Set to 1 to trust the first proxy (cPanel/Nginx/Cloudflare) 
- * to get the correct User IP for rate limiting.
+ * Set to 'true' to trust all proxies. This is more reliable for 
+ * cPanel/Nginx environments to ensure we get the real user IP.
  */
-app.set('trust proxy', 1);
+app.set('trust proxy', true);
 
 // 2. Enhanced Security Middlewares
 app.use(helmet({
@@ -28,14 +28,22 @@ app.use(helmet({
 }));
 
 /**
- * 3. TIERED RATE LIMITING CONFIGURATION
+ * 3. IP EXTRACTOR HELPER
+ * This ensures rate limiters and logs always get the real client IP.
+ */
+const getClientIp = (req) => {
+  return req.headers['x-forwarded-for']?.split(',')[0].trim() || req.ip || req.socket.remoteAddress;
+};
+
+/**
+ * 4. TIERED RATE LIMITING CONFIGURATION
  */
 
 // A. Passive Limiter: For background syncs (Push Tokens, Dashboard, Profile Me)
-// These are called automatically by the app, so we allow a much higher limit.
 const passiveLimiter = rateLimit({
-  windowMs: 10 * 60 * 1000, // 10 minutes
-  max: 1000, // Allow 1000 hits per 10 mins (prevents Dev Fast Refresh blocks)
+  windowMs: 10 * 60 * 1000,
+  max: 1000,
+  keyGenerator: getClientIp, // 🔥 Force real IP detection
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: "Background sync limit exceeded." }
@@ -43,8 +51,9 @@ const passiveLimiter = rateLimit({
 
 // B. Auth Limiter: Stricter security for Login/Register/Forgot Password
 const authLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 30, // Increased to 30 for easier testing/usage
+  windowMs: 60 * 60 * 1000,
+  max: 30,
+  keyGenerator: getClientIp, // 🔥 Force real IP detection
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -55,8 +64,9 @@ const authLimiter = rateLimit({
 
 // C. Global Limiter: General fallback for all other API routes
 const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 500, // Increased from 100 to 500 for a smoother user experience
+  windowMs: 15 * 60 * 1000,
+  max: 500,
+  keyGenerator: getClientIp, // 🔥 Force real IP detection
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -66,7 +76,7 @@ const globalLimiter = rateLimit({
 });
 
 /**
- * 4. Optimized CORS Configuration
+ * 5. Optimized CORS Configuration
  */
 const allowedOrigins = [
   'http://localhost:3000',
@@ -79,7 +89,6 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Allow mobile apps (no origin) and development
       if (!origin || process.env.NODE_ENV === 'development') return callback(null, true);
       if (allowedOrigins.indexOf(origin) !== -1) {
         callback(null, true);
@@ -92,50 +101,49 @@ app.use(
   })
 );
 
-// 5. Body Parsers & Logging
+// 6. Body Parsers & Logging
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-app.use(morgan(':remote-addr :method :url :status :res[content-length] - :response-time ms'));
+// Custom Morgan token to log the real IP
+morgan.token('real-ip', (req) => getClientIp(req));
+app.use(morgan(':real-ip :method :url :status :res[content-length] - :response-time ms'));
 
 /**
- * 6. APPLY RATE LIMITERS STRATEGICALLY
- * Order matters! Specific routes must come before general ones.
+ * 7. APPLY RATE LIMITERS STRATEGICALLY
  */
-
-// Tier 1: Background Passive Routes (Dashboard, Tokens)
 app.use('/api/v1/notifications/sync-token', passiveLimiter);
 app.use('/api/v1/customers/dashboard', passiveLimiter);
 app.use('/api/v1/auth/me', passiveLimiter);
 
-// Tier 2: Strict Auth Routes
 app.use('/api/v1/auth/login', authLimiter);
 app.use('/api/v1/auth/register', authLimiter);
 app.use('/api/v1/auth/forgot-password', authLimiter);
 
-// Tier 3: Global Catch-all for API
 app.use('/api/', globalLimiter);
 
-// 7. Static Folders
+// 8. Static Folders
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// 8. API routes
+// 9. API routes
 app.use('/api/v1', routes);
 
 // Health root
 app.get('/', (req, res) => {
-  const publicIp = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  const realIp = getClientIp(req);
 
   res.json({
     success: true,
     message: 'GreenScrapHub API is Online',
-    your_ip: publicIp,
+    your_ip: realIp,
+    proxy_ip: req.ip, // To see what Express thinks
+    forwarded: req.headers['x-forwarded-for'], // To see the full chain
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'production'
   });
 });
 
-// 9. 404 + error handlers
+// 10. 404 + error handlers
 app.use(notFound);
 app.use(errorHandler);
 
