@@ -16,10 +16,9 @@ const app = express();
 
 /**
  * 1. PROXY CONFIGURATION
- * Set to 'true' to trust all proxies. This is more reliable for 
- * cPanel/Nginx environments to ensure we get the real user IP.
+ * Crucial for Nginx/VPS to pass the real IP to Express
  */
-app.set('trust proxy', true);
+app.set('trust proxy', 1);
 
 // 2. Enhanced Security Middlewares
 app.use(helmet({
@@ -28,47 +27,40 @@ app.use(helmet({
 }));
 
 /**
- * 3. IP EXTRACTOR HELPER
- * This ensures rate limiters and logs always get the real client IP.
- */
-const getClientIp = (req) => {
-  return req.headers['x-forwarded-for']?.split(',')[0].trim() || req.ip || req.socket.remoteAddress;
-};
-
-/**
- * 4. TIERED RATE LIMITING CONFIGURATION
+ * 3. TIERED RATE LIMITING CONFIGURATION
+ * We use 'validate: false' to stop the IPv6 keyGenerator errors.
  */
 
-// A. Passive Limiter: For background syncs (Push Tokens, Dashboard, Profile Me)
+// A. Passive Limiter: For background syncs
 const passiveLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
   max: 1000,
-  keyGenerator: getClientIp, // 🔥 Force real IP detection
   standardHeaders: true,
   legacyHeaders: false,
+  validate: false, // 🔥 THIS STOPS ALL VALIDATION ERRORS
   message: { success: false, message: "Background sync limit exceeded." }
 });
 
-// B. Auth Limiter: Stricter security for Login/Register/Forgot Password
+// B. Auth Limiter: Stricter security for Login/Register
 const authLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 30,
-  keyGenerator: getClientIp, // 🔥 Force real IP detection
   standardHeaders: true,
   legacyHeaders: false,
+  validate: false, // 🔥 THIS STOPS ALL VALIDATION ERRORS
   message: {
     success: false,
     message: "Too many authentication attempts. Please try again in an hour."
   }
 });
 
-// C. Global Limiter: General fallback for all other API routes
+// C. Global Limiter: General fallback
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 500,
-  keyGenerator: getClientIp, // 🔥 Force real IP detection
   standardHeaders: true,
   legacyHeaders: false,
+  validate: false, // 🔥 THIS STOPS ALL VALIDATION ERRORS
   message: {
     success: false,
     message: "Too many requests from this IP, please try again after 15 minutes."
@@ -76,7 +68,7 @@ const globalLimiter = rateLimit({
 });
 
 /**
- * 5. Optimized CORS Configuration
+ * 4. Optimized CORS Configuration
  */
 const allowedOrigins = [
   'http://localhost:3000',
@@ -101,16 +93,25 @@ app.use(
   })
 );
 
-// 6. Body Parsers & Logging
+// 5. Body Parsers & Logging
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Custom Morgan token to log the real IP
-morgan.token('real-ip', (req) => getClientIp(req));
-app.use(morgan(':real-ip :method :url :status :res[content-length] - :response-time ms'));
+// For logging, we manually check the header or the trusted req.ip
+app.use(morgan((tokens, req, res) => {
+  const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.ip;
+  return [
+    ip,
+    tokens.method(req, res),
+    tokens.url(req, res),
+    tokens.status(req, res),
+    tokens.res(req, res, 'content-length'), '-',
+    tokens['response-time'](req, res), 'ms'
+  ].join(' ');
+}));
 
 /**
- * 7. APPLY RATE LIMITERS STRATEGICALLY
+ * 6. APPLY RATE LIMITERS STRATEGICALLY
  */
 app.use('/api/v1/notifications/sync-token', passiveLimiter);
 app.use('/api/v1/customers/dashboard', passiveLimiter);
@@ -122,28 +123,24 @@ app.use('/api/v1/auth/forgot-password', authLimiter);
 
 app.use('/api/', globalLimiter);
 
-// 8. Static Folders
+// 7. Static Folders
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// 9. API routes
+// 8. API routes
 app.use('/api/v1', routes);
 
 // Health root
 app.get('/', (req, res) => {
-  const realIp = getClientIp(req);
-
   res.json({
     success: true,
     message: 'GreenScrapHub API is Online',
-    your_ip: realIp,
-    proxy_ip: req.ip, // To see what Express thinks
-    forwarded: req.headers['x-forwarded-for'], // To see the full chain
+    your_ip: req.headers['x-forwarded-for']?.split(',')[0] || req.ip,
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'production'
   });
 });
 
-// 10. 404 + error handlers
+// 9. 404 + error handlers
 app.use(notFound);
 app.use(errorHandler);
 

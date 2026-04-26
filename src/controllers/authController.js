@@ -14,10 +14,10 @@ const otpStore = new Map();
 const logActivity = async (req, userId, action, metadata = {}) => {
   try {
     const agent = useragent.parse(req.headers['user-agent']);
-    
+
     // Improved IP detection
     let ip = requestIp.getClientIp(req);
-    
+
     // If you are behind a proxy (like Nginx), request-ip usually handles it, 
     // but we can force a clean-up if it returns a list or IPv6 prefix
     if (ip && ip.startsWith('::ffff:')) {
@@ -157,27 +157,50 @@ export const verifyAndRegister = async (req, res, next) => {
 
     await conn.beginTransaction();
 
+    // 🔥 1. Fetch Dynamic Reward Settings
+    const [settingsRows] = await conn.query("SELECT * FROM app_settings WHERE id = 1");
+    const settings = settingsRows[0] || { signup_bonus_points: 20, referral_bonus_points: 50 };
+
     const password_hash = await bcrypt.hash(data.password, 10);
 
+    // 2. Create User
     const [u] = await conn.query(
       "INSERT INTO users (full_name, phone, email, password_hash, role_id) VALUES (?, ?, ?, ?, 4)",
       [data.full_name, data.phone, data.email || null, password_hash]
     );
     const userId = u.insertId;
 
+    // 3. Handle Referral Points
     let referredByCustomerId = null;
     if (data.referral_code) {
       const [ref] = await conn.query("SELECT id FROM customers WHERE referral_code = ?", [data.referral_code]);
       if (ref.length > 0) {
         referredByCustomerId = ref[0].id;
-        await awardReferralBonus(referredByCustomerId, conn);
+
+        // Award dynamic referral bonus to the Referrer
+        await conn.query(
+          "UPDATE customers SET total_points = total_points + ? WHERE id = ?",
+          [settings.referral_bonus_points, referredByCustomerId]
+        );
+
+        await conn.query(
+          "INSERT INTO point_transactions (customer_id, amount, type, description) VALUES (?, ?, 'referral_bonus', ?)",
+          [referredByCustomerId, settings.referral_bonus_points, `Referral bonus for inviting ${data.full_name}`]
+        );
       }
     }
 
+    // 4. Create Customer Profile with Dynamic Signup Bonus
     const refCode = 'GS' + Math.random().toString(36).substring(2, 7).toUpperCase();
     await conn.query(
-      "INSERT INTO customers (user_id, referral_code, referred_by, total_points) VALUES (?, ?, ?, 20)",
-      [userId, refCode, referredByCustomerId]
+      "INSERT INTO customers (user_id, referral_code, referred_by, total_points) VALUES (?, ?, ?, ?)",
+      [userId, refCode, referredByCustomerId, settings.signup_bonus_points]
+    );
+
+    // Log the signup bonus in history
+    await conn.query(
+      "INSERT INTO point_transactions (customer_id, amount, type, description) VALUES ((SELECT id FROM customers WHERE user_id = ?), ?, 'earn', 'Welcome Signup Bonus')",
+      [userId, settings.signup_bonus_points]
     );
 
     await conn.query("INSERT INTO wallet_accounts (user_id, balance) VALUES (?, 0)", [userId]);
@@ -261,19 +284,41 @@ export const onboardStaff = async (req, res, next) => {
     (Used by both self-reg and admin-onboarding)
 ----------------------------------------------------- */
 const createCustomerProfile = async (conn, userId, referralCodeInput) => {
+  // 🔥 Fetch Dynamic Settings
+  const [settingsRows] = await conn.query("SELECT * FROM app_settings WHERE id = 1");
+  const settings = settingsRows[0] || { signup_bonus_points: 20, referral_bonus_points: 50 };
+
   let referredByCustomerId = null;
   if (referralCodeInput) {
     const [ref] = await conn.query("SELECT id FROM customers WHERE referral_code = ?", [referralCodeInput]);
     if (ref.length > 0) {
       referredByCustomerId = ref[0].id;
-      await awardReferralBonus(referredByCustomerId, conn);
+
+      // Dynamic referral bonus for the referrer
+      await conn.query(
+        "UPDATE customers SET total_points = total_points + ? WHERE id = ?",
+        [settings.referral_bonus_points, referredByCustomerId]
+      );
+
+      await conn.query(
+        "INSERT INTO point_transactions (customer_id, amount, type, description) VALUES (?, ?, 'referral_bonus', 'Referral bonus for inviting a new member')",
+        [referredByCustomerId, settings.referral_bonus_points]
+      );
     }
   }
 
   const newRefCode = 'GS' + Math.random().toString(36).substring(2, 7).toUpperCase();
+
+  // Create profile with dynamic signup points
   await conn.query(
-    "INSERT INTO customers (user_id, referral_code, referred_by, total_points) VALUES (?, ?, ?, 20)",
-    [userId, newRefCode, referredByCustomerId]
+    "INSERT INTO customers (user_id, referral_code, referred_by, total_points) VALUES (?, ?, ?, ?)",
+    [userId, newRefCode, referredByCustomerId, settings.signup_bonus_points]
+  );
+
+  // Log Signup bonus history for user
+  await conn.query(
+    "INSERT INTO point_transactions (customer_id, amount, type, description) VALUES ((SELECT id FROM customers WHERE user_id = ?), ?, 'earn', 'Admin Onboarding Welcome Bonus')",
+    [userId, settings.signup_bonus_points]
   );
 };
 
@@ -399,10 +444,11 @@ export const updateFcmToken = async (req, res, next) => {
 };
 
 /* -----------------------------------------------------
-    GET ME (Comprehensive Profile)
+    GET ME (Comprehensive Profile with App Config)
 ----------------------------------------------------- */
 export const getMe = async (req, res, next) => {
   try {
+    // 1. Fetch User Profile Data
     const [rows] = await db.query(`
             SELECT 
                 u.id, u.full_name, u.phone, u.email, u.profile_image, 
@@ -422,6 +468,7 @@ export const getMe = async (req, res, next) => {
 
     const user = rows[0];
 
+    // 2. Handle Profile Image URL
     if (user.profile_image) {
       const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
       user.profile_image = user.profile_image.startsWith('http')
@@ -429,7 +476,33 @@ export const getMe = async (req, res, next) => {
         : `${baseUrl}${user.profile_image}`;
     }
 
-    res.json({ success: true, data: user });
+    /**
+     * 3. 🔥 NEW: FETCH GLOBAL APP SETTINGS
+     * This allows the app to show dynamic reward values and rates
+     */
+    const [settingsRows] = await db.query(`
+        SELECT 
+            signup_bonus_points, 
+            referral_bonus_points, 
+            point_to_cash_rate, 
+            min_redeem_points,
+            min_withdrawal_amount
+        FROM app_settings 
+        WHERE id = 1
+    `);
+
+    // Combine user data with app configuration
+    res.json({
+      success: true,
+      data: user,
+      app_config: settingsRows[0] || {
+        signup_bonus_points: 100,
+        referral_bonus_points: 50,
+        point_to_cash_rate: 0.10,
+        min_redeem_points: 100
+      }
+    });
+
   } catch (err) {
     next(err);
   }

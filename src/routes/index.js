@@ -20,6 +20,7 @@ import agentRoutes from './agentRoutes.js';
 import receiptRoutes from './receiptRoutes.js';
 import inquiryRoutes from './inquiryRoutes.js';
 import notificationRoutes from './notificationRoutes.js';
+import adminRoutes from './adminRoutes.js';
 const router = express.Router();
 
 /**
@@ -72,6 +73,7 @@ router.use('/riders', riderRoutes);
 router.use('/customers', customerDashboardRoutes);
 router.use('/receipts', receiptRoutes);
 router.use('/notifications', notificationRoutes);
+router.use('/admin', adminRoutes);
 
 /**
  * @section Agents Management

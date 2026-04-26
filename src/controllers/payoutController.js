@@ -33,17 +33,21 @@ export const requestWithdrawal = async (req, res) => {
         const { id: userId } = req.user;
         const { amount, method, account_details } = req.body;
 
-        // A. Fetch Dynamic Minimum Limit
+        // --- A. FETCH DYNAMIC LIMIT FROM APP_SETTINGS ---
+        // We changed the source table to 'app_settings' and the column name to 'min_withdrawal_amount'
         const [settings] = await conn.query(
-            "SELECT setting_value FROM system_settings WHERE setting_key = 'min_withdrawal_amount'"
+            "SELECT min_withdrawal_amount FROM app_settings WHERE id = 1 LIMIT 1"
         );
-        const dynamicMin = settings.length ? parseFloat(settings[0].setting_value) : 500;
+
+        // Fallback to 500 if the table is empty for some reason
+        const dynamicMin = settings.length ? parseFloat(settings[0].min_withdrawal_amount) : 500;
 
         if (parseFloat(amount) < dynamicMin) {
+            // This will now correctly say ৳10 if that's what you set in the Admin Panel
             throw new ApiError(400, `Minimum withdrawal amount is ৳${dynamicMin}`);
         }
 
-        // B. Fetch and Lock Wallet
+        // --- B. FETCH AND LOCK WALLET ---
         const [wallet] = await conn.query(
             "SELECT id, balance FROM wallet_accounts WHERE user_id = ? FOR UPDATE",
             [userId]
@@ -57,7 +61,7 @@ export const requestWithdrawal = async (req, res) => {
         const withdrawAmount = parseFloat(amount);
         const balanceAfter = balanceBefore - withdrawAmount;
 
-        // C. Create Payout Request (Corrected Schema)
+        // --- C. CREATE PAYOUT REQUEST ---
         const [request] = await conn.query(
             `INSERT INTO payout_requests 
             (user_id, amount, payment_method, account_details, status, requested_at) 
@@ -66,17 +70,17 @@ export const requestWithdrawal = async (req, res) => {
         );
         const requestId = request.insertId;
 
-        // D. Update Wallet Balance
+        // --- D. UPDATE WALLET BALANCE ---
         await conn.query(
             "UPDATE wallet_accounts SET balance = ?, updated_at = NOW() WHERE id = ?",
             [balanceAfter, wallet[0].id]
         );
 
-        // E. Record Transaction (wallet_transactions usually HAS wallet_id, so this stays)
+        // --- E. RECORD TRANSACTION ---
         await conn.query(
             `INSERT INTO wallet_transactions 
-            (wallet_id, type, source, reference_type, reference_id, amount, balance_before, balance_after, description_en, description_bn, status) 
-            VALUES (?, 'debit', 'withdrawal', 'payout_request', ?, ?, ?, ?, ?, ?, 'pending')`,
+            (wallet_id, type, source, reference_type, reference_id, amount, balance_before, balance_after, description_en, description_bn, status, created_at) 
+            VALUES (?, 'debit', 'withdrawal', 'payout_request', ?, ?, ?, ?, ?, ?, 'pending', NOW())`,
             [
                 wallet[0].id, requestId, withdrawAmount, balanceBefore, balanceAfter,
                 `Withdrawal request via ${method.toUpperCase()}`,
@@ -92,7 +96,12 @@ export const requestWithdrawal = async (req, res) => {
         });
     } catch (err) {
         await conn.rollback();
-        res.status(err.statusCode || 500).json({ success: false, message: err.message });
+        // Standardizing error handling
+        if (err instanceof ApiError) {
+            res.status(err.statusCode).json({ success: false, message: err.message });
+        } else {
+            res.status(500).json({ success: false, message: err.message });
+        }
     } finally {
         conn.release();
     }

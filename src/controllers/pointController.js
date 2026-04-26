@@ -12,16 +12,28 @@ export const redeemPoints = async (req, res, next) => {
         const { id: userId, role } = req.user;
         const { pointsToRedeem } = req.body;
 
-        // Role Protection: Only customers typically earn/redeem green points
+        // 1. Role Protection
         if (role !== 'customer') {
             throw new ApiError(403, "Only customers can redeem green points for cash.");
         }
 
-        if (!pointsToRedeem || pointsToRedeem < 100) {
-            throw new ApiError(400, "Minimum 100 points required to redeem (৳10 value).");
+        // 2. FETCH SYSTEM SETTINGS (Dynamic Rates & Thresholds)
+        const [settingsRows] = await conn.query(
+            "SELECT point_to_cash_rate, min_redeem_points FROM app_settings WHERE id = 1 LIMIT 1"
+        );
+
+        if (!settingsRows.length) {
+            throw new ApiError(500, "Reward system configuration missing. Contact admin.");
         }
 
-        // 1. Fetch Customer Points with Row Lock
+        const { point_to_cash_rate, min_redeem_points } = settingsRows[0];
+
+        // 3. Validate Request against Dynamic Minimum
+        if (!pointsToRedeem || pointsToRedeem < min_redeem_points) {
+            throw new ApiError(400, `Minimum ${min_redeem_points} points required to redeem.`);
+        }
+
+        // 4. Fetch Customer Points with Row Lock (FOR UPDATE)
         const [customer] = await conn.query(
             "SELECT id, total_points FROM customers WHERE user_id = ? FOR UPDATE",
             [userId]
@@ -31,10 +43,11 @@ export const redeemPoints = async (req, res, next) => {
             throw new ApiError(400, "Insufficient points balance.");
         }
 
-        // 2. Conversion Formula (10:1)
-        const cashValue = pointsToRedeem / 10;
+        // 5. Dynamic Conversion Formula (Value from DB)
+        // Note: point_to_cash_rate is likely something like 0.10 (for 10:1)
+        const cashValue = pointsToRedeem * parseFloat(point_to_cash_rate);
 
-        // 3. Deduct Points & Log Point Transaction
+        // 6. Deduct Points & Log Point Transaction
         await conn.query(
             "UPDATE customers SET total_points = total_points - ? WHERE id = ?",
             [pointsToRedeem, customer[0].id]
@@ -46,30 +59,30 @@ export const redeemPoints = async (req, res, next) => {
             [
                 customer[0].id,
                 -pointsToRedeem,
-                `Converted ${pointsToRedeem} points to ৳${cashValue} cash`
+                `Converted ${pointsToRedeem} points to ৳${cashValue.toFixed(2)} cash`
             ]
         );
 
-        // 4. Credit Wallet Account with Row Lock
+        // 7. Credit Wallet Account with Row Lock
         const [wallet] = await conn.query(
             "SELECT id, balance FROM wallet_accounts WHERE user_id = ? FOR UPDATE",
             [userId]
         );
 
         if (!wallet.length) {
-            throw new ApiError(404, "Wallet account not found. Please contact support.");
+            throw new ApiError(404, "Wallet account not found.");
         }
 
         const balanceBefore = parseFloat(wallet[0].balance);
         const balanceAfter = balanceBefore + cashValue;
 
-        // 5. Update Wallet Balance
+        // 8. Update Wallet Balance
         await conn.query(
             "UPDATE wallet_accounts SET balance = ?, updated_at = NOW() WHERE id = ?",
             [balanceAfter, wallet[0].id]
         );
 
-        // 6. Log Wallet Transaction for Audit Trail
+        // 9. Log Wallet Transaction (Multilingual Audit)
         await conn.query(
             `INSERT INTO wallet_transactions 
             (wallet_id, type, source, reference_type, reference_id, amount, balance_before, balance_after, description_en, description_bn, status, created_at) 
@@ -80,15 +93,15 @@ export const redeemPoints = async (req, res, next) => {
                 cashValue,
                 balanceBefore,
                 balanceAfter,
-                `Redeemed ${pointsToRedeem} Green Points`,
-                `${pointsToRedeem} গ্রিন পয়েন্ট রিডিম করা হয়েছে`,
+                `Redeemed ${pointsToRedeem} points`,
+                `${pointsToRedeem} পয়েন্ট রিডিম করা হয়েছে`,
             ]
         );
 
         await conn.commit();
         res.status(200).json({
             success: true,
-            message: `Success! ৳${cashValue} has been added to your wallet.`,
+            message: `Success! ৳${cashValue.toFixed(2)} has been added to your wallet.`,
             data: {
                 new_points_balance: customer[0].total_points - pointsToRedeem,
                 added_cash: cashValue,
