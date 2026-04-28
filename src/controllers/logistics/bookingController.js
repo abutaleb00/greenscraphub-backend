@@ -141,7 +141,8 @@ export const createPickup = async (req, res, next) => {
         const uploadedFiles = req.files || [];
         const bookingCode = `GS-${upazila_id || '0'}-${Date.now().toString().slice(-4)}`;
 
-        // 3. Create Main Pickup Entry
+        // 3. Create Main Pickup Entry 
+        // Note: Added min_total_amount and max_total_amount (make sure these columns exist in your pickups table)
         const [pickupResult] = await conn.query(
             `INSERT INTO pickups (
                 booking_code, customer_id, customer_address_id, 
@@ -157,47 +158,62 @@ export const createPickup = async (req, res, next) => {
         );
         const pickupId = pickupResult.insertId;
 
-        // 4. Process Items and Calculate Value
+        // 4. Process Items and Calculate Range Value
         let totalEstMin = 0;
+        let totalEstMax = 0;
+
         for (let i = 0; i < parsedItems.length; i++) {
             const item = parsedItems[i];
             const itemId = item.item_id || item.scrap_item_id;
 
-            const [priceData] = await conn.query(
-                `SELECT si.current_min_rate, si.category_id, ov.min_rate as override_rate
-                 FROM scrap_items si
-                 LEFT JOIN item_price_overrides ov ON si.id = ov.item_id 
-                    AND ov.is_active = 1
-                    AND (ov.upazila_id = ? OR ov.district_id = ? OR ov.division_id = ?)
-                 WHERE si.id = ?
-                 ORDER BY ov.upazila_id DESC, ov.district_id DESC, ov.division_id DESC LIMIT 1`,
-                [upazila_id, district_id, division_id, itemId]
-            );
-
-            const finalRate = priceData.length > 0 ? (priceData[0].override_rate || priceData[0].current_min_rate || 0) : 0;
+            // We use the rates passed from the mobile app to ensure the user sees exactly 
+            // what they saw on the confirmation screen.
+            const minRate = parseFloat(item.min_rate) || 0;
+            const maxRate = parseFloat(item.max_rate) || 0;
             const weight = parseFloat(item.estimated_weight || item.weight) || 0;
-            const itemSubtotal = finalRate * weight;
-            totalEstMin += itemSubtotal;
+
+            const itemMinTotal = minRate * weight;
+            const itemMaxTotal = maxRate * weight;
+
+            totalEstMin += itemMinTotal;
+            totalEstMax += itemMaxTotal;
 
             const itemPhotos = uploadedFiles
                 .filter(file => file.fieldname === `item_photos_${i}` || file.fieldname === 'photos')
                 .map(file => `/uploads/pickups/${file.filename}`);
 
+            // Insert into pickup_items including the min/max rates
             await conn.query(
                 `INSERT INTO pickup_items (
                     pickup_id, category_id, item_id, 
-                    estimated_weight, final_rate_per_unit, final_amount, 
+                    estimated_weight, 
+                    min_rate_per_unit, max_rate_per_unit,
+                    final_rate_per_unit, final_amount, 
                     photo_url, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
-                [pickupId, priceData[0]?.category_id || null, itemId, weight, finalRate, itemSubtotal, JSON.stringify(itemPhotos)]
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+                [
+                    pickupId,
+                    item.category_id || null,
+                    itemId,
+                    weight,
+                    minRate,
+                    maxRate,
+                    minRate, // Default final_rate to min until weighed
+                    itemMinTotal, // Default final_amount to min until weighed
+                    JSON.stringify(itemPhotos)
+                ]
             );
         }
 
-        // 5. Finalize Database
-        await conn.query("UPDATE pickups SET base_amount = ? WHERE id = ?", [totalEstMin, pickupId]);
+        // 5. Finalize Database with the calculated ranges
+        await conn.query(
+            "UPDATE pickups SET base_amount = ?, min_total_amount = ?, max_total_amount = ? WHERE id = ?",
+            [totalEstMin, totalEstMin, totalEstMax, pickupId]
+        );
+
         await conn.query(
             `INSERT INTO pickup_timeline (pickup_id, status, note, changed_by, created_at) 
-             VALUES (?, 'pending', 'Shipment request created by customer', ?, NOW())`,
+             VALUES (?, 'pending', 'Shipment request created by customer with price range locked', ?, NOW())`,
             [pickupId, userId]
         );
 
@@ -207,54 +223,54 @@ export const createPickup = async (req, res, next) => {
         await conn.commit();
 
         // 6. LOG ACTIVITY
-        await logActivity(req, userId, 'CREATE_PICKUP', { booking_code: bookingCode, pickup_id: pickupId, estimated_value: totalEstMin.toFixed(2) });
+        await logActivity(req, userId, 'CREATE_PICKUP', {
+            booking_code: bookingCode,
+            pickup_id: pickupId,
+            est_range: `${totalEstMin}-${totalEstMax}`
+        });
 
-        // ✅ STEP 7: SEND API SUCCESS FIRST
-        // This ensures the user's app transitions to the success screen before the notification pops up.
+        // ✅ STEP 7: SEND API SUCCESS
         res.status(201).json({
             success: true,
             message: "Pickup created successfully!",
             data: {
                 booking_code: bookingCode,
                 pickup_id: pickupId,
-                estimated_value: totalEstMin.toFixed(2)
+                estimated_min: totalEstMin.toFixed(2),
+                estimated_max: totalEstMax.toFixed(2)
             }
         });
 
-        // ✅ STEP 8: ASYNC NOTIFICATIONS (Executes after res.json)
-        // Wrapped in setImmediate to ensure the process doesn't block the connection closure
+        // ✅ STEP 8: ASYNC NOTIFICATIONS
         setImmediate(async () => {
             try {
-                // Push Notification
                 if (customerFcmToken) {
                     await sendPushNotification(
                         customerFcmToken,
                         "পিকআপ অনুরোধ সফল! 📝",
-                        `আপনার অনুরোধ ${bookingCode} গ্রহণ করা হয়েছে।`,
+                        `আপনার অনুরোধ ${bookingCode} গ্রহণ করা হয়েছে। সম্ভাব্য মূল্য: ৳${totalEstMin.toFixed(0)} - ৳${totalEstMax.toFixed(0)}`,
                         { orderId: pickupId.toString(), type: "order_update" }
                     );
                 }
 
-                // SMS Notification
+                // SMS and Email logic remains same, but using the range
                 let formattedPhone = customerPhone.trim();
                 if (formattedPhone.startsWith('0')) formattedPhone = '88' + formattedPhone;
-                const smsMessage = `পিকআপ অনুরোধ নিশ্চিত! অর্ডার কোড: ${bookingCode}. - Smart Scrap BD`;
+                const smsMessage = `পিকআপ অনুরোধ নিশ্চিত! কোড: ${bookingCode}. সম্ভাব্য মূল্য: ৳${totalEstMin.toFixed(0)}-${totalEstMax.toFixed(0)}. - Smart Scrap BD`;
 
                 await axios.post('https://api.sms.net.bd/sendsms', {
                     api_key: process.env.SMS_API_KEY,
                     msg: smsMessage,
                     to: formattedPhone
-                }, {
-                    headers: { 'Content-Type': 'multipart/form-data' }
-                });
+                }, { headers: { 'Content-Type': 'multipart/form-data' } });
 
-                // Email Notification
                 if (customerEmail && !customerEmail.includes('example.com')) {
                     await sendPickupEmail(customerEmail, {
                         customerName,
                         customerPhone,
                         bookingCode,
-                        totalEstMin: totalEstMin.toFixed(2),
+                        minTotal: totalEstMin.toFixed(2),
+                        maxTotal: totalEstMax.toFixed(2),
                         scheduledDate: scheduled_date,
                         timeSlot: scheduled_time_slot
                     });
@@ -488,15 +504,22 @@ export const createOrderAsAdmin = async (req, res, next) => {
 
         const [pickupResult] = await conn.query(
             `INSERT INTO pickups (
-                booking_code, customer_id, customer_address_id, 
-                division_id, district_id, upazila_id,
-                status, scheduled_date, scheduled_time_slot, 
-                customer_note, pickup_type, created_by_admin, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, 1, NOW(), NOW())`,
+        booking_code, customer_id, customer_address_id, 
+        division_id, district_id, upazila_id,
+        status, scheduled_date, scheduled_time_slot, 
+        customer_note, pickup_type, 
+        base_amount, min_total_amount, max_total_amount, -- 🔥 MATCHING SQL COLUMNS
+        created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
             [
-                bookingCode, customer.customerId, address_id, division_id, district_id, upazila_id,
+                bookingCode, customerId, address_id, division_id, district_id, upazila_id,
                 scheduled_date || new Date().toISOString().split('T')[0],
-                scheduled_time_slot || '10:00 AM - 06:00 PM', pickup_note || "Order placed by Support Team", pickup_type || 'scheduled'
+                scheduled_time_slot || '10:00 AM - 06:00 PM',
+                customer_note,
+                pickup_type || 'scheduled',
+                totalMin, // base_amount
+                totalMin, // min_total_amount
+                totalMax  // max_total_amount
             ]
         );
         const pickupId = pickupResult.insertId;
@@ -527,11 +550,23 @@ export const createOrderAsAdmin = async (req, res, next) => {
 
             await conn.query(
                 `INSERT INTO pickup_items (
-                    pickup_id, category_id, item_id, 
-                    estimated_weight, final_rate_per_unit, final_amount, 
-                    photo_url, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
-                [pickupId, priceData[0]?.category_id || null, item.item_id, weight, finalRate, itemSubtotal, JSON.stringify(itemPhotos)]
+        pickup_id, category_id, item_id, 
+        estimated_weight, 
+        min_rate_per_unit, max_rate_per_unit, -- 🔥 MATCHING SQL COLUMNS
+        final_rate_per_unit, final_amount, 
+        photo_url, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+                [
+                    pickupId,
+                    item.category_id || null,
+                    itemId,
+                    weight,
+                    minRate,
+                    maxRate,
+                    minRate, // final_rate_per_unit defaults to min
+                    itemSubtotal, // final_amount defaults to min
+                    JSON.stringify(itemPhotos)
+                ]
             );
         }
 
