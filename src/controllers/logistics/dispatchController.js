@@ -1,6 +1,9 @@
 import db from "../../config/db.js";
 import ApiError from "../../utils/ApiError.js";
 import { sendPushNotification } from "../../utils/notificationHelper.js";
+import axios from "axios";
+import nodemailer from 'nodemailer';
+import FormData from 'form-data'; // Ensure this package is installed: npm install form-data
 
 /* -----------------------------------------------------
     HELPER: SAVE TO NOTIFICATIONS TABLE (DB Persistent)
@@ -8,17 +11,58 @@ import { sendPushNotification } from "../../utils/notificationHelper.js";
 ----------------------------------------------------- */
 const saveNotification = async (conn, userId, titleKey, bodyKey, placeholders = {}, type = 'info', action = null) => {
     try {
+        const validTypes = ['info', 'alert', 'success', 'warning'];
+        const finalType = validTypes.includes(type) ? type : 'info';
+
         await conn.query(`
             INSERT INTO notifications (
                 user_id, title_key, body_key, body_placeholders, 
                 notification_type, click_action, created_at
             ) VALUES (?, ?, ?, ?, ?, ?, NOW())`,
-            [userId, titleKey, bodyKey, JSON.stringify(placeholders), type, action]
+            [userId, titleKey, bodyKey, JSON.stringify(placeholders), finalType, action]
         );
     } catch (err) {
         console.error("[DB NOTIFICATION ERROR]", err.message);
     }
 };
+
+/* -----------------------------------------------------
+    HELPER: SEND RIDER EMAIL
+----------------------------------------------------- */
+const sendRiderAssignmentEmail = async (email, details) => {
+    try {
+        const transporter = nodemailer.createTransport({
+            host: process.env.MAIL_HOST,
+            port: parseInt(process.env.MAIL_PORT),
+            secure: process.env.MAIL_SECURE === 'true',
+            auth: {
+                user: process.env.MAIL_USER,
+                pass: process.env.MAIL_PASS,
+            },
+        });
+
+        await transporter.sendMail({
+            from: `"Smart Scrap Logistics" <${process.env.MAIL_USER}>`,
+            to: email,
+            subject: `New Task Assigned: ${details.bookingCode}`,
+            html: `
+                <div style="font-family: sans-serif; padding: 20px; border: 1px solid #10B981; border-radius: 15px; max-width: 600px;">
+                    <h2 style="color: #10B981;">New Assignment!</h2>
+                    <p>Hello <strong>${details.riderName}</strong>,</p>
+                    <p>You have been assigned a new pickup mission.</p>
+                    <div style="background: #f8fafc; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                        <p><strong>Booking Code:</strong> ${details.bookingCode}</p>
+                        <p><strong>Address:</strong> ${details.address}</p>
+                    </div>
+                    <p>Please open the Rider App to initiate the journey.</p>
+                </div>
+            `,
+        });
+    } catch (err) {
+        console.error("[MAIL ERROR]", err.message);
+    }
+};
+
 /**
  * 1. ASSIGN RIDER (DISPATCH)
  */
@@ -31,14 +75,18 @@ export const assignRiderController = async (req, res, next) => {
 
         await conn.beginTransaction();
 
+        // 1. Fetch Participant Details (Rider, Customer, and Address)
         const [rows] = await conn.query(
-            `SELECT r.id, r.agent_id, u.full_name as rider_name, 
-                    cust_u.id as target_user_id, cust_u.fcm_token as customer_fcm, p.booking_code
+            `SELECT r.id, r.agent_id, u.full_name as rider_name, u.phone as rider_phone, 
+                    u.email as rider_email, u.id as rider_user_id, u.fcm_token as rider_fcm,
+                    cust_u.id as target_user_id, cust_u.fcm_token as customer_fcm, 
+                    p.booking_code, addr.address_line
              FROM pickups p
              JOIN riders r ON r.id = ?
              JOIN users u ON r.user_id = u.id
              JOIN customers c ON p.customer_id = c.id
              JOIN users cust_u ON c.user_id = cust_u.id
+             LEFT JOIN addresses addr ON p.customer_address_id = addr.id
              WHERE p.id = ?`,
             [rider_id, pickupId]
         );
@@ -46,6 +94,7 @@ export const assignRiderController = async (req, res, next) => {
         if (!rows.length) throw new ApiError(404, "Data mismatch: Rider or Pickup not found");
         const data = rows[0];
 
+        // 2. Update Pickup Status
         const [updateResult] = await conn.query(
             `UPDATE pickups SET 
                 rider_id = ?, 
@@ -61,36 +110,84 @@ export const assignRiderController = async (req, res, next) => {
             throw new ApiError(400, "Pickup is already processed or completed.");
         }
 
+        // 3. Log Timeline
         await conn.query(
             "INSERT INTO pickup_timeline (pickup_id, status, changed_by, note) VALUES (?, 'accepted', ?, ?)",
             [pickupId, changerId, `Dispatched to Rider: ${data.rider_name}`]
         );
 
-        // 🔥 DB NOTIFICATION: Rider Assigned
-        await saveNotification(
-            conn,
-            data.target_user_id,
-            'notif_rider_assigned_title',
-            'notif_rider_assigned_body',
-            { riderName: data.rider_name, bookingCode: data.booking_code },
-            'success',
-            `/(home)/activity/${pickupId}`
+        // 4. 🔥 PERSISTENT NOTIFICATIONS
+        // To Customer
+        await saveNotification(conn, data.target_user_id, 'notif_rider_assigned_title', 'notif_rider_assigned_body',
+            { riderName: data.rider_name, bookingCode: data.booking_code }, 'success', `/(home)/activity/${pickupId}`
+        );
+
+        // To Rider
+        await saveNotification(conn, data.rider_user_id, 'notif_new_task_title', 'notif_new_task_body',
+            { bookingCode: data.booking_code }, 'alert', `/(driver)/tasks/${pickupId}`
         );
 
         await conn.commit();
 
-        if (data.customer_fcm) {
-            await sendPushNotification(
-                data.customer_fcm,
-                "Rider Assigned! 🚚",
-                `${data.rider_name} has accepted your pickup request ${data.booking_code}.`,
-                { orderId: pickupId.toString(), type: "order_update" }
-            );
-        }
+        // 5. --- ASYNC ALERTS (SMS, Push, Email) ---
+        setImmediate(async () => {
+            try {
+                // A. SMS (Using form-data for multipart support)
+                if (data.rider_phone) {
+                    let formattedPhone = data.rider_phone.trim();
+                    if (formattedPhone.startsWith('0')) formattedPhone = '88' + formattedPhone;
+
+                    // Use a strict limit to ensure 1 SMS credit (staying under 70 for safety)
+                    const bookingPart = `GSH Order: ${data.booking_code}.`; // approx 20 chars
+                    const actionPart = ` Open App now.`; // 14 chars
+                    const remainingSpace = 70 - (bookingPart.length + actionPart.length + 6); // approx 30 chars for address
+
+                    const shortAddress = data.address_line ? data.address_line.substring(0, remainingSpace) : "N/A";
+                    const smsMsg = `${bookingPart} Loc: ${shortAddress}.${actionPart}`;
+
+                    const form = new FormData();
+                    form.append('api_key', process.env.SMS_API_KEY);
+                    form.append('msg', smsMsg); // The resulting string is guaranteed < 70 chars
+                    form.append('to', formattedPhone);
+
+                    await axios.post('https://api.sms.net.bd/sendsms', form, {
+                        headers: form.getHeaders()
+                    });
+                }
+
+                // B. PUSH NOTIFICATIONS
+                if (data.customer_fcm) {
+                    await sendPushNotification(data.customer_fcm, "Rider Assigned! 🚚",
+                        `${data.rider_name} is on the way for pickup ${data.booking_code}.`,
+                        { orderId: pickupId.toString(), type: "order_update" }
+                    );
+                }
+                if (data.rider_fcm) {
+                    await sendPushNotification(data.rider_fcm, "New Task! 📦",
+                        `Task ${data.booking_code} assigned. Tap to view location.`,
+                        {
+                            orderId: pickupId.toString(),
+                            type: "NEW_MISSION" // 🔥 This is the key for the frontend listener
+                        }
+                    );
+                }
+
+                // C. EMAIL
+                if (data.rider_email && !data.rider_email.includes('example.com')) {
+                    await sendRiderAssignmentEmail(data.rider_email, {
+                        riderName: data.rider_name,
+                        bookingCode: data.booking_code,
+                        address: data.address_line
+                    });
+                }
+            } catch (err) {
+                console.error("[ASYNC ALERT ERROR]", err.message);
+            }
+        });
 
         res.json({ success: true, message: `Rider ${data.rider_name} has been dispatched.` });
     } catch (err) {
-        await conn.rollback();
+        if (conn) await conn.rollback();
         next(err);
     } finally {
         conn.release();
@@ -126,43 +223,24 @@ export const updatePickupStatus = async (req, res, next) => {
             [id, status, note || `Status: ${status}`]
         );
 
-        // 🔥 DB NOTIFICATION: Dynamic Status Mapping
-        let titleKey = 'notif_status_update_title';
-        let bodyKey = 'notif_status_update_body';
-        let notifType = 'info';
-
-        if (status === 'rider_on_way') notifType = 'success';
-        if (status === 'cancelled') notifType = 'alert';
-
-        await saveNotification(
-            conn,
-            pickupRows[0].target_user_id,
-            `notif_${status}_title`, // Dynamic keys like notif_arrived_title
-            `notif_${status}_body`,
-            { bookingCode: pickupRows[0].booking_code },
-            notifType,
-            `/(home)/activity/${id}`
+        await saveNotification(conn, pickupRows[0].target_user_id, `notif_${status}_title`, `notif_${status}_body`,
+            { bookingCode: pickupRows[0].booking_code }, status === 'cancelled' ? 'alert' : 'info', `/(home)/activity/${id}`
         );
 
         await conn.commit();
 
         if (pickupRows.length && pickupRows[0].fcm_token) {
-            const customerToken = pickupRows[0].fcm_token;
-            const bCode = pickupRows[0].booking_code;
-
             let title = "Pickup Update";
-            let body = `Your request ${bCode} is now: ${status.replace(/_/g, ' ')}`;
+            let body = `Request ${pickupRows[0].booking_code} is now ${status.replace(/_/g, ' ')}`;
+            if (status === 'rider_on_way') title = "Rider is coming! 🛵";
+            else if (status === 'arrived') title = "Rider Arrived! 📍";
 
-            if (status === 'rider_on_way') { title = "Rider is coming! 🛵"; body = `Your rider is on the way for ${bCode}.`; }
-            else if (status === 'arrived') { title = "Rider Arrived! 📍"; body = `Our rider has arrived for ${bCode}.`; }
-            else if (status === 'cancelled') { title = "Pickup Cancelled ❌"; body = `Your request ${bCode} has been cancelled.`; }
-
-            await sendPushNotification(customerToken, title, body, { orderId: id.toString(), type: "order_update" });
+            sendPushNotification(pickupRows[0].fcm_token, title, body, { orderId: id.toString(), type: "order_update" });
         }
 
         res.json({ success: true, message: `Status updated to ${status}` });
     } catch (err) {
-        await conn.rollback();
+        if (conn) await conn.rollback();
         next(err);
     } finally {
         conn.release();
@@ -170,7 +248,7 @@ export const updatePickupStatus = async (req, res, next) => {
 };
 
 /**
- * 3. AGENT PICKUP LIST (Cleaned for Admin Fresh Start)
+ * 3. AGENT PICKUP LIST
  */
 export const agentPickupList = async (req, res, next) => {
     try {
@@ -196,7 +274,7 @@ export const agentPickupList = async (req, res, next) => {
 };
 
 /**
- * 4. RIDER PICKUP LIST (Cleaned for Admin Fresh Start)
+ * 4. RIDER PICKUP LIST
  */
 export const riderPickupList = async (req, res, next) => {
     try {
@@ -255,23 +333,14 @@ export const reassignSinglePickup = async (req, res, next) => {
             [id, `Job reassigned to Rider: ${rows[0].rider_name}`]
         );
 
-        // 🔥 DB NOTIFICATION: Job Reassigned
-        await saveNotification(
-            conn,
-            rows[0].target_user_id,
-            'notif_rider_reassigned_title',
-            'notif_rider_reassigned_body',
-            { riderName: rows[0].rider_name, bookingCode: rows[0].booking_code },
-            'warning',
-            `/(home)/activity/${id}`
+        await saveNotification(conn, rows[0].target_user_id, 'notif_rider_reassigned_title', 'notif_rider_reassigned_body',
+            { riderName: rows[0].rider_name, bookingCode: rows[0].booking_code }, 'warning', `/(home)/activity/${id}`
         );
 
         await conn.commit();
 
         if (rows[0].fcm_token) {
-            await sendPushNotification(
-                rows[0].fcm_token,
-                "Rider Reassigned 🔄",
+            await sendPushNotification(rows[0].fcm_token, "Rider Reassigned 🔄",
                 `A new rider, ${rows[0].rider_name}, has been assigned to your request.`,
                 { orderId: id.toString(), type: "order_update" }
             );
@@ -279,7 +348,7 @@ export const reassignSinglePickup = async (req, res, next) => {
 
         res.json({ success: true, message: "Rider reassigned successfully." });
     } catch (err) {
-        await conn.rollback();
+        if (conn) await conn.rollback();
         next(err);
     } finally {
         conn.release();
