@@ -9,15 +9,12 @@ import { sendPushNotification } from '../../utils/notificationHelper.js';
 ----------------------------------------------------- */
 const saveNotification = async (conn, userId, titleKey, bodyKey, placeholders = {}, type = 'info', action = null) => {
     try {
-        const validTypes = ['info', 'alert', 'success', 'warning'];
-        const finalType = validTypes.includes(type) ? type : 'info';
-
         await conn.query(`
             INSERT INTO notifications (
                 user_id, title_key, body_key, body_placeholders, 
                 notification_type, click_action, created_at
             ) VALUES (?, ?, ?, ?, ?, ?, NOW())`,
-            [userId, titleKey, bodyKey, JSON.stringify(placeholders), finalType, action]
+            [userId, titleKey, bodyKey, JSON.stringify(placeholders), type, action]
         );
     } catch (err) {
         console.error("[DB NOTIFICATION ERROR]", err.message);
@@ -172,15 +169,17 @@ export const updateLocation = async (req, res) => {
 };
 /**
  * GET RIDER DASHBOARD
- * Mobile-optimized LOC (Logistics Operations Center) data.
+ * Updated for Leader System: Tracks real-time Hub Cash and Shift Status.
  */
 export async function getRiderDashboard(req, res, next) {
     try {
         const userId = req.user.id;
 
-        // 1. Get Rider Profile with safety check
+        // 1. Get Rider Profile & Operational Data (Liability + Weight)
         const [riderRows] = await db.query(
-            `SELECT r.id, r.is_online, u.full_name, u.profile_image 
+            `SELECT 
+                r.id, r.is_online, r.cash_held_liability, r.total_collected_weight_kg,
+                u.full_name, u.profile_image 
              FROM riders r 
              JOIN users u ON r.user_id = u.id 
              WHERE r.user_id = ?`,
@@ -191,11 +190,10 @@ export async function getRiderDashboard(req, res, next) {
         const rider = riderRows[0];
         const riderId = rider.id;
 
-        // 2. Fetch Active Missions (Queue)
-        // 🔥 SYNCED JOIN: pickups -> customers -> users
+        // 2. Fetch Active Missions (Optimized Queue)
         const [activeTasks] = await db.query(
             `SELECT 
-                p.id, p.booking_code, p.status, p.scheduled_date, p.scheduled_time_slot,
+                p.id, p.booking_code, p.status, p.scheduled_time_slot,
                 u.full_name AS customer_name, u.phone AS customer_phone,
                 adr.address_line, adr.house_no, adr.road_no, adr.landmark,
                 adr.latitude, adr.longitude
@@ -216,26 +214,31 @@ export async function getRiderDashboard(req, res, next) {
             [riderId]
         );
 
-        // 3. Financial Intelligence Query
-        const [stats] = await db.query(
+        // 3. Performance & Daily Statistics
+        const [perfStats] = await db.query(
             `SELECT
                 COUNT(CASE WHEN DATE(completed_at) = CURDATE() THEN 1 END) AS count_today,
-                COUNT(CASE WHEN MONTH(completed_at) = MONTH(CURDATE()) AND YEAR(completed_at) = YEAR(CURDATE()) THEN 1 END) AS count_month,
                 COALESCE(SUM(CASE WHEN DATE(completed_at) = CURDATE() THEN rider_commission_amount ELSE 0 END), 0) AS earn_today,
-                COALESCE(SUM(CASE WHEN MONTH(completed_at) = MONTH(CURDATE()) AND YEAR(completed_at) = YEAR(CURDATE()) THEN rider_commission_amount ELSE 0 END), 0) AS earn_month,
-                COALESCE(SUM(CASE WHEN is_settled_to_hub = 0 AND status = 'completed' THEN rider_collected_cash ELSE 0 END), 0) AS cash_liability
+                COALESCE(SUM(CASE WHEN MONTH(completed_at) = MONTH(CURDATE()) AND YEAR(completed_at) = YEAR(CURDATE()) THEN rider_commission_amount ELSE 0 END), 0) AS earn_month
             FROM pickups
-            WHERE rider_id = ?`,
+            WHERE rider_id = ? AND status = 'completed'`,
             [riderId]
         );
 
-        // 4. Wallet Balance (Actual Withdrawable Earnings)
+        // 4. Check for Active Shift (For UI "Clock-in" status)
+        const [activeShift] = await db.query(
+            "SELECT id, cash_issued, opened_at FROM rider_shifts WHERE rider_id = ? AND status = 'active' LIMIT 1",
+            [riderId]
+        );
+
+        // 5. Wallet Balance (Rider's actual take-home earnings)
         const [wallet] = await db.query("SELECT balance FROM wallet_accounts WHERE user_id = ?", [userId]);
 
         // Helper for Avatar URL
         const getAvatarUrl = (path) => {
             if (!path) return null;
-            return path.startsWith('http') ? path : `${process.env.BASE_URL || 'https://webapp.prosfata.space'}${path}`;
+            const baseUrl = process.env.BASE_URL || 'https://webapp.prosfata.space';
+            return path.startsWith('http') ? path : `${baseUrl.replace(/\/$/, "")}/${path.replace(/^\//, "")}`;
         };
 
         return res.json({
@@ -244,43 +247,35 @@ export async function getRiderDashboard(req, res, next) {
                 profile: {
                     name: rider.full_name,
                     avatar: getAvatarUrl(rider.profile_image),
-                    is_online: Boolean(rider.is_online)
+                    is_online: Boolean(rider.is_online),
+                    shift_active: activeShift.length > 0
                 },
+                // 🔥 UPDATED FINANCIALS: Reflecting Hub Liability vs Withdrawable Balance
                 financials: {
+                    hub_cash_on_hand: parseFloat(rider.cash_held_liability || 0).toFixed(2),
                     withdrawable_balance: parseFloat(wallet[0]?.balance || 0).toFixed(2),
-                    cash_held_liability: parseFloat(stats[0].cash_liability || 0).toFixed(2),
+                    current_truck_load_kg: parseFloat(rider.total_collected_weight_kg || 0).toFixed(1),
                     currency: "BDT"
                 },
                 performance: {
                     today: {
-                        trips: stats[0].count_today || 0,
-                        income: parseFloat(stats[0].earn_today || 0).toFixed(2)
+                        trips: perfStats[0].count_today || 0,
+                        income: parseFloat(perfStats[0].earn_today || 0).toFixed(2)
                     },
-                    monthly: {
-                        trips: stats[0].count_month || 0,
-                        income: parseFloat(stats[0].earn_month || 0).toFixed(2)
-                    }
+                    monthly_income: parseFloat(perfStats[0].earn_month || 0).toFixed(2)
                 },
-                active_missions: activeTasks.map(t => {
-                    // Format address string
-                    const addressParts = [];
-                    if (t.house_no) addressParts.push(`H# ${t.house_no}`);
-                    if (t.road_no) addressParts.push(`R# ${t.road_no}`);
-                    if (t.address_line) addressParts.push(t.address_line);
-
-                    return {
-                        id: t.id,
-                        ref: t.booking_code,
-                        status: t.status,
-                        customer: { name: t.customer_name, phone: t.customer_phone },
-                        location: {
-                            address: addressParts.join(', ') || 'Location Specified',
-                            landmark: t.landmark,
-                            coords: { lat: t.latitude, lng: t.longitude }
-                        },
-                        schedule: t.scheduled_time_slot
-                    };
-                })
+                active_missions: activeTasks.map(t => ({
+                    id: t.id,
+                    ref: t.booking_code,
+                    status: t.status,
+                    customer: { name: t.customer_name, phone: t.customer_phone },
+                    location: {
+                        address: [t.house_no, t.road_no, t.address_line].filter(Boolean).join(', ') || 'Address Provided',
+                        landmark: t.landmark,
+                        coords: { lat: t.latitude, lng: t.longitude }
+                    },
+                    schedule: t.scheduled_time_slot
+                }))
             }
         });
     } catch (err) {
@@ -610,180 +605,213 @@ export const getRiderCollectionLogs = async (req, res, next) => {
 };
 
 /**
- * Helper: Update User Wallet and Log Transaction
+ * UNIFIED WALLET HELPER
+ * Precision-safe, race-condition protected, and Leader System aware.
  */
 const updateWallet = async (conn, userId, amount, type, source, refType, refId, descEn) => {
-    console.log(`[Wallet] Processing ${type} for User: ${userId}, Amount: ${amount}`);
+    const numericAmount = Math.abs(parseFloat(amount)) || 0;
+    if (numericAmount <= 0) return null;
 
-    // 1. Double-Check Reference: Ensure we don't duplicate, but don't skip if new
-    const [existing] = await conn.query(
-        "SELECT id FROM wallet_transactions WHERE reference_type = ? AND reference_id = ? AND source = ?",
-        [refType, refId, source]
-    );
+    // 🛡️ LEADER SYSTEM PROTECTION: 
+    // These sources represent Company Cash movement, not Rider Earnings.
+    // They must NEVER affect the 'balance' column.
+    const operationalSources = ['hub_issue', 'hub_settlement', 'customer_payout'];
+    const isOperational = operationalSources.includes(source);
 
-    if (existing.length > 0) {
-        console.log(`[Wallet] Transaction already exists (ID: ${existing[0].id}). Skipping.`);
-        return existing[0].id;
+    try {
+        // 1. Idempotency Check
+        const [existing] = await conn.query(
+            "SELECT id FROM wallet_transactions WHERE reference_type = ? AND reference_id = ? AND source = ?",
+            [refType, refId, source]
+        );
+        if (existing.length > 0) return existing[0].id;
+
+        // 2. Fetch/Lock Wallet
+        let [walletRows] = await conn.query(
+            "SELECT id, balance FROM wallet_accounts WHERE user_id = ? FOR UPDATE",
+            [userId]
+        );
+
+        let walletId;
+        let balanceBefore = 0;
+
+        if (walletRows.length === 0) {
+            const [ins] = await conn.query(
+                "INSERT INTO wallet_accounts (user_id, balance, created_at, updated_at) VALUES (?, 0, NOW(), NOW())",
+                [userId]
+            );
+            walletId = ins.insertId;
+        } else {
+            walletId = walletRows[0].id;
+            balanceBefore = parseFloat(walletRows[0].balance) || 0;
+        }
+
+        // 3. Calculate Balance
+        let balanceAfter = balanceBefore;
+
+        if (!isOperational) {
+            // Only update balance if it's NOT a Hub/Operational transaction
+            balanceAfter = type === 'credit'
+                ? parseFloat((balanceBefore + numericAmount).toFixed(2))
+                : parseFloat((balanceBefore - numericAmount).toFixed(2));
+
+            await conn.query(
+                "UPDATE wallet_accounts SET balance = ?, updated_at = NOW() WHERE id = ?",
+                [balanceAfter, walletId]
+            );
+        }
+
+        // 4. Record Transaction Ledger
+        const [result] = await conn.query(
+            `INSERT INTO wallet_transactions 
+            (wallet_id, type, source, reference_type, reference_id, amount, balance_before, balance_after, description_en, status, created_at) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', NOW())`,
+            [walletId, type, source, refType, refId, numericAmount, balanceBefore, balanceAfter, descEn]
+        );
+
+        return result.insertId;
+    } catch (err) {
+        console.error("[Wallet Helper Error]", err.message);
+        throw err;
     }
-
-    // 2. Fetch/Lock Wallet
-    let [wallet] = await conn.query(
-        "SELECT id, balance FROM wallet_accounts WHERE user_id = ? FOR UPDATE",
-        [userId]
-    );
-
-    if (!wallet.length) {
-        console.log(`[Wallet] Creating new wallet account for User: ${userId}`);
-        const [ins] = await conn.query("INSERT INTO wallet_accounts (user_id, balance) VALUES (?, 0)", [userId]);
-        wallet = [{ id: ins.insertId, balance: 0 }];
-    }
-
-    const balanceBefore = parseFloat(wallet[0].balance) || 0;
-    const balanceAfter = type === 'credit' ? balanceBefore + amount : balanceBefore - amount;
-
-    // 3. Update Balance
-    await conn.query(
-        "UPDATE wallet_accounts SET balance = ?, updated_at = NOW() WHERE id = ?",
-        [balanceAfter, wallet[0].id]
-    );
-
-    // 4. INSERT INTO TRANSACTION TABLE (The critical step)
-    const [result] = await conn.query(
-        `INSERT INTO wallet_transactions 
-        (wallet_id, type, source, reference_type, reference_id, amount, balance_before, balance_after, description_en, status) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed')`,
-        [wallet[0].id, type, source, refType, refId, amount, balanceBefore, balanceAfter, descEn]
-    );
-
-    console.log(`[Wallet] Success. Transaction ID: ${result.insertId}`);
-    return result.insertId;
 };
 
 /**
- * FINALIZE PICKUP (Hybrid Model: Salary vs Commission)
- * Updates items, calculates splits, executes wallet transfers, and logs to timeline.
- */
-/**
  * FINALIZE PICKUP
- * Updates items, calculates splits, handles liability, and uploads proof images.
+ * Updates items, handles liability, and uploads proof images.
  */
 export const finalizePickup = async (req, res, next) => {
     const conn = await db.getConnection();
     try {
         const { id: pickupId } = req.params;
-        const { items, payment_method, note, proof_image_after } = req.body;
+        const { items, payment_method, proof_image_after } = req.body;
 
         await conn.beginTransaction();
 
-        // 1. Lock record and fetch participant details
+        // 1. Fetch Participant Details & Lock Record
         const [p] = await conn.query(`
-            SELECT p.*, c.user_id as customer_uid, cust_u.fcm_token as customer_fcm,
-                   r.user_id as rider_uid, r.payment_mode as rider_specific_mode,
-                   a.owner_user_id as agent_uid, a.default_rider_mode as agent_default_mode,
-                   a.platform_fee_percent as hub_platform_fee_rate,
-                   a.hub_commission_value as hub_commission_rate
+            SELECT p.*, r.id as rider_table_id, r.cash_held_liability, r.user_id as rider_uid,
+                   u.id as customer_user_id, u.full_name as customer_name, u.phone as customer_phone, 
+                   u.email as customer_email, u.fcm_token as customer_fcm,
+                   a.hub_commission_value as hub_comm_rate, a.platform_fee_percent as fee_rate
             FROM pickups p
             JOIN customers c ON p.customer_id = c.id
-            JOIN users cust_u ON c.user_id = cust_u.id
+            JOIN users u ON c.user_id = u.id
             LEFT JOIN riders r ON p.rider_id = r.id
             LEFT JOIN agents a ON p.agent_id = a.id
             WHERE p.id = ? FOR UPDATE`, [pickupId]);
 
-        if (!p.length) throw new ApiError(404, "Pickup mission not found.");
+        if (!p.length) throw new ApiError(404, "Mission not found.");
         const pickup = p[0];
 
-        // 2. Process Items & Calculate Totals
-        let netPayableToCustomer = 0;
-        for (const it of items) {
-            const weight = parseFloat(it.actual_weight) || 0;
-            const rate = parseFloat(it.final_rate) || 0;
-            const subtotal = weight * rate;
-            netPayableToCustomer += subtotal;
+        // 2. Process Items & Verified Weights
+        let netPayable = 0;
+        let totalWeight = 0;
+        const parsedItems = typeof items === 'string' ? JSON.parse(items) : items;
 
-            if (it.id && !String(it.id).startsWith('new-')) {
-                await conn.query(
-                    `UPDATE pickup_items SET actual_weight = ?, final_rate_per_unit = ?, final_amount = ? WHERE id = ?`,
-                    [weight, rate, subtotal, it.id]
-                );
-            } else {
-                await conn.query(
-                    `INSERT INTO pickup_items (pickup_id, item_id, actual_weight, final_rate_per_unit, final_amount) VALUES (?, ?, ?, ?, ?)`,
-                    [pickupId, it.item_id, weight, rate, subtotal]
-                );
+        for (const it of parsedItems) {
+            const w = parseFloat(it.actual_weight) || 0;
+            const r = parseFloat(it.final_rate) || 0;
+            const sub = w * r;
+            netPayable += sub;
+            totalWeight += w;
+
+            await conn.query(
+                `UPDATE pickup_items SET actual_weight = ?, final_rate_per_unit = ?, final_amount = ? WHERE id = ?`,
+                [w, r, sub, it.id]
+            );
+        }
+
+        // 3. --- 🛡️ LEADER SYSTEM: LIABILITY & TRUCK LOAD ---
+        if (payment_method === 'cash') {
+            const currentCash = parseFloat(pickup.cash_held_liability || 0);
+            if (currentCash < netPayable) {
+                throw new ApiError(400, `Insufficient Hub Cash. Need ৳${netPayable.toFixed(2)}, have ৳${currentCash.toFixed(2)}`);
             }
+
+            // A. Update Physical Rider Stats (This is the primary tracker for company money)
+            await conn.query(
+                `UPDATE riders SET 
+                    cash_held_liability = cash_held_liability - ?, 
+                    total_collected_weight_kg = total_collected_weight_kg + ? 
+                 WHERE id = ?`,
+                [netPayable, totalWeight, pickup.rider_table_id]
+            );
+
+            // B. Log Ledger Entry (Record spending but do not touch personal balance)
+            await updateWallet(
+                conn, pickup.rider_uid, netPayable, 'debit', 'customer_payout',
+                'pickup', pickupId, `Paid to customer for ${pickup.booking_code}`
+            );
+        } else {
+            // Non-cash (Wallet): Update truck load only
+            await conn.query(`UPDATE riders SET total_collected_weight_kg = total_collected_weight_kg + ? WHERE id = ?`, [totalWeight, pickup.rider_table_id]);
+
+            // Credit Customer Wallet (Actual money transfer)
+            await updateWallet(
+                conn, pickup.customer_user_id, netPayable, 'credit', 'pickup_payment',
+                'pickup', pickupId, `Received payment for ${pickup.booking_code}`
+            );
         }
 
-        // 3. Calculate Splits (Rider Commission, Platform Fee, Agent Commission)
-        const activeRiderMode = pickup.rider_specific_mode === 'default' ? pickup.agent_default_mode : pickup.rider_specific_mode;
-
-        // Assume 2% for commission mode, 0 for salary mode
-        const riderCommAmount = (activeRiderMode === 'commission') ? (netPayableToCustomer * 0.02) : 0;
-        const agentCommAmount = (netPayableToCustomer * (parseFloat(pickup.hub_commission_rate) || 0)) / 100;
-        const platformFeeAmount = (netPayableToCustomer * (parseFloat(pickup.hub_platform_fee_rate) || 0)) / 100;
-
-        // 4. Handle Financial Flow & Liability
-        // Instruction: Both Cash and Wallet increase Rider Liability
-        const riderCollectedCashLiability = netPayableToCustomer;
-        let walletCreditToCustomer = 0;
-
-        if (payment_method === 'wallet') {
-            walletCreditToCustomer = netPayableToCustomer;
-            // System credits customer's digital wallet
-            await updateWallet(conn, pickup.customer_uid, netPayableToCustomer, 'credit', 'pickup_payment', 'pickup', pickupId, `Wallet payment for ${pickup.booking_code}`);
-        }
-
-        // 5. Credit rider commission to their digital wallet (Incentive)
-        if (riderCommAmount > 0) {
-            await updateWallet(conn, pickup.rider_uid, riderCommAmount, 'credit', 'rider_commission', 'pickup', pickupId, `Incentive for ${pickup.booking_code}`);
-        }
-
-        // 6. Handle Proof Images (If provided as array or string)
+        // 4. Update Pickup Record
         const proofAfter = Array.isArray(proof_image_after) ? JSON.stringify(proof_image_after) : proof_image_after;
 
-        // 7. Final Update to Pickups Table
         await conn.query(`
             UPDATE pickups SET 
                 status = 'completed',
                 payment_status = 'paid',
                 payment_method = ?,
+                payment_mode_snapshot = ?,
+                actual_weight_kg = ?, 
                 net_payable_amount = ?,
                 cash_paid_to_customer = ?,
                 rider_collected_cash = ?,
-                wallet_credit_amount = ?,
-                rider_commission_amount = ?,
-                agent_commission_amount = ?,
-                platform_fee_amount = ?,
+                rider_commission_amount = 0.00,
                 proof_image_after = ?,
                 completed_at = NOW(),
                 updated_at = NOW()
             WHERE id = ?`,
             [
-                payment_method,
-                netPayableToCustomer,
-                (payment_method === 'cash' ? netPayableToCustomer : 0), // Cash paid physically
-                riderCollectedCashLiability, // Rider's liability for the collected goods value
-                walletCreditToCustomer,
-                riderCommAmount,
-                agentCommAmount,
-                platformFeeAmount,
-                proofAfter || pickup.proof_image_after,
-                pickupId
+                payment_method, payment_method, totalWeight, netPayable,
+                (payment_method === 'cash' ? netPayable : 0),
+                netPayable, proofAfter || pickup.proof_image_after, pickupId
             ]
         );
 
-        // 8. Log Timeline
+        // 5. Timeline & DB Notification
         await conn.query(`INSERT INTO pickup_timeline (pickup_id, status, note, changed_by) VALUES (?, 'completed', ?, ?)`,
-            [pickupId, `Finalized at ৳${netPayableToCustomer.toFixed(2)} via ${payment_method.toUpperCase()}. Proof uploaded.`, req.user.id]);
+            [pickupId, `Finalized: ৳${netPayable.toFixed(2)} | ${totalWeight}kg`, req.user.id]);
+
+        await saveNotification(
+            conn, pickup.customer_user_id, 'notif_order_completed_title', 'notif_order_completed_body',
+            { bookingCode: pickup.booking_code, amount: netPayable.toFixed(0) },
+            'success', `/(home)/activity/${pickupId}`
+        );
 
         await conn.commit();
 
+        // 📨 6. Notifications Post-Commit
+        if (pickup.customer_fcm) {
+            sendPushNotification(
+                pickup.customer_fcm,
+                "Payment Confirmed! ✅",
+                `৳${netPayable.toFixed(2)} has been paid for Order ${pickup.booking_code}.`,
+                { orderId: pickupId.toString(), type: "ORDER_UPDATE" }
+            );
+        }
+
+        if (pickup.customer_email) {
+            sendUnifiedReceipt(pickupId).catch(e => console.error("Mail Error:", e.message));
+        }
+
         res.json({
             success: true,
-            message: "Mission finalized successfully.",
+            message: "Mission finalized successfully",
             data: {
-                total: netPayableToCustomer.toFixed(2),
-                incentive: riderCommAmount.toFixed(2),
-                liability: riderCollectedCashLiability.toFixed(2)
+                total_paid: netPayable.toFixed(2),
+                weight_collected: totalWeight,
+                remaining_hub_cash: payment_method === 'cash' ? (pickup.cash_held_liability - netPayable) : pickup.cash_held_liability
             }
         });
 
@@ -940,78 +968,115 @@ export const getHistoryDetail = async (req, res, next) => {
 };
 
 /**
- * GET RIDER EARNINGS OVERVIEW
- * Updated for Hybrid Model (is_settled_to_hub tracking)
+ * GET RIDER EARNINGS & CASH LEDGER OVERVIEW
+ * Shows: Hub Cash flow, Completed Pickups, and Monthly Incentives.
+ */
+/**
+ * GET RIDER EARNINGS & CASH LEDGER OVERVIEW
+ * Fixed: Deep scan for transactions based on User -> Wallet relationship.
  */
 export const getEarningsOverview = async (req, res, next) => {
     try {
-        const rider = await getRiderInfo(req);
-        const userId = rider.user_id;
-        const riderId = rider.id;
+        const riderProfile = await getRiderInfo(req);
+        const userId = req.user.id;
+        const riderId = riderProfile.id;
 
-        // 1. Fetch Liquid Wallet Balance (Rider's actual available funds)
-        const [wallet] = await db.query(
-            "SELECT balance FROM wallet_accounts WHERE user_id = ?",
-            [userId]
-        );
+        // 1. Fetch Stats & Wallet info
+        const [meta] = await db.query(`
+            SELECT 
+                r.cash_held_liability, r.total_collected_weight_kg,
+                wa.balance as withdrawable_balance, wa.id as wallet_id
+            FROM riders r
+            LEFT JOIN wallet_accounts wa ON wa.user_id = r.user_id
+            WHERE r.id = ?`, [riderId]);
 
-        // 2. Fetch Liability (Cash in Hand - Collected but NOT yet paid to Agent)
-        const [liabilityRow] = await db.query(
-            `SELECT COALESCE(SUM(rider_collected_cash), 0) as total_liability 
-             FROM pickups 
-             WHERE rider_id = ? AND status = 'completed' AND is_settled_to_hub = 0`,
+        if (!meta.length) throw new ApiError(404, "Rider financial profile not found.");
+        const stats = meta[0];
+
+        // 2. THE LEDGER: Fetch transactions
+        let ledger = [];
+        if (stats.wallet_id) {
+            const [history] = await db.query(`
+                SELECT 
+                    wt.id, wt.type, wt.amount, wt.source, wt.description_en, 
+                    wt.created_at as date, wt.reference_type, wt.reference_id,
+                    p.booking_code
+                FROM wallet_transactions wt
+                LEFT JOIN pickups p ON (wt.reference_id = p.id AND wt.reference_type = 'pickup')
+                WHERE wt.wallet_id = ?
+                ORDER BY wt.created_at DESC, wt.id DESC 
+                LIMIT 50`, [stats.wallet_id]);
+
+            ledger = history.map(tx => ({
+                id: tx.id,
+                type: tx.type,
+                source: tx.source,
+                amount: parseFloat(tx.amount).toFixed(2),
+                description: tx.booking_code
+                    ? `Order: ${tx.booking_code}`
+                    : (tx.description_en || 'System Transaction'),
+                date: tx.date
+            }));
+        }
+
+        // 3. Monthly Performance
+        const [monthlyRow] = await db.query(`
+            SELECT COALESCE(SUM(rider_commission_amount), 0) as monthly_incentive 
+            FROM pickups 
+            WHERE rider_id = ? 
+              AND status = 'completed' 
+              AND MONTH(completed_at) = MONTH(CURDATE())
+              AND YEAR(completed_at) = YEAR(CURDATE())`, [riderId]);
+
+        /**
+         * 4. UPDATED: Shift Check
+         * We now look for 'active' OR 'settlement_pending' shifts.
+         * This ensures the app knows the rider is waiting for Admin approval.
+         */
+        const [shiftRows] = await db.query(
+            `SELECT id, cash_issued, reported_cash_return, reported_weight_return, status, opened_at 
+             FROM rider_shifts 
+             WHERE rider_id = ? AND status IN ('active', 'settlement_pending') 
+             ORDER BY opened_at DESC LIMIT 1`,
             [riderId]
         );
 
-        // 3. Fetch Total Settled (Total Physical Cash the rider HAS already handed to Agents)
-        const [settledRow] = await db.query(
-            `SELECT COALESCE(SUM(rider_collected_cash), 0) as total_paid_to_agent 
-             FROM pickups 
-             WHERE rider_id = ? AND status = 'completed' AND is_settled_to_hub = 1`,
-            [riderId]
-        );
+        const activeShift = shiftRows.length > 0 ? shiftRows[0] : null;
 
-        // 4. Performance: Monthly Incentives (Commissions earned this month)
-        const [monthlyRow] = await db.query(
-            `SELECT COALESCE(SUM(rider_commission_amount), 0) as monthly_incentive 
-             FROM pickups 
-             WHERE rider_id = ? AND status = 'completed' 
-             AND MONTH(completed_at) = MONTH(CURRENT_DATE())
-             AND YEAR(completed_at) = YEAR(CURRENT_DATE())`,
-            [riderId]
-        );
-
-        // 5. Audit Ledger (Recent Transactions)
-        const [history] = await db.query(
-            `SELECT 
-                p.id, p.booking_code, p.net_payable_amount, 
-                p.rider_collected_cash, p.rider_commission_amount, 
-                p.completed_at, p.is_settled_to_hub, p.payment_mode_snapshot
-             FROM pickups p
-             WHERE p.rider_id = ? AND p.status = 'completed'
-             ORDER BY p.completed_at DESC LIMIT 20`,
-            [riderId]
-        );
+        /**
+         * 5. VIRTUAL TRANSACTION:
+         * If the shift is pending, we inject a "Pending" record at the top of the ledger
+         * so the rider sees immediate feedback in their history.
+         */
+        if (activeShift && activeShift.status === 'settlement_pending') {
+            ledger.unshift({
+                id: 'pending_settle',
+                type: 'debit',
+                source: 'settlement_intent',
+                amount: parseFloat(activeShift.reported_cash_return).toFixed(2),
+                description: 'Settlement Pending Approval',
+                date: new Date(),
+                is_pending: true // Frontend can use this to show a yellow badge
+            });
+        }
 
         res.json({
             success: true,
             stats: {
-                wallet_balance: parseFloat(wallet[0]?.balance || 0).toFixed(2),
-                cash_in_hand: parseFloat(liabilityRow[0]?.total_liability || 0).toFixed(2),
-                total_paid_to_agent: parseFloat(settledRow[0]?.total_paid_to_agent || 0).toFixed(2),
+                withdrawable_balance: parseFloat(stats.withdrawable_balance || 0).toFixed(2),
+                // UI LOGIC: If settlement is pending, show remaining cash as 0 or reduced
+                hub_cash_in_hand: activeShift?.status === 'settlement_pending'
+                    ? (parseFloat(stats.cash_held_liability) - parseFloat(activeShift.reported_cash_return)).toFixed(2)
+                    : parseFloat(stats.cash_held_liability || 0).toFixed(2),
+                current_load_kg: parseFloat(stats.total_collected_weight_kg || 0).toFixed(1),
                 monthly_incentives: parseFloat(monthlyRow[0]?.monthly_incentive || 0).toFixed(2)
             },
-            ledger: history.map(tx => ({
-                id: tx.id,
-                booking_code: tx.booking_code,
-                total_collected: parseFloat(tx.rider_collected_cash).toFixed(2),
-                my_incentive: parseFloat(tx.rider_commission_amount).toFixed(2),
-                date: tx.completed_at,
-                is_settled: tx.is_settled_to_hub === 1,
-                protocol: tx.payment_mode_snapshot
-            }))
+            active_shift: activeShift,
+            ledger: ledger
         });
+
     } catch (err) {
+        console.error("[LEDGER_OVERVIEW_ERROR]", err);
         next(err);
     }
 };

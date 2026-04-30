@@ -4,7 +4,6 @@ import { sendPushNotification } from "../../utils/notificationHelper.js";
 
 /* -----------------------------------------------------
     HELPER: SAVE TO NOTIFICATIONS TABLE (DB Persistent)
-    Mapped to ENUM('info', 'alert', 'success', 'warning')
 ----------------------------------------------------- */
 const saveNotification = async (conn, userId, titleKey, bodyKey, placeholders = {}, type = 'info', action = null) => {
     try {
@@ -22,70 +21,91 @@ const saveNotification = async (conn, userId, titleKey, bodyKey, placeholders = 
         console.error("[DB NOTIFICATION ERROR]", err.message);
     }
 };
+
+/**
+ * UNIFIED WALLET HELPER
+ * Precision-safe, race-condition protected, and Leader System aware.
+ */
 const updateWallet = async (conn, userId, amount, type, source, refType, refId, descEn) => {
-    // 1. Prevent Double Processing: Check if this reference transaction already exists
-    const [existing] = await conn.query(
-        "SELECT id FROM wallet_transactions WHERE reference_type = ? AND reference_id = ? AND source = ?",
-        [refType, refId, source]
-    );
-    if (existing.length > 0) return;
+    const numericAmount = Math.abs(parseFloat(amount)) || 0;
+    if (numericAmount <= 0) return null;
 
-    // 2. Fetch Wallet with Row Lock (FOR UPDATE) to prevent race conditions
-    let [wallet] = await conn.query(
-        "SELECT id, balance FROM wallet_accounts WHERE user_id = ? FOR UPDATE",
-        [userId]
-    );
+    // 🛡️ LEADER SYSTEM PROTECTION: 
+    // These sources represent Company Cash movement, not Rider Earnings.
+    // They must NEVER affect the 'balance' column.
+    const operationalSources = ['hub_issue', 'hub_settlement', 'customer_payout'];
+    const isOperational = operationalSources.includes(source);
 
-    if (!wallet.length) {
-        const [ins] = await conn.query(
-            "INSERT INTO wallet_accounts (user_id, balance) VALUES (?, 0)",
+    try {
+        // 1. Idempotency Check
+        const [existing] = await conn.query(
+            "SELECT id FROM wallet_transactions WHERE reference_type = ? AND reference_id = ? AND source = ?",
+            [refType, refId, source]
+        );
+        if (existing.length > 0) return existing[0].id;
+
+        // 2. Fetch/Lock Wallet
+        let [walletRows] = await conn.query(
+            "SELECT id, balance FROM wallet_accounts WHERE user_id = ? FOR UPDATE",
             [userId]
         );
-        wallet = [{ id: ins.insertId, balance: 0 }];
+
+        let walletId;
+        let balanceBefore = 0;
+
+        if (walletRows.length === 0) {
+            const [ins] = await conn.query(
+                "INSERT INTO wallet_accounts (user_id, balance, created_at, updated_at) VALUES (?, 0, NOW(), NOW())",
+                [userId]
+            );
+            walletId = ins.insertId;
+        } else {
+            walletId = walletRows[0].id;
+            balanceBefore = parseFloat(walletRows[0].balance) || 0;
+        }
+
+        // 3. Calculate Balance
+        let balanceAfter = balanceBefore;
+
+        if (!isOperational) {
+            // Only update balance if it's NOT a Hub/Operational transaction
+            balanceAfter = type === 'credit'
+                ? parseFloat((balanceBefore + numericAmount).toFixed(2))
+                : parseFloat((balanceBefore - numericAmount).toFixed(2));
+
+            await conn.query(
+                "UPDATE wallet_accounts SET balance = ?, updated_at = NOW() WHERE id = ?",
+                [balanceAfter, walletId]
+            );
+        }
+
+        // 4. Record Transaction Ledger
+        const [result] = await conn.query(
+            `INSERT INTO wallet_transactions 
+            (wallet_id, type, source, reference_type, reference_id, amount, balance_before, balance_after, description_en, status, created_at) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', NOW())`,
+            [walletId, type, source, refType, refId, numericAmount, balanceBefore, balanceAfter, descEn]
+        );
+
+        return result.insertId;
+    } catch (err) {
+        console.error("[Wallet Helper Error]", err.message);
+        throw err;
     }
-
-    const balanceBefore = parseFloat(wallet[0].balance);
-    const balanceAfter = type === 'credit' ? balanceBefore + amount : balanceBefore - amount;
-
-    // 3. Update Balance
-    await conn.query(
-        "UPDATE wallet_accounts SET balance = ?, updated_at = NOW() WHERE id = ?",
-        [balanceAfter, wallet[0].id]
-    );
-
-    // 4. Log Transaction
-    await conn.query(
-        `INSERT INTO wallet_transactions 
-        (wallet_id, type, source, reference_type, reference_id, amount, balance_before, balance_after, description_en, status) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed')`,
-        [wallet[0].id, type, source, refType, refId, amount, balanceBefore, balanceAfter, descEn]
-    );
 };
 
 /**
- * GET PICKUP DETAILS (Real-App Tracking Logic)
- * Provides dynamic coordinates based on the current state of the pickup
- */
-
-/**
- * GET PICKUP DETAILS (Real-App Tracking Logic)
- * Fixed: Corrected coordinate mapping to use Address table and updated fallbacks to Khulna.
+ * 1. GET PICKUP DETAILS (Real-App Tracking + Timeline)
  */
 export const getPickupDetails = async (req, res, next) => {
     try {
         const { id } = req.params;
-
-        // 1. Fetch main pickup info with Address Coordinates
         const [pickupRows] = await db.query(
-            `SELECT 
-                p.*, 
-                u.full_name as customer_name, u.phone as customer_phone, 
+            `SELECT p.*, u.full_name as customer_name, u.phone as customer_phone, u.email as customer_email,
                 r_u.full_name as rider_name, r_u.phone as rider_phone,
                 r.current_latitude as rider_live_lat, r.current_longitude as rider_live_lng,
                 ag.business_name as hub_name, ag.latitude as hub_lat, ag.longitude as hub_lng,
-                addr.address_line, addr.house_no, addr.road_no, addr.landmark,
-                addr.latitude as addr_lat, addr.longitude as addr_lng, -- Added specific address coords
-                dns.name_en as division_name, dist.name_en as district_name, upz.name_en as upazila_name
+                addr.address_line, addr.latitude as addr_lat, addr.longitude as addr_lng
              FROM pickups p 
              JOIN customers c ON p.customer_id = c.id 
              JOIN users u ON c.user_id = u.id
@@ -93,107 +113,37 @@ export const getPickupDetails = async (req, res, next) => {
              LEFT JOIN users r_u ON r.user_id = r_u.id
              LEFT JOIN agents ag ON p.agent_id = ag.id
              LEFT JOIN addresses addr ON p.customer_address_id = addr.id
-             LEFT JOIN divisions dns ON addr.division_id = dns.id
-             LEFT JOIN districts dist ON addr.district_id = dist.id
-             LEFT JOIN upazilas upz ON addr.upazila_id = upz.id
-             WHERE p.id = ?`,
-            [id]
+             WHERE p.id = ?`, [id]
         );
 
-        if (!pickupRows.length) throw new ApiError(404, "Pickup request not found");
-
+        if (!pickupRows.length) throw new ApiError(404, "Pickup not found");
         const pickup = pickupRows[0];
 
-        // 2. Real-App Tracking Logic
-        // Khulna Default Fallback: 22.8456, 89.5403
-        let tracking = {
-            origin: {
-                latitude: parseFloat(pickup.hub_lat) || 22.8456,
-                longitude: parseFloat(pickup.hub_lng) || 89.5403,
-                label: 'Hub'
-            },
-            destination: {
-                // Priority: 1. Address Lat/Lng, 2. Pickup Lat/Lng, 3. Khulna Default
-                latitude: parseFloat(pickup.addr_lat) || parseFloat(pickup.latitude) || 22.8456,
-                longitude: parseFloat(pickup.addr_lng) || parseFloat(pickup.longitude) || 89.5403,
-                label: 'Customer'
-            },
-            current_focus: 'agent'
-        };
-
-        // Switch origin to Rider Live Location if they are currently moving
-        if (['rider_on_way', 'arrived', 'weighing'].includes(pickup.status?.toLowerCase()) && pickup.rider_live_lat) {
-            tracking.origin = {
-                latitude: parseFloat(pickup.rider_live_lat),
-                longitude: parseFloat(pickup.rider_live_lng),
-                label: 'Rider'
-            };
-            tracking.current_focus = 'rider';
-        }
-
-        // 3. Image URL Helper
         const getFullUrl = (path) => {
             if (!path) return null;
             if (path.startsWith('http')) return path;
-            const baseUrl = process.env.BASE_URL || 'https://webapp.prosfata.space';
-            return `${baseUrl.replace(/\/$/, "")}/${path.replace(/^\//, "")}`;
+            return `${process.env.BASE_URL || 'https://webapp.prosfata.space'}/${path.replace(/^\//, "")}`;
         };
 
-        // 4. Fetch Items with photos
         const [items] = await db.query(
             `SELECT pi.*, si.name_en, si.name_bn, si.unit, si.image_url as product_image
-             FROM pickup_items pi 
-             JOIN scrap_items si ON pi.item_id = si.id 
-             WHERE pi.pickup_id = ?`,
-            [id]
-        );
-
-        const transformedItems = items.map(item => {
-            let photos = [];
-            if (item.photo_url) {
-                try {
-                    const parsed = typeof item.photo_url === 'string' ? JSON.parse(item.photo_url) : item.photo_url;
-                    photos = Array.isArray(parsed) ? parsed.map(p => getFullUrl(p)) : [getFullUrl(parsed)];
-                } catch (e) {
-                    photos = [getFullUrl(item.photo_url)];
-                }
-            }
-            return {
-                ...item,
-                product_image: getFullUrl(item.product_image),
-                user_photos: photos
-            };
-        });
-
-        // 5. Fetch Timeline
-        const [timeline] = await db.query(
-            `SELECT pt.*, u.full_name as changer_name FROM pickup_timeline pt
-             LEFT JOIN users u ON pt.changed_by = u.id
-             WHERE pt.pickup_id = ? ORDER BY pt.created_at DESC`,
-            [id]
+             FROM pickup_items pi JOIN scrap_items si ON pi.item_id = si.id WHERE pi.pickup_id = ?`, [id]
         );
 
         res.json({
             success: true,
             data: {
-                pickup: {
-                    ...pickup,
-                    proof_image_before: getFullUrl(pickup.proof_image_before),
-                    proof_image_after: getFullUrl(pickup.proof_image_after),
-                    rider_image: null
-                },
-                tracking,
-                items: transformedItems,
-                timeline
+                pickup: { ...pickup, proof_image_before: getFullUrl(pickup.proof_image_before), proof_image_after: getFullUrl(pickup.proof_image_after) },
+                items,
             }
         });
-
-    } catch (err) {
-        console.error("Tracking API Error:", err);
-        next(err);
-    }
+    } catch (err) { next(err); }
 };
 
+/**
+ * 2. COMPLETE PICKUP (FCM + SMS + Email + Wallet + Ledger Liability)
+ * Logic: Validates Hub Cash before allowing physical payout and manages truck load.
+ */
 export const completePickup = async (req, res, next) => {
     const conn = await db.getConnection();
     const { id: pickupId } = req.params;
@@ -202,179 +152,517 @@ export const completePickup = async (req, res, next) => {
     try {
         await conn.beginTransaction();
 
-        // 1. Fetch Master Record with Locks
+        // 1. Fetch Pickup, Customer, and Rider details 
+        // Note: Includes email for the success receipt notification
         const [p] = await conn.query(`
-            SELECT p.*, 
-                   c.user_id as customer_uid, 
-                   r.user_id as rider_uid, 
-                   a.owner_user_id as agent_uid,
-                   u.fcm_token as customer_fcm
+            SELECT p.*, c.user_id as customer_uid, r.id as rider_table_id, r.user_id as rider_uid, 
+                   r.cash_held_liability, u.fcm_token as customer_fcm, u.phone as customer_phone, 
+                   u.email as customer_email
             FROM pickups p
             JOIN customers c ON p.customer_id = c.id
             JOIN users u ON c.user_id = u.id
             LEFT JOIN riders r ON p.rider_id = r.id
-            LEFT JOIN agents a ON p.agent_id = a.id
             WHERE p.id = ? FOR UPDATE`, [pickupId]);
 
-        if (!p.length) throw new ApiError(404, "Pickup request not found.");
-        if (p[0].status === 'completed') throw new ApiError(400, "This pickup is already finalized.");
-
+        if (!p.length) throw new ApiError(404, "Pickup not found.");
         const pickup = p[0];
 
-        // 2. Settlement Settings
-        const adminCommRate = 0.05;
-        const agentCommRate = 0.05;
-        const riderCommRate = 0.02;
-
+        // 2. Calculate Totals based on actual weights provided by the Rider
         let netPayable = 0;
         let totalWeight = 0;
         const parsedItems = typeof items === 'string' ? JSON.parse(items) : items;
 
-        // 3. Process Verified Weights
         for (const it of parsedItems) {
             const weight = parseFloat(it.actual_weight) || 0;
             const rate = parseFloat(it.final_rate) || 0;
-            const itemSubtotal = weight * rate;
-
-            netPayable += itemSubtotal;
+            const subtotal = weight * rate;
+            netPayable += subtotal;
             totalWeight += weight;
 
             await conn.query(
-                `UPDATE pickup_items SET 
-                    actual_weight = ?, 
-                    final_rate_per_unit = ?, 
-                    final_amount = ?, 
-                    updated_at = NOW() 
-                 WHERE id = ? AND pickup_id = ?`,
-                [weight, rate, itemSubtotal, it.id, pickupId]
+                `UPDATE pickup_items SET actual_weight = ?, final_rate_per_unit = ?, final_amount = ? 
+                 WHERE id = ? AND pickup_id = ?`, [weight, rate, subtotal, it.id, pickupId]
             );
         }
 
-        // 4. Financial Transfers
-        if (pickup.agent_uid) {
-            await updateWallet(conn, pickup.agent_uid, (netPayable * agentCommRate), 'credit', 'pickup_commission', 'pickup', pickupId, `Commission for Shipment #${pickup.booking_code}`);
-        }
-        if (pickup.rider_uid) {
-            await updateWallet(conn, pickup.rider_uid, (netPayable * riderCommRate), 'credit', 'pickup_commission', 'pickup', pickupId, `Incentive for Shipment #${pickup.booking_code}`);
-        }
-        if (payment_method === 'wallet') {
-            await updateWallet(conn, pickup.customer_uid, netPayable, 'credit', 'pickup_payment', 'pickup', pickupId, `Payment for Shipment #${pickup.booking_code}`);
+        // 3. --- 🛡️ LEADER SYSTEM: CASH VALIDATION & LIABILITY ---
+        if (payment_method === 'cash') {
+            const currentLiability = parseFloat(pickup.cash_held_liability || 0);
+
+            // Safety check: Ensure rider has enough physical cash issued by hub
+            if (currentLiability < netPayable) {
+                throw new ApiError(400, `Insufficient Hub Cash. You need ৳${netPayable.toFixed(2)} but have only ৳${currentLiability.toFixed(2)} in hand.`);
+            }
+
+            // Deduct from Hub liability and increase truck load weight
+            await conn.query(
+                `UPDATE riders SET 
+                    cash_held_liability = cash_held_liability - ?, 
+                    total_collected_weight_kg = total_collected_weight_kg + ? 
+                 WHERE id = ?`,
+                [netPayable, totalWeight, pickup.rider_table_id]
+            );
+        } else {
+            // For Wallet/Later, liability is unchanged, but truck weight increases
+            await conn.query(
+                "UPDATE riders SET total_collected_weight_kg = total_collected_weight_kg + ? WHERE id = ?",
+                [totalWeight, pickup.rider_table_id]
+            );
         }
 
-        // 5. Finalize Record
+        // 4. --- 💰 WALLET UPDATES ---
+        // Customer Payment (Only if they chose digital wallet method)
+        if (payment_method === 'wallet') {
+            await updateWallet(conn, pickup.customer_uid, netPayable, 'credit', 'pickup_payment', 'pickup', pickupId, `Payment for ${pickup.booking_code}`);
+        }
+
+        // 5. --- ✅ FINALIZE PICKUP RECORD ---
         const proofImage = req.file ? `/uploads/pickups/${req.file.filename}` : null;
+
         await conn.query(
             `UPDATE pickups SET 
                 status = 'completed', 
                 actual_weight_kg = ?, 
                 net_payable_amount = ?, 
-                admin_commission_amount = ?, 
-                agent_commission_amount = ?, 
-                rider_commission_amount = ?,
                 payment_method = ?, 
-                payment_status = ?,
+                payment_status = ?, 
                 proof_image_after = ?, 
-                completed_at = NOW(),
-                updated_at = NOW()
-            WHERE id = ?`,
-            [totalWeight, netPayable, (netPayable * adminCommRate), (netPayable * agentCommRate), (netPayable * riderCommRate), payment_method, (payment_method === 'wallet' ? 'paid' : 'pending'), proofImage, pickupId]
+                completed_at = NOW() 
+             WHERE id = ?`,
+            [
+                totalWeight,
+                netPayable,
+                payment_method,
+                (payment_method === 'wallet' ? 'paid' : 'pending'),
+                proofImage,
+                pickupId
+            ]
         );
 
-        // 6. Timeline Entry
+        // Record in Timeline for audit log
         await conn.query(
-            `INSERT INTO pickup_timeline (pickup_id, status, note, changed_by, created_at) 
-             VALUES (?, 'completed', ?, ?, NOW())`,
-            [pickupId, note || 'Shipment verified and finalized', req.user.id]
+            "INSERT INTO pickup_timeline (pickup_id, status, note, changed_by) VALUES (?, 'completed', ?, ?)",
+            [pickupId, note || 'Shipment finalized and paid', req.user.id]
         );
 
-        // 🔥 DB NOTIFICATION: Earnings Confirmed
-        await saveNotification(
+        // Save persistent in-app notification for the Customer
+        await saveNotification(conn, pickup.customer_uid, 'notif_earnings_confirmed_title', 'notif_earnings_confirmed_body',
+            { bookingCode: pickup.booking_code, amount: netPayable.toFixed(2) }, 'success', `/(home)/activity/${pickupId}`);
+
+        // COMMIT TRANSACTION
+        await conn.commit();
+
+        // 6. --- 📨 EXTERNAL COMMUNICATIONS (Post-Commit) ---
+
+        // SMS Notification
+        if (pickup.customer_phone) {
+            const smsMessage = `SmartScrap: Your pickup ${pickup.booking_code} is complete. ৳${netPayable.toFixed(2)} has been paid via ${payment_method.toUpperCase()}. Thank you!`;
+            // Call your SMS Gateway provider here
+            // await smsHelper.send(pickup.customer_phone, smsMessage); 
+            console.log(`[LOG: SMS Sent to ${pickup.customer_phone}]`);
+        }
+
+        // Email Notification
+        if (pickup.customer_email) {
+            const emailSubject = `Success: Receipt for Pickup ${pickup.booking_code}`;
+            const emailBody = `<h1>Pickup Successful</h1><p>Your scrap weighing ${totalWeight}kg has been collected. Net amount paid: ৳${netPayable.toFixed(2)} via ${payment_method}.</p>`;
+            // Call your Email provider here (SendGrid/Nodemailer)
+            // await emailHelper.send(pickup.customer_email, emailSubject, emailBody);
+            console.log(`[LOG: Email Sent to ${pickup.customer_email}]`);
+        }
+
+        // Push Notification (FCM)
+        if (pickup.customer_fcm) {
+            sendPushNotification(
+                pickup.customer_fcm,
+                "Earnings Confirmed! 💰",
+                `৳${netPayable.toFixed(2)} for ${pickup.booking_code} via ${payment_method.toUpperCase()}`,
+                { orderId: pickupId.toString(), type: "ORDER_UPDATE" }
+            );
+        }
+
+        // Final Response
+        res.json({
+            success: true,
+            message: "Pickup completed successfully!",
+            net_amount: netPayable,
+            remaining_hub_cash: payment_method === 'cash' ? (parseFloat(pickup.cash_held_liability) - netPayable) : pickup.cash_held_liability
+        });
+
+    } catch (err) {
+        if (conn) await conn.rollback();
+        next(err);
+    } finally {
+        conn.release();
+    }
+};
+
+/**
+ * 🟢 ADMIN: OPEN SHIFT / ISSUE CASH (Flexible)
+ * Allows both starting a shift AND topping up an active one.
+ */
+export const openRiderShift = async (req, res, next) => {
+    const conn = await db.getConnection();
+    try {
+        const { rider_id, amount_issued, notes } = req.body;
+        const numAmount = parseFloat(amount_issued);
+
+        await conn.beginTransaction();
+
+        // 1. Check if the rider already has an active shift
+        const [active] = await conn.query(
+            "SELECT id FROM rider_shifts WHERE rider_id = ? AND status = 'active'",
+            [rider_id]
+        );
+
+        if (active.length > 0) {
+            // SCENARIO: TOP-UP (Shift already exists)
+            const shiftId = active[0].id;
+
+            // Increment the cash_issued on the existing shift
+            await conn.query(
+                "UPDATE rider_shifts SET cash_issued = cash_issued + ?, notes = CONCAT(COALESCE(notes,''), ?) WHERE id = ?",
+                [numAmount, ` | Top-up: ৳${numAmount}`, shiftId]
+            );
+
+            // Log the top-up in the ledger
+            const [rider] = await conn.query("SELECT user_id FROM riders WHERE id = ?", [rider_id]);
+            await updateWallet(conn, rider[0].user_id, numAmount, 'credit', 'hub_issue', 'shift', shiftId, `Shift Top-up: ৳${numAmount}`);
+
+        } else {
+            // SCENARIO: NEW SHIFT
+            const [result] = await conn.query(
+                "INSERT INTO rider_shifts (rider_id, admin_id, cash_issued, status, notes) VALUES (?, ?, ?, 'active', ?)",
+                [rider_id, req.user.id, numAmount, notes]
+            );
+
+            const [rider] = await conn.query("SELECT user_id FROM riders WHERE id = ?", [rider_id]);
+            await updateWallet(conn, rider[0].user_id, numAmount, 'credit', 'hub_issue', 'shift', result.insertId, `Morning Cash Issued: ৳${numAmount}`);
+        }
+
+        // 2. ALWAYS update the rider's total liability
+        await conn.query(
+            "UPDATE riders SET cash_held_liability = cash_held_liability + ? WHERE id = ?",
+            [numAmount, rider_id]
+        );
+
+        await conn.commit();
+        res.json({ success: true, message: "Cash Issued Successfully" });
+    } catch (err) {
+        if (conn) await conn.rollback();
+        next(err);
+    } finally {
+        conn.release();
+    }
+};
+
+/**
+ * RIDER: SETTLE INTENT
+ * Updated to match your specific DB schema (no updated_at column)
+ */
+export const settleRiderIntent = async (req, res, next) => {
+    try {
+        const { amount_to_return, scrap_weight } = req.body;
+        const userId = req.user.id;
+
+        // 1. Resolve Rider Table ID
+        const [rider] = await db.query("SELECT id FROM riders WHERE user_id = ?", [userId]);
+        if (!rider.length) return res.status(404).json({ success: false, message: "Rider not found" });
+        const riderId = rider[0].id;
+
+        // 2. Update the Active Shift
+        // REMOVED: updated_at = NOW() because column is missing in your table
+        const [result] = await db.query(
+            `UPDATE rider_shifts 
+             SET 
+                reported_cash_return = ?, 
+                reported_weight_return = ?, 
+                status = 'settlement_pending'
+             WHERE rider_id = ? AND status = 'active' 
+             ORDER BY opened_at DESC LIMIT 1`,
+            [
+                parseFloat(amount_to_return) || 0,
+                parseFloat(scrap_weight) || 0,
+                riderId
+            ]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "No active shift found. Please check if you already submitted."
+            });
+        }
+
+        res.json({
+            success: true,
+            message: "Declaration sent. Proceed to Hub for handover."
+        });
+
+    } catch (err) {
+        console.error("[SETTLE_INTENT_ERROR]", err.message);
+        next(err);
+    }
+};
+
+/**
+ * 5. EVENING: SETTLE SHIFT & RETURN CASH (Admin Finalizes)
+ * Fixed: Now looks for 'settlement_pending' status and resets liability.
+ */
+export const settleRiderShift = async (req, res, next) => {
+    const conn = await db.getConnection();
+    try {
+        const { shift_id, cash_returned, scrap_value, notes } = req.body;
+
+        await conn.beginTransaction();
+
+        // 1. Fetch the shift. We allow 'active' OR 'settlement_pending' to be settled.
+        // We also lock the row (FOR UPDATE) to prevent double-settlement.
+        const [shiftRows] = await conn.query(
+            "SELECT * FROM rider_shifts WHERE id = ? AND status IN ('active', 'settlement_pending') FOR UPDATE",
+            [shift_id]
+        );
+
+        if (!shiftRows.length) {
+            throw new ApiError(404, "No active or pending shift found for this ID.");
+        }
+
+        const shift = shiftRows[0];
+
+        // 2. Update the Shift Record
+        await conn.query(
+            `UPDATE rider_shifts SET 
+                cash_returned = ?, 
+                scrap_value_received = ?, 
+                status = 'completed', 
+                closed_at = NOW(), 
+                notes = ? 
+             WHERE id = ?`,
+            [cash_returned, scrap_value, notes, shift_id]
+        );
+
+        // 3. Reset Rider Liability & Inventory
+        // We subtract the cash returned from liability and reset the truck load to 0.
+        await conn.query(
+            `UPDATE riders SET 
+                cash_held_liability = cash_held_liability - ?, 
+                total_collected_weight_kg = 0 
+             WHERE id = ?`,
+            [cash_returned, shift.rider_id]
+        );
+
+        // 4. Mark all pickups from this shift as settled
+        await conn.query(
+            `UPDATE pickups SET 
+                is_settled_to_hub = 1 
+             WHERE rider_id = ? AND status = 'completed' AND is_settled_to_hub = 0`,
+            [shift.rider_id]
+        );
+
+        // 5. Update Ledger (Using the helper we built)
+        // We use 'customer_payout' style logic here so it doesn't turn the personal wallet negative
+        const [rider] = await conn.query("SELECT user_id FROM riders WHERE id = ?", [shift.rider_id]);
+
+        await updateWallet(
             conn,
-            pickup.customer_uid,
-            'notif_earnings_confirmed_title',
-            'notif_earnings_confirmed_body',
-            { bookingCode: pickup.booking_code, amount: netPayable.toFixed(2) },
-            'success',
-            `/(home)/activity/${pickupId}`
+            rider[0].user_id,
+            cash_returned,
+            'debit',
+            'hub_settlement',
+            'shift',
+            shift_id,
+            `Handover to Hub: ৳${cash_returned} | ${scrap_value}kg`
         );
 
         await conn.commit();
 
-        // 8. FIREBASE PUSH
-        if (pickup.customer_fcm) {
-            try {
-                await sendPushNotification(
-                    pickup.customer_fcm,
-                    "Earnings Confirmed! 💰",
-                    `Success! You earned ৳${netPayable.toFixed(2)} for request ${pickup.booking_code}.`,
-                    { orderId: pickupId.toString(), type: "order_update" }
-                );
-            } catch (notifErr) {
-                console.error("FCM Error:", notifErr.message);
-            }
-        }
-
-        res.json({ success: true, message: "Shipment finalized successfully!", net_amount: netPayable });
+        res.json({
+            success: true,
+            message: "Settlement successful. Rider liability updated."
+        });
 
     } catch (err) {
         if (conn) await conn.rollback();
+        console.error("[SETTLE_ERROR]", err.message);
         next(err);
     } finally {
         if (conn) conn.release();
     }
 };
 
-export const getReceipt = async (req, res, next) => {
+/**
+ * 🟢 ADMIN: GET HUB TRANSACTION HISTORY
+ * Fetches the most recent global hub-related transactions (Issues & Settlements)
+ */
+export const getHubTransactionHistory = async (req, res, next) => {
     try {
-        const { id } = req.params;
-        const [pickup] = await db.query(`
-            SELECT p.*, u.full_name as customer_name, ag.business_name as hub_name
-            FROM pickups p 
-            JOIN customers c ON p.customer_id = c.id 
-            JOIN users u ON c.user_id = u.id
-            LEFT JOIN agents ag ON p.agent_id = ag.id
-            WHERE p.id = ? AND p.status = 'completed'`, [id]);
-
-        if (!pickup.length) throw new ApiError(404, "Receipt not available.");
-
-        const [items] = await db.query(
-            `SELECT pi.*, si.name_en 
-             FROM pickup_items pi 
-             JOIN scrap_items si ON pi.item_id = si.id 
-             WHERE pi.pickup_id = ?`, [id]);
-
-        res.json({ success: true, data: { pickup: pickup[0], items } });
-    } catch (err) {
-        next(err);
-    }
-};
-
-
-export const getPickupTimeline = async (req, res, next) => {
-    try {
-        const { id } = req.params;
-
-        const query = `
+        const [rows] = await db.query(`
             SELECT 
-                pt.id,
-                pt.status,
-                pt.note,
-                pt.created_at,
-                COALESCE(u.full_name, 'System/Deleted User') as actor_name
-            FROM pickup_timeline pt
-            LEFT JOIN users u ON pt.changed_by = u.id
-            WHERE pt.pickup_id = ?
-            ORDER BY pt.created_at ASC
-        `;
-
-        const [rows] = await db.query(query, [id]);
+                wt.id,
+                u.full_name as rider_name,
+                wt.type,
+                wt.amount,
+                wt.source,
+                wt.description_en as description,
+                wt.created_at as date
+            FROM wallet_transactions wt
+            JOIN wallet_accounts wa ON wt.wallet_id = wa.id
+            JOIN users u ON wa.user_id = u.id
+            WHERE wt.source IN ('hub_issue', 'hub_settlement')
+            ORDER BY wt.created_at DESC
+            LIMIT 50
+        `);
 
         res.json({
             success: true,
             data: rows
         });
     } catch (err) {
-        console.error("Timeline API Error:", err);
+        console.error("[HUB_HISTORY_ERROR]", err);
         next(err);
+    }
+};
+export const getReceipt = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const [pickup] = await db.query(
+            `SELECT p.*, u.full_name as customer_name, ag.business_name as hub_name 
+             FROM pickups p JOIN customers c ON p.customer_id = c.id 
+             JOIN users u ON c.user_id = u.id 
+             LEFT JOIN agents ag ON p.agent_id = ag.id WHERE p.id = ?`, [id]);
+        const [items] = await db.query(`SELECT pi.*, si.name_en FROM pickup_items pi JOIN scrap_items si ON pi.item_id = si.id WHERE pi.pickup_id = ?`, [id]);
+        res.json({ success: true, data: { pickup: pickup[0], items } });
+    } catch (err) { next(err); }
+};
+
+export const getPickupTimeline = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const [rows] = await db.query(
+            `SELECT pt.id, pt.status, pt.note, pt.created_at, COALESCE(u.full_name, 'System') as actor_name
+             FROM pickup_timeline pt LEFT JOIN users u ON pt.changed_by = u.id
+             WHERE pt.pickup_id = ? ORDER BY pt.created_at ASC`, [id]
+        );
+        res.json({ success: true, data: rows });
+    } catch (err) { next(err); }
+};
+
+/**
+ * ADMIN: GET HUB OVERVIEW
+ * Updated: Fetches reported settlement values and handles 'settlement_pending' status
+ */
+export const getHubRiderStatus = async (req, res, next) => {
+    try {
+        const [rows] = await db.query(`
+            SELECT 
+                r.id, 
+                u.full_name, 
+                u.phone, 
+                r.cash_held_liability, 
+                r.total_collected_weight_kg,
+                rs.id as active_shift_id,
+                rs.status as shift_status,
+                rs.cash_issued,
+                rs.reported_cash_return,
+                rs.reported_weight_return,
+                rs.opened_at as shift_start_time,
+                CASE WHEN rs.id IS NOT NULL THEN 1 ELSE 0 END as shift_active
+            FROM riders r
+            JOIN users u ON r.user_id = u.id
+            -- Link to shifts that are either 'active' or 'settlement_pending'
+            LEFT JOIN rider_shifts rs ON r.id = rs.rider_id AND rs.status IN ('active', 'settlement_pending')
+            WHERE u.is_active = 1 
+            ORDER BY 
+                -- Sort by pending status first so Admin sees them at the top
+                CASE WHEN rs.status = 'settlement_pending' THEN 1 ELSE 2 END ASC,
+                u.full_name ASC
+        `);
+
+        // Clean up the data for the frontend
+        const formattedData = rows.map(rider => ({
+            ...rider,
+            // Ensure numbers are floats for calculations
+            cash_held_liability: parseFloat(rider.cash_held_liability),
+            reported_cash_return: parseFloat(rider.reported_cash_return || 0),
+            reported_weight_return: parseFloat(rider.reported_weight_return || 0),
+            total_collected_weight_kg: parseFloat(rider.total_collected_weight_kg)
+        }));
+
+        res.json({
+            success: true,
+            count: formattedData.length,
+            data: formattedData
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+/**
+ * 🔄 RECONCILE RIDER ACCOUNT
+ * Forces a recalculation of the rider's cash liability based on the actual 
+ * audit trail (Shifts - Completed Cash Pickups).
+ */
+export const reconcileRiderAccount = async (req, res, next) => {
+    const conn = await db.getConnection();
+    try {
+        const userId = req.user.id;
+        await conn.beginTransaction();
+
+        // 1. Identify the Rider
+        const [riderRows] = await conn.query(
+            "SELECT id, cash_held_liability FROM riders WHERE user_id = ? FOR UPDATE",
+            [userId]
+        );
+        if (!riderRows.length) throw new ApiError(404, "Rider profile not found.");
+        const riderId = riderRows[0].id;
+
+        // 2. Calculate Reality:
+        // Total Cash Issued in active/past shifts - Total Cash paid to customers in unsettled pickups
+        const [audit] = await conn.query(`
+            SELECT (
+                (SELECT COALESCE(SUM(cash_issued - cash_returned), 0) 
+                 FROM rider_shifts 
+                 WHERE rider_id = ?) 
+                - 
+                (SELECT COALESCE(SUM(net_payable_amount), 0) 
+                 FROM pickups 
+                 WHERE rider_id = ? 
+                 AND status = 'completed' 
+                 AND payment_method = 'cash' 
+                 AND is_settled_to_hub = 0)
+            ) AS calculated_liability
+        `, [riderId, riderId]);
+
+        const actualLiability = audit[0].calculated_liability;
+
+        // 3. Update Rider table if there is a mismatch
+        if (parseFloat(riderRows[0].cash_held_liability) !== parseFloat(actualLiability)) {
+            await conn.query(
+                "UPDATE riders SET cash_held_liability = ? WHERE id = ?",
+                [actualLiability, riderId]
+            );
+
+            // Log the correction in the timeline for Admin visibility
+            await conn.query(
+                `INSERT INTO pickup_timeline (pickup_id, status, note, changed_by) 
+                 VALUES (0, 'system_reconcile', ?, ?)`,
+                [`Auto-correction: Liability adjusted to ৳${actualLiability}`, userId]
+            );
+        }
+
+        await conn.commit();
+
+        res.json({
+            success: true,
+            message: "Account reconciled successfully",
+            new_balance: actualLiability
+        });
+
+    } catch (err) {
+        if (conn) await conn.rollback();
+        next(err);
+    } finally {
+        conn.release();
     }
 };
