@@ -107,12 +107,25 @@ export const updateStatus = async (req, res) => {
  * Updates Rider's Last Known Coordinates in Database
  * This is called by the background task every 30-60 seconds.
  */
+/**
+ * UPDATE RIDER LIVE LOCATION
+ * Updates coordinates and triggers real-time socket events for live tracking.
+ */
 export const updateLocation = async (req, res) => {
     const { latitude, longitude, heading, speed } = req.body;
-    const userId = req.user.id;
+    const userId = req.user.id; // Identification from auth middleware
+
+    // Validate coordinates to prevent DB errors
+    if (!latitude || !longitude) {
+        return res.status(400).json({
+            success: false,
+            message: "Invalid satellite coordinates received."
+        });
+    }
 
     try {
         // 1. Update Persistent Storage (MySQL)
+        // We update current_latitude, current_longitude, and updated_at
         const [result] = await db.query(
             `UPDATE riders 
              SET current_latitude = ?, 
@@ -123,23 +136,38 @@ export const updateLocation = async (req, res) => {
         );
 
         if (result.affectedRows === 0) {
-            return res.status(404).json({ success: false, message: "Rider not found" });
+            return res.status(404).json({
+                success: false,
+                message: "Rider profile not found in active registry."
+            });
         }
 
-        // 2. Optional: If you want to trigger the Socket from the REST API instead of the App
-        // const io = req.app.get('io');
-        // io.to('active_riders_map').emit('rider_moved', {
-        //     riderId: userId,
-        //     latitude,
-        //     longitude,
-        //     heading
-        // });
+        // 2. Real-time Dispatch (Socket.io)
+        // Triggering this from the API ensures the Admin/Agent map updates instantly
+        const io = req.app.get('io');
+        if (io) {
+            io.to('fleet_monitoring_room').emit('rider_position_update', {
+                rider_id: userId,
+                latitude: parseFloat(latitude),
+                longitude: parseFloat(longitude),
+                heading: heading || 0,
+                speed: speed || 0,
+                timestamp: new Date()
+            });
+        }
 
-        return res.json({ success: true, message: "Location synced to DB" });
+        return res.json({
+            success: true,
+            message: "Satellite link synchronized",
+            timestamp: new Date()
+        });
 
     } catch (error) {
-        console.error("DB Location Sync Error:", error);
-        return res.status(500).json({ success: false });
+        console.error("Critical Location Sync Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal telemetry failure."
+        });
     }
 };
 /**
@@ -164,6 +192,7 @@ export async function getRiderDashboard(req, res, next) {
         const riderId = rider.id;
 
         // 2. Fetch Active Missions (Queue)
+        // 🔥 SYNCED JOIN: pickups -> customers -> users
         const [activeTasks] = await db.query(
             `SELECT 
                 p.id, p.booking_code, p.status, p.scheduled_date, p.scheduled_time_slot,
@@ -171,23 +200,29 @@ export async function getRiderDashboard(req, res, next) {
                 adr.address_line, adr.house_no, adr.road_no, adr.landmark,
                 adr.latitude, adr.longitude
             FROM pickups p
-            JOIN users u ON p.customer_id = u.id
+            INNER JOIN customers c ON p.customer_id = c.id
+            INNER JOIN users u ON c.user_id = u.id
             LEFT JOIN addresses adr ON p.customer_address_id = adr.id
             WHERE p.rider_id = ? 
-              AND p.status IN ('accepted', 'rider_on_way', 'arrived', 'weighing')
+              AND p.status NOT IN ('completed', 'cancelled')
               AND p.is_deleted = 0
-            ORDER BY p.status = 'weighing' DESC, p.scheduled_date ASC`,
+            ORDER BY 
+                CASE 
+                    WHEN p.status = 'weighing' THEN 1
+                    WHEN p.status = 'arrived' THEN 2
+                    WHEN p.status = 'rider_on_way' THEN 3
+                    ELSE 4 
+                END ASC, p.scheduled_date ASC`,
             [riderId]
         );
 
-        // 3. Financial Intelligence Query (Calculates Today, Month, and Liability)
+        // 3. Financial Intelligence Query
         const [stats] = await db.query(
             `SELECT
                 COUNT(CASE WHEN DATE(completed_at) = CURDATE() THEN 1 END) AS count_today,
                 COUNT(CASE WHEN MONTH(completed_at) = MONTH(CURDATE()) AND YEAR(completed_at) = YEAR(CURDATE()) THEN 1 END) AS count_month,
                 COALESCE(SUM(CASE WHEN DATE(completed_at) = CURDATE() THEN rider_commission_amount ELSE 0 END), 0) AS earn_today,
                 COALESCE(SUM(CASE WHEN MONTH(completed_at) = MONTH(CURDATE()) AND YEAR(completed_at) = YEAR(CURDATE()) THEN rider_commission_amount ELSE 0 END), 0) AS earn_month,
-                -- LIABILITY: Sum of collected cash where status is completed but NOT yet settled to hub
                 COALESCE(SUM(CASE WHEN is_settled_to_hub = 0 AND status = 'completed' THEN rider_collected_cash ELSE 0 END), 0) AS cash_liability
             FROM pickups
             WHERE rider_id = ?`,
@@ -226,21 +261,32 @@ export async function getRiderDashboard(req, res, next) {
                         income: parseFloat(stats[0].earn_month || 0).toFixed(2)
                     }
                 },
-                active_missions: activeTasks.map(t => ({
-                    id: t.id,
-                    ref: t.booking_code,
-                    status: t.status,
-                    customer: { name: t.customer_name, phone: t.customer_phone },
-                    location: {
-                        address: [t.house_no, t.road_no, t.address_line].filter(Boolean).join(', ') || 'Address N/A',
-                        landmark: t.landmark,
-                        coords: { lat: t.latitude, lng: t.longitude }
-                    },
-                    schedule: t.scheduled_time_slot
-                }))
+                active_missions: activeTasks.map(t => {
+                    // Format address string
+                    const addressParts = [];
+                    if (t.house_no) addressParts.push(`H# ${t.house_no}`);
+                    if (t.road_no) addressParts.push(`R# ${t.road_no}`);
+                    if (t.address_line) addressParts.push(t.address_line);
+
+                    return {
+                        id: t.id,
+                        ref: t.booking_code,
+                        status: t.status,
+                        customer: { name: t.customer_name, phone: t.customer_phone },
+                        location: {
+                            address: addressParts.join(', ') || 'Location Specified',
+                            landmark: t.landmark,
+                            coords: { lat: t.latitude, lng: t.longitude }
+                        },
+                        schedule: t.scheduled_time_slot
+                    };
+                })
             }
         });
-    } catch (err) { next(err); }
+    } catch (err) {
+        console.error("Dashboard API Error:", err);
+        next(err);
+    }
 }
 
 /**
@@ -322,91 +368,98 @@ export const getMyTasks = async (req, res, next) => {
 
 /**
  * GET SINGLE TASK DETAIL
- * Returns comprehensive data including customer info, catalog images, and user-uploaded proofs.
+ * Returns comprehensive data including customer info, catalog images, 
+ * market pricing, and a full operational timeline.
  */
 export const getTaskDetail = async (req, res, next) => {
     try {
         const { id } = req.params;
         const rider = await getRiderInfo(req);
 
-        // 1. Fetch Comprehensive Pickup Info
-        // Added 'p.rider_id' to select to verify if it's assigned
+        // 1. Fetch Pickup Master Data with Schedule Highlights
         const [taskRows] = await db.query(`
             SELECT 
                 p.id, p.booking_code, p.status, p.base_amount, p.customer_note,
+                p.min_total_amount, p.max_total_amount, p.payment_method,
+                -- Schedule Info
+                p.scheduled_date, p.scheduled_time_slot,
+                -- Customer Details
                 u.full_name as customer_name, u.phone as customer_phone,
                 addr.address_line, addr.house_no, addr.road_no, addr.landmark,
-                addr.latitude, addr.longitude, p.rider_id
+                addr.latitude as addr_lat, addr.longitude as addr_lng, 
+                p.rider_id, p.created_at as order_made_at
             FROM pickups p
             JOIN customers c ON p.customer_id = c.id
             JOIN users u ON c.user_id = u.id
             LEFT JOIN addresses addr ON p.customer_address_id = addr.id
-            WHERE p.id = ?`, // Removed rider_id temporarily to see if data exists at all
+            WHERE p.id = ?`,
             [id]
         );
 
         if (!taskRows.length) {
-            throw new ApiError(404, "Mission Node not found in database.");
+            throw new ApiError(404, "Mission Node not found.");
         }
 
         const task = taskRows[0];
 
-        // SECURITY CHECK: If you want to strictly enforce rider ownership
-        // if (task.rider_id !== rider.id) { throw new ApiError(403, "Unauthorized access to this node."); }
+        // 2. Fetch the Operational Timeline (The "Story" of the order)
+        const [timeline] = await db.query(`
+            SELECT status, note, created_at as timestamp
+            FROM pickup_timeline
+            WHERE pickup_id = ?
+            ORDER BY created_at DESC`,
+            [id]
+        );
 
-        // Helper to format image URLs
-        const getFullUrl = (path) => {
-            if (!path) return null;
-            if (path.startsWith('http')) return path;
-            const baseUrl = process.env.BASE_URL || 'https://webapp.prosfata.space';
-            return `${baseUrl}/${path.replace(/^\//, '')}`;
-        };
-
-        // 2. Fetch Itemized List
-        // Changed to LEFT JOIN to ensure items appear even if scrap_items reference is wonky
+        // 3. Fetch Itemized List with Market Metadata
         const [items] = await db.query(`
             SELECT 
-                pi.id as pickup_item_id,
-                pi.item_id, 
+                pi.id as pickup_item_id, pi.item_id, pi.category_id,
                 si.name_en, si.name_bn, si.unit, 
-                si.current_min_rate as price,
+                si.current_min_rate as market_min_price,
+                si.current_max_rate as market_max_price,
                 si.image_url as product_image,
-                pi.estimated_weight,
-                pi.photo_url as user_uploaded_photo,
-                pi.category_id
+                pi.estimated_weight, pi.actual_weight,
+                pi.final_rate_per_unit as applied_rate,
+                pi.photo_url as user_uploaded_photo
             FROM pickup_items pi
             LEFT JOIN scrap_items si ON pi.item_id = si.id
             WHERE pi.pickup_id = ?`,
             [id]
         );
 
-        console.log(`[DEBUG] Found ${items.length} items for Pickup ID: ${id}`);
+        const baseUrl = process.env.BASE_URL || 'https://webapp.prosfata.space';
+        const getFullUrl = (path) => (!path ? null : (path.startsWith('http') ? path : `${baseUrl}/${path.replace(/^\//, '')}`));
 
-        // Transform items...
         const transformedItems = items.map(item => {
             let photosArray = [];
-            try {
-                photosArray = item.user_uploaded_photo ? JSON.parse(item.user_uploaded_photo) : [];
-            } catch (e) {
-                photosArray = [];
-            }
-
-            const userPhotosUrls = photosArray.map(p => getFullUrl(p));
-            const catalogImageUrl = getFullUrl(item.product_image);
+            try { photosArray = item.user_uploaded_photo ? JSON.parse(item.user_uploaded_photo) : []; } catch (e) { photosArray = []; }
 
             return {
                 ...item,
-                user_photos: userPhotosUrls,
-                catalog_image: catalogImageUrl,
-                thumbnail: userPhotosUrls.length > 0 ? userPhotosUrls[0] : catalogImageUrl
+                market_range: `৳${item.market_min_price} - ৳${item.market_max_price}`,
+                user_photos: photosArray.map(p => getFullUrl(p)),
+                catalog_image: getFullUrl(item.product_image),
+                current_valuation: (parseFloat(item.actual_weight || item.estimated_weight || 0) * parseFloat(item.applied_rate || item.market_min_price)).toFixed(2)
             };
         });
 
         res.json({
             success: true,
             data: {
-                pickup: task,
-                items: transformedItems
+                pickup: {
+                    ...task,
+                    // Highlights for UI
+                    formatted_schedule: `${new Date(task.scheduled_date).toDateString()} | ${task.scheduled_time_slot}`,
+                },
+                scenarios: {
+                    min_expected: parseFloat(task.min_total_amount || 0).toFixed(2),
+                    max_expected: parseFloat(task.max_total_amount || 0).toFixed(2),
+                    base_fare: parseFloat(task.base_amount || 0).toFixed(2)
+                },
+                items: transformedItems,
+                // Full history of the order for the rider
+                order_timeline: timeline
             }
         });
     } catch (err) {
@@ -610,14 +663,19 @@ const updateWallet = async (conn, userId, amount, type, source, refType, refId, 
  * FINALIZE PICKUP (Hybrid Model: Salary vs Commission)
  * Updates items, calculates splits, executes wallet transfers, and logs to timeline.
  */
+/**
+ * FINALIZE PICKUP
+ * Updates items, calculates splits, handles liability, and uploads proof images.
+ */
 export const finalizePickup = async (req, res, next) => {
     const conn = await db.getConnection();
     try {
         const { id: pickupId } = req.params;
-        const { items, payment_method, note } = req.body;
+        const { items, payment_method, note, proof_image_after } = req.body;
 
         await conn.beginTransaction();
 
+        // 1. Lock record and fetch participant details
         const [p] = await conn.query(`
             SELECT p.*, c.user_id as customer_uid, cust_u.fcm_token as customer_fcm,
                    r.user_id as rider_uid, r.payment_mode as rider_specific_mode,
@@ -631,12 +689,10 @@ export const finalizePickup = async (req, res, next) => {
             LEFT JOIN agents a ON p.agent_id = a.id
             WHERE p.id = ? FOR UPDATE`, [pickupId]);
 
-        if (!p.length) throw new ApiError(404, "Pickup not found.");
+        if (!p.length) throw new ApiError(404, "Pickup mission not found.");
         const pickup = p[0];
 
-        const activePaymentMode = pickup.rider_specific_mode === 'default'
-            ? pickup.agent_default_mode : pickup.rider_specific_mode;
-
+        // 2. Process Items & Calculate Totals
         let netPayableToCustomer = 0;
         for (const it of items) {
             const weight = parseFloat(it.actual_weight) || 0;
@@ -645,61 +701,91 @@ export const finalizePickup = async (req, res, next) => {
             netPayableToCustomer += subtotal;
 
             if (it.id && !String(it.id).startsWith('new-')) {
-                await conn.query(`UPDATE pickup_items SET actual_weight = ?, final_rate_per_unit = ?, final_amount = ? WHERE id = ?`, [weight, rate, subtotal, it.id]);
+                await conn.query(
+                    `UPDATE pickup_items SET actual_weight = ?, final_rate_per_unit = ?, final_amount = ? WHERE id = ?`,
+                    [weight, rate, subtotal, it.id]
+                );
             } else {
-                await conn.query(`INSERT INTO pickup_items (pickup_id, item_id, actual_weight, final_rate_per_unit, final_amount) VALUES (?, ?, ?, ?, ?)`, [pickupId, it.item_id, weight, rate, subtotal]);
+                await conn.query(
+                    `INSERT INTO pickup_items (pickup_id, item_id, actual_weight, final_rate_per_unit, final_amount) VALUES (?, ?, ?, ?, ?)`,
+                    [pickupId, it.item_id, weight, rate, subtotal]
+                );
             }
         }
 
-        const platformFeeAmount = (netPayableToCustomer * (parseFloat(pickup.hub_platform_fee_rate) || 0)) / 100;
+        // 3. Calculate Splits (Rider Commission, Platform Fee, Agent Commission)
+        const activeRiderMode = pickup.rider_specific_mode === 'default' ? pickup.agent_default_mode : pickup.rider_specific_mode;
+
+        // Assume 2% for commission mode, 0 for salary mode
+        const riderCommAmount = (activeRiderMode === 'commission') ? (netPayableToCustomer * 0.02) : 0;
         const agentCommAmount = (netPayableToCustomer * (parseFloat(pickup.hub_commission_rate) || 0)) / 100;
-        let riderCommAmount = (activePaymentMode === 'commission') ? netPayableToCustomer * 0.02 : 0;
+        const platformFeeAmount = (netPayableToCustomer * (parseFloat(pickup.hub_platform_fee_rate) || 0)) / 100;
 
-        // Wallet Transfers
+        // 4. Handle Financial Flow & Liability
+        // Instruction: Both Cash and Wallet increase Rider Liability
+        const riderCollectedCashLiability = netPayableToCustomer;
+        let walletCreditToCustomer = 0;
+
         if (payment_method === 'wallet') {
-            await updateWallet(conn, pickup.customer_uid, netPayableToCustomer, 'credit', 'pickup_payment', 'pickup', pickupId, `Payment for ${pickup.booking_code}`);
-        }
-        if (pickup.agent_uid && agentCommAmount > 0) {
-            await updateWallet(conn, pickup.agent_uid, agentCommAmount, 'credit', 'pickup_commission', 'pickup', pickupId, `Hub Commission: ${pickup.booking_code}`);
-        }
-        if (pickup.rider_uid && riderCommAmount > 0) {
-            await updateWallet(conn, pickup.rider_uid, riderCommAmount, 'credit', 'pickup_commission', 'pickup', pickupId, `Rider Incentive: ${pickup.booking_code}`);
+            walletCreditToCustomer = netPayableToCustomer;
+            // System credits customer's digital wallet
+            await updateWallet(conn, pickup.customer_uid, netPayableToCustomer, 'credit', 'pickup_payment', 'pickup', pickupId, `Wallet payment for ${pickup.booking_code}`);
         }
 
+        // 5. Credit rider commission to their digital wallet (Incentive)
+        if (riderCommAmount > 0) {
+            await updateWallet(conn, pickup.rider_uid, riderCommAmount, 'credit', 'rider_commission', 'pickup', pickupId, `Incentive for ${pickup.booking_code}`);
+        }
+
+        // 6. Handle Proof Images (If provided as array or string)
+        const proofAfter = Array.isArray(proof_image_after) ? JSON.stringify(proof_image_after) : proof_image_after;
+
+        // 7. Final Update to Pickups Table
         await conn.query(`
-            UPDATE pickups SET status = 'completed', net_payable_amount = ?, rider_collected_cash = ?, 
-            rider_commission_amount = ?, platform_fee_amount = ?, agent_commission_amount = ?, 
-            payment_mode_snapshot = ?, payment_status = 'paid', completed_at = NOW() WHERE id = ?`,
-            [netPayableToCustomer, (payment_method === 'cash' ? netPayableToCustomer : 0), riderCommAmount, platformFeeAmount, agentCommAmount, activePaymentMode, pickupId]
+            UPDATE pickups SET 
+                status = 'completed',
+                payment_status = 'paid',
+                payment_method = ?,
+                net_payable_amount = ?,
+                cash_paid_to_customer = ?,
+                rider_collected_cash = ?,
+                wallet_credit_amount = ?,
+                rider_commission_amount = ?,
+                agent_commission_amount = ?,
+                platform_fee_amount = ?,
+                proof_image_after = ?,
+                completed_at = NOW(),
+                updated_at = NOW()
+            WHERE id = ?`,
+            [
+                payment_method,
+                netPayableToCustomer,
+                (payment_method === 'cash' ? netPayableToCustomer : 0), // Cash paid physically
+                riderCollectedCashLiability, // Rider's liability for the collected goods value
+                walletCreditToCustomer,
+                riderCommAmount,
+                agentCommAmount,
+                platformFeeAmount,
+                proofAfter || pickup.proof_image_after,
+                pickupId
+            ]
         );
 
+        // 8. Log Timeline
         await conn.query(`INSERT INTO pickup_timeline (pickup_id, status, note, changed_by) VALUES (?, 'completed', ?, ?)`,
-            [pickupId, `Finalized. ৳${netPayableToCustomer} via ${payment_method.toUpperCase()}.`, req.user.id]);
-
-        // 🔥 DB NOTIFICATION: Completion History
-        await saveNotification(
-            conn,
-            pickup.customer_uid,
-            'notif_pickup_completed_title',
-            'notif_pickup_completed_body',
-            { bookingCode: pickup.booking_code, amount: netPayableToCustomer.toFixed(2) },
-            'success',
-            `/(home)/activity/${pickupId}`
-        );
+            [pickupId, `Finalized at ৳${netPayableToCustomer.toFixed(2)} via ${payment_method.toUpperCase()}. Proof uploaded.`, req.user.id]);
 
         await conn.commit();
 
-        // 3. TRIGGER PUSH NOTIFICATION
-        if (pickup.customer_fcm) {
-            await sendPushNotification(
-                pickup.customer_fcm,
-                "Recycling Completed! 💰",
-                `Your pickup ${pickup.booking_code} is finished. You earned ৳${netPayableToCustomer.toFixed(2)}.`,
-                { orderId: pickupId.toString(), type: "order_update" }
-            );
-        }
-
-        res.json({ success: true, message: "Pickup Successfully Finalized" });
+        res.json({
+            success: true,
+            message: "Mission finalized successfully.",
+            data: {
+                total: netPayableToCustomer.toFixed(2),
+                incentive: riderCommAmount.toFixed(2),
+                liability: riderCollectedCashLiability.toFixed(2)
+            }
+        });
 
     } catch (err) {
         if (conn) await conn.rollback();
@@ -778,34 +864,76 @@ export const getRiderHistory = async (req, res, next) => {
 
 /**
  * GET RIDER HISTORY DETAIL
- * Fetches item-by-item breakdown of a completed task
+ * Fetches breakdown, user photos, and the full timeline/audit trail.
  */
 export const getHistoryDetail = async (req, res, next) => {
     try {
         const { id } = req.params;
         const rider = await getRiderInfo(req);
 
-        // 1. Fetch Master Record
+        const baseUrl = process.env.BASE_URL || 'https://webapp.prosfata.space';
+        const getFullUrl = (path) => (!path ? null : (path.startsWith('http') ? path : `${baseUrl}/${path.replace(/^\//, '')}`));
+
+        // 1. Fetch Master Record with Financial Result
         const [pickup] = await db.query(`
-            SELECT p.*, u.full_name as customer_name, addr.address_line
+            SELECT 
+                p.*, u.full_name as customer_name, u.phone as customer_phone, 
+                addr.address_line, addr.landmark
             FROM pickups p
             JOIN customers c ON p.customer_id = c.id
             JOIN users u ON c.user_id = u.id
             LEFT JOIN addresses addr ON p.customer_address_id = addr.id
-            WHERE p.id = ? AND p.rider_id = ? AND p.status = 'completed'`,
+            WHERE p.id = ? AND p.rider_id = ?`,
             [id, rider.id]
         );
 
         if (!pickup.length) throw new ApiError(404, "History record not found.");
 
-        // 2. Fetch Itemized Audit Trail
+        // 2. Fetch Itemized Final Audit including User Photos
         const [items] = await db.query(`
-            SELECT pi.*, si.name_en, si.unit, si.image_url
+            SELECT 
+                pi.*, si.name_en, si.unit, si.image_url as product_image,
+                pi.photo_url as user_uploaded_photo
             FROM pickup_items pi
             JOIN scrap_items si ON pi.item_id = si.id
             WHERE pi.pickup_id = ?`, [id]);
 
-        res.json({ success: true, data: { pickup: pickup[0], items } });
+        // Transform items to include parsed and full-path user photos
+        const transformedItems = items.map(item => {
+            let photosArray = [];
+            try {
+                photosArray = item.user_uploaded_photo ? JSON.parse(item.user_uploaded_photo) : [];
+            } catch (e) {
+                photosArray = [];
+            }
+
+            return {
+                ...item,
+                subtotal: (parseFloat(item.actual_weight) * parseFloat(item.final_rate_per_unit)).toFixed(2),
+                product_image: getFullUrl(item.product_image),
+                user_photos: photosArray.map(p => getFullUrl(p)) // 🔥 These are the missing photos
+            };
+        });
+
+        // 3. Fetch Full Mission Timeline
+        const [timeline] = await db.query(`
+            SELECT status, note, created_at as timestamp
+            FROM pickup_timeline
+            WHERE pickup_id = ?
+            ORDER BY created_at ASC`, [id]);
+
+        res.json({
+            success: true,
+            data: {
+                pickup: {
+                    ...pickup[0],
+                    // Also format the proof_image_after (rider's upload) if it exists
+                    proof_image_after: pickup[0].proof_image_after ? JSON.parse(pickup[0].proof_image_after).map(p => getFullUrl(p)) : []
+                },
+                items: transformedItems,
+                audit_trail: timeline
+            }
+        });
     } catch (err) {
         next(err);
     }
@@ -885,5 +1013,80 @@ export const getEarningsOverview = async (req, res, next) => {
         });
     } catch (err) {
         next(err);
+    }
+};
+
+/**
+ * CANCEL/DECLINE TASK
+ * Triggered when a rider cannot complete a deal (Price disagreement, Customer absent, etc.)
+ */
+export const cancelTask = async (req, res, next) => {
+    const conn = await db.getConnection();
+    try {
+        const { id } = req.params;
+        const { reason, note } = req.body;
+        const rider = await getRiderInfo(req); // Safety check for rider role
+
+        if (!reason) {
+            throw new ApiError(400, "A cancellation reason is required.");
+        }
+
+        await conn.beginTransaction();
+
+        // 1. Update Pickup Table
+        const [result] = await conn.query(
+            `UPDATE pickups 
+             SET status = 'cancelled', 
+                 cancelled_at = NOW(), 
+                 cancelled_by_user_id = ?, 
+                 cancellation_reason = ?, 
+                 cancellation_note = ?,
+                 updated_at = NOW() 
+             WHERE id = ? AND rider_id = ?`,
+            [req.user.id, reason, note || null, id, rider.id]
+        );
+
+        if (result.affectedRows === 0) {
+            throw new ApiError(404, "Task not found or unauthorized.");
+        }
+
+        // 2. Log to Timeline for History
+        await conn.query(
+            `INSERT INTO pickup_timeline (pickup_id, status, changed_by, note) 
+             VALUES (?, 'cancelled', ?, ?)`,
+            [id, req.user.id, `Declined by Rider. Reason: ${reason}. Note: ${note || 'N/A'}`]
+        );
+
+        // 3. Fetch Customer FCM Token to notify them
+        const [customer] = await conn.query(
+            `SELECT u.fcm_token, p.booking_code 
+             FROM pickups p 
+             JOIN customers c ON p.customer_id = c.id 
+             JOIN users u ON c.user_id = u.id 
+             WHERE p.id = ?`, [id]
+        );
+
+        await conn.commit();
+
+        // 4. Trigger Notification (Async)
+        if (customer[0]?.fcm_token) {
+            sendPushNotification(
+                customer[0].fcm_token,
+                "Pickup Cancelled",
+                `Your pickup ${customer[0].booking_code} was cancelled: ${reason}`,
+                { type: "order_cancelled", id: id.toString() }
+            ).catch(err => console.error("Push Error:", err.message));
+        }
+
+        res.json({
+            success: true,
+            message: "Mission successfully aborted and logged."
+        });
+
+    } catch (err) {
+        if (conn) await conn.rollback();
+        next(err);
+    } finally {
+        if (conn) conn.release();
     }
 };

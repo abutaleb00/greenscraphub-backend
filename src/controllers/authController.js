@@ -453,7 +453,7 @@ export const getMe = async (req, res, next) => {
             SELECT 
                 u.id, u.full_name, u.phone, u.email, u.profile_image, 
                 r.name as role, c.referral_code, c.total_points,
-                rd.is_online, rd.vehicle_number,
+                rd.is_online, rd.vehicle_number, rd.vehicle_type,
                 COALESCE(ag.business_name, u.full_name) as business_name, 
                 ag.code as agent_code, w.balance as wallet_balance
             FROM users u

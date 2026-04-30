@@ -16,143 +16,153 @@ const PORT = process.env.PORT || 4000;
 const server = http.createServer(app);
 
 /**
- * 2. Initialize Socket.io
+ * 2. Initialize Socket.io with Premium Configuration
  */
 const io = new Server(server, {
   cors: {
     origin: "*",
     methods: ["GET", "POST"]
   },
-  pingTimeout: 60000,
+  pingTimeout: 60000, // Handle mobile network instability
 });
 
 /**
- * 3. Real-Time Tracking & Rider Management Logic
+ * 3. Real-Time Fleet & Logistics Logic
  */
 io.on('connection', (socket) => {
-  console.log(`🔌 New Connection: ${socket.id}`);
+  console.log(`🔌 New encrypted link established: ${socket.id}`);
 
-  // --- RIDER SPECIFIC LOGIC ---
+  // --- RIDER / FLEET MANAGEMENT ---
 
   /**
-   * 🛰️ Event: Rider Registration
-   * Join a private room and the global monitoring room
+   * 🛰️ Event: Register Rider
+   * Joins private telemetry room and global monitoring room
    */
-  socket.on('register_rider', (riderId) => {
-    socket.join(`rider_${riderId}`);
-    socket.join('active_riders_map');
-    console.log(`🚛 Rider Registered: ${riderId}`);
+  socket.on('register_rider', (userId) => {
+    if (!userId) return;
+    socket.join(`rider_user_${userId}`);
+    socket.join('fleet_monitoring_room'); // Global room for Admin Dashboard
+    console.log(`🚛 Rider Authenticated & Linked: User ID ${userId}`);
   });
 
   /**
-   * 🟢 Event: Rider Status Change (Online/Offline)
+   * 🟢 Event: Rider Presence Update (Online/Offline)
    */
   socket.on('rider_status_update', async (data) => {
-    const { riderId, is_online, location } = data;
+    const { userId, is_online, location } = data;
 
     try {
-      // FIX: Use 'id' instead of 'user_id' if your app is sending the Rider Table ID
-      // We update both cases to be safe or you can standardize on Rider ID.
+      // Update riders table using user_id as the primary key
       await pool.query(
-        'UPDATE riders SET is_online = ?, current_latitude = ?, current_longitude = ?, updated_at = NOW() WHERE id = ?',
-        [is_online ? 1 : 0, location?.lat || null, location?.lng || null, riderId]
+        `UPDATE riders SET 
+          is_online = ?, 
+          current_latitude = ?, 
+          current_longitude = ?, 
+          updated_at = NOW() 
+         WHERE user_id = ?`,
+        [is_online ? 1 : 0, location?.lat || null, location?.lng || null, userId]
       );
 
-      // Broadcast to Admin Dashboard
-      io.to('active_riders_map').emit('rider_presence_changed', {
-        riderId,
-        is_online,
-        location,
-        last_updated: new Date()
+      // Broadcast presence change to Admin Fleet Map
+      io.to('fleet_monitoring_room').emit('rider_presence_changed', {
+        userId,
+        is_online: !!is_online,
+        location: location || null,
+        timestamp: new Date()
       });
 
-      console.log(`👤 Rider ${riderId} is now ${is_online ? 'ONLINE' : 'OFFLINE'}`);
+      console.log(`👤 Rider ${userId} status: ${is_online ? 'CONNECTED/ONLINE' : 'DISCONNECTED/OFFLINE'}`);
     } catch (err) {
-      console.error("❌ Error updating rider status in DB:", err);
+      console.error("❌ DB Update Error (Status):", err.message);
     }
   });
 
   /**
-   * 📍 Event: Periodic Location Update
-   * Updates coordinates + Broadcasts to Customer & Admin
+   * 📍 Event: Live Telemetry (Periodic Location Update)
+   * Syncs to DB and broadcasts to assigned Customer & Admin Fleet
    */
   socket.on('update_location', async (data) => {
-    const { riderId, pickupId, latitude, longitude, heading } = data;
+    const { userId, pickupId, latitude, longitude, heading, speed } = data;
 
-    if (!latitude || !longitude) return;
+    if (!latitude || !longitude || !userId) return;
 
     try {
-      // 1. Database Sync (Using 'id' as the primary reference)
+      // 1. Permanent Sync (MySQL)
       await pool.query(
-        'UPDATE riders SET current_latitude = ?, current_longitude = ?, updated_at = NOW() WHERE id = ?',
-        [latitude, longitude, riderId]
+        'UPDATE riders SET current_latitude = ?, current_longitude = ?, updated_at = NOW() WHERE user_id = ?',
+        [latitude, longitude, userId]
       );
 
       const payload = {
-        riderId,
+        userId,
         latitude: parseFloat(latitude),
         longitude: parseFloat(longitude),
         heading: heading || 0,
+        speed: speed || 0,
         timestamp: new Date()
       };
 
-      // 2. Broadcast to Customer
-      // Room name matches what the Customer joins: pickup_{id}
+      // 2. Transmit to Customer (Assigned Mission Room)
       if (pickupId) {
         io.to(`pickup_${pickupId}`).emit('location_changed', payload);
       }
 
-      // 3. Broadcast to global Admin map
-      io.to('active_riders_map').emit('rider_moved', payload);
+      // 3. Transmit to Fleet Monitoring (Admin Dashboard)
+      io.to('fleet_monitoring_room').emit('rider_moved', payload);
 
     } catch (err) {
-      console.error("❌ Error syncing location to DB:", err);
+      console.error("❌ DB Update Error (Location):", err.message);
     }
   });
 
 
-  // --- CUSTOMER / PICKUP LOGIC ---
+  // --- MISSION / CUSTOMER LOGIC ---
 
   /**
-   * 📍 Event: Join Pickup Room
-   * Customers join this to receive 'location_changed' events
+   * 📍 Event: Join Mission Tracker
+   * Customers join this to receive real-time rider movement
    */
   socket.on('join_pickup', (pickupId) => {
-    // Leave previous pickup rooms to prevent memory leaks/duplicate tracking
+    if (!pickupId) return;
+
+    // Cleanup: Remove from previous missions to save memory
     Array.from(socket.rooms).forEach(room => {
       if (room.startsWith('pickup_')) socket.leave(room);
     });
 
     socket.join(`pickup_${pickupId}`);
-    console.log(`📍 User ${socket.id} joined room: pickup_${pickupId}`);
+    console.log(`📍 Subscriber joined Mission Tracker: pickup_${pickupId}`);
   });
 
   /**
-   * 📢 Event: Status Change
-   * Notifies customer when status goes from 'accepted' to 'rider_on_way'
+   * 📢 Event: Mission Lifecycle Update
+   * Notifies customer when status changes (Accepted -> On Way -> Arrived)
    */
   socket.on('pickup_status_changed', (data) => {
     const { pickupId, status } = data;
+    if (!pickupId) return;
+
     io.to(`pickup_${pickupId}`).emit('status_updated', {
       pickupId,
       status,
       timestamp: new Date()
     });
-    console.log(`📢 Status Update for pickup_${pickupId}: ${status}`);
+    console.log(`📢 Mission ${pickupId} State Change: ${status.toUpperCase()}`);
   });
 
   socket.on('disconnect', () => {
-    console.log(`❌ Disconnected: ${socket.id}`);
+    console.log(`❌ Link Terminated: ${socket.id}`);
   });
 });
 
 /**
- * 4. Global IO Access
+ * 4. Attach Socket.io to Express context
+ * Allows REST controllers to trigger real-time events
  */
 app.set('io', io);
 
 /**
- * 5. Network Utility
+ * 5. Network Discovery Utility
  */
 const getLocalIp = () => {
   const interfaces = os.networkInterfaces();
@@ -165,25 +175,27 @@ const getLocalIp = () => {
 };
 
 /**
- * 6. Startup Sequence
+ * 6. Server Initialization Sequence
  */
 async function start() {
   try {
-    // Test DB Connection
+    // Verify Database Readiness
     const [rows] = await pool.query('SELECT 1 + 1 AS result');
-    console.log('✅ MySQL Database Connected');
+    console.log('✅ MySQL Telemetry DB Connected');
 
     const NETWORK_IP = getLocalIp();
 
     server.listen(PORT, '0.0.0.0', () => {
-      console.log(`\n🚀 GreenScrapHub Backend Initialized:`);
-      console.log(`🔗 Local API:   http://localhost:${PORT}/api/v1`);
-      console.log(`📱 Network API: http://${NETWORK_IP}:${PORT}/api/v1`);
-      console.log(`🛰️ Socket.io:  Rider Tracking Rooms Enabled`);
+      console.log(`\n===========================================================`);
+      console.log(`🚀 GREENSCRAP TACTICAL BACKEND INITIALIZED`);
+      console.log(`===========================================================`);
+      console.log(`🔗 Local Endpoint:   http://localhost:${PORT}/api/v1`);
+      console.log(`📱 Network Gateway: http://${NETWORK_IP}:${PORT}/api/v1`);
+      console.log(`🛰️ Socket Link:     Encryption & Fleet Tracking Active`);
       console.log(`___________________________________________________________\n`);
     });
   } catch (err) {
-    console.error('❌ Server startup error:', err);
+    console.error('❌ FATAL: Server failed to initialize:', err.message);
     process.exit(1);
   }
 }

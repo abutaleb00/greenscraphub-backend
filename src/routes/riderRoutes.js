@@ -4,8 +4,9 @@ import {
     getRiderDashboard,
     getMyTasks,
     getTaskDetail,
+    cancelTask,
     updateTaskStatus,
-    getRiderEarnings,      
+    getRiderEarnings,
     getRiderCollectionLogs,
     finalizePickup,
     getRiderHistory,
@@ -42,6 +43,7 @@ router.get("/earnings", auth(["rider"]), getRiderEarnings);
  * @desc    Fetch active assignments (Pending, On the Way, Arrived)
  */
 router.post("/tasks/:id/finalize", auth(["rider"]), finalizePickup);
+router.post("/tasks/:id/cancel", auth(["rider"]), cancelTask);
 router.get("/tasks/:id", auth(["rider", "agent"]), getTaskDetail);
 router.get("/tasks", auth(["rider"]), getMyTasks);
 
