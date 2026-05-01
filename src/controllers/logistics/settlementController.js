@@ -331,7 +331,7 @@ export const openRiderShift = async (req, res, next) => {
 
         // 1. Get the rider's user_id safely
         const [rider] = await conn.query(
-            "SELECT user_id, cash_held_liability FROM riders WHERE id = ?",
+            "SELECT user_id, cash_held_liability FROM riders WHERE id = ?", 
             [rider_id]
         );
         if (!rider.length) {
@@ -341,7 +341,7 @@ export const openRiderShift = async (req, res, next) => {
 
         // Fetch user wallet account from 'wallet_accounts'
         const [wallet] = await conn.query(
-            "SELECT id, balance FROM wallet_accounts WHERE user_id = ?",
+            "SELECT id, balance FROM wallet_accounts WHERE user_id = ?", 
             [userId]
         );
         if (!wallet.length) {
@@ -369,13 +369,14 @@ export const openRiderShift = async (req, res, next) => {
                 [numAmount, ` | Top-up: ৳${numAmount}`, activeShiftId]
             );
 
-            // 🟢 FIXED: Using NULL for reference_type and reference_id to completely avoid any ENUM truncation errors
+            // 🟢 FIXED: Changed reference_type to 'adjustment' to prevent null constraint violations
             await conn.query(
                 `INSERT INTO wallet_transactions 
                     (wallet_id, type, source, reference_type, reference_id, amount, balance_before, balance_after, description_en, status) 
-                 VALUES (?, 'credit', 'adjustment', NULL, NULL, ?, ?, ?, ?, 'completed')`,
+                 VALUES (?, 'credit', 'hub_issue', 'adjustment', ?, ?, ?, ?, ?, 'completed')`,
                 [
                     walletId,
+                    activeShiftId,
                     numAmount,
                     balanceBefore,
                     balanceAfter,
@@ -391,13 +392,14 @@ export const openRiderShift = async (req, res, next) => {
             );
             activeShiftId = result.insertId;
 
-            // 🟢 FIXED: Using NULL for reference_type and reference_id to completely avoid any ENUM truncation errors
+            // 🟢 FIXED: Changed reference_type to 'adjustment' to prevent null constraint violations
             await conn.query(
                 `INSERT INTO wallet_transactions 
                     (wallet_id, type, source, reference_type, reference_id, amount, balance_before, balance_after, description_en, status) 
-                 VALUES (?, 'credit', 'adjustment', NULL, NULL, ?, ?, ?, ?, 'completed')`,
+                 VALUES (?, 'credit', 'hub_issue', 'adjustment', ?, ?, ?, ?, ?, 'completed')`,
                 [
                     walletId,
+                    activeShiftId,
                     numAmount,
                     balanceBefore,
                     balanceAfter,
