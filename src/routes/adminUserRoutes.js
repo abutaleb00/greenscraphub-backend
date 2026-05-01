@@ -116,8 +116,9 @@ router.post(
             .isLength({ min: 6 })
             .withMessage("Password must be at least 6 characters"),
         body("email").optional().isEmail().withMessage("Invalid email format"),
-        body("vehicle_type").notEmpty().withMessage("Vehicle type is required (e.g., Van, Rickshaw, Bicycle)"),
+        body("vehicle_type").notEmpty().withMessage("Vehicle type is required"),
         body("vehicle_number").optional().isString(),
+        body("base_upazila_id").optional().isInt().withMessage("Invalid Upazila ID"),
 
         // Validation Logic: If Admin is creating, agent_id is mandatory. 
         // If Agent is creating, it's pulled from their session in the controller.

@@ -216,10 +216,11 @@ export const createRiderAccount = async (req, res, next) => {
 
         const {
             full_name, phone, email, password, agent_id,
-            vehicle_type, vehicle_number, payment_mode
+            vehicle_type, vehicle_number, payment_mode, base_upazila_id
         } = req.body;
         const requester = req.user;
 
+        // 1. Determine Agent ID
         let finalAgentId = null;
         if (requester.role === "agent") {
             const [agent] = await conn.query("SELECT id FROM agents WHERE owner_user_id = ?", [requester.id]);
@@ -231,6 +232,22 @@ export const createRiderAccount = async (req, res, next) => {
 
         if (!finalAgentId) throw new ApiError(400, "agent_id is required");
 
+        // 2. Fetch the Upazila ID of the assigned Hub (Safe fallback constraint fix)
+        let finalUpazilaId = base_upazila_id;
+        if (!finalUpazilaId) {
+            const [agentData] = await conn.query(
+                "SELECT upazila_id, base_upazila_id FROM agents WHERE id = ?",
+                [finalAgentId]
+            );
+            if (!agentData.length) throw new ApiError(404, "Assigned agent hub does not exist");
+            finalUpazilaId = agentData[0].upazila_id || agentData[0].base_upazila_id;
+        }
+
+        if (!finalUpazilaId) {
+            throw new ApiError(400, "base_upazila_id is required for this operational node");
+        }
+
+        // 3. Create User Account
         const password_hash = await bcrypt.hash(password, 10);
         const [userResult] = await conn.query(
             "INSERT INTO users (full_name, phone, email, password_hash, role_id) VALUES (?, ?, ?, ?, 3)",
@@ -238,16 +255,29 @@ export const createRiderAccount = async (req, res, next) => {
         );
         const userId = userResult.insertId;
 
-        // Updated to include payment_mode (salary, commission, or default)
+        // 4. Create Rider Record using inferred finalUpazilaId
         await conn.query(
-            "INSERT INTO riders (user_id, agent_id, vehicle_type, vehicle_number, payment_mode) VALUES (?, ?, ?, ?, ?)",
-            [userId, finalAgentId, vehicle_type || 'Bicycle', vehicle_number || null, payment_mode || 'default']
+            `INSERT INTO riders 
+                (user_id, agent_id, base_upazila_id, vehicle_type, vehicle_number, payment_mode) 
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [
+                userId,
+                finalAgentId,
+                finalUpazilaId,
+                vehicle_type || 'Bicycle',
+                vehicle_number || null,
+                payment_mode || 'default'
+            ]
         );
 
+        // 5. Initialize Wallet and Commit
         await initializeWallet(conn, userId);
 
         await conn.commit();
-        res.status(201).json({ success: true, message: `Rider account created in ${payment_mode || 'default'} mode.` });
+        res.status(201).json({
+            success: true,
+            message: `Rider account created in ${payment_mode || 'default'} mode.`
+        });
 
     } catch (err) {
         await conn.rollback();
