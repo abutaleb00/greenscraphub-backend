@@ -190,11 +190,12 @@ export async function getRiderDashboard(req, res, next) {
         const rider = riderRows[0];
         const riderId = rider.id;
 
-        // 2. Fetch Active Missions (Optimized Queue)
+        // 2. Fetch Active Missions (Optimized Queue with Customer profile_image)
         const [activeTasks] = await db.query(
             `SELECT 
                 p.id, p.booking_code, p.status, p.scheduled_time_slot,
                 u.full_name AS customer_name, u.phone AS customer_phone,
+                u.profile_image AS customer_image,
                 adr.address_line, adr.house_no, adr.road_no, adr.landmark,
                 adr.latitude, adr.longitude
             FROM pickups p
@@ -234,11 +235,11 @@ export async function getRiderDashboard(req, res, next) {
         // 5. Wallet Balance (Rider's actual take-home earnings)
         const [wallet] = await db.query("SELECT balance FROM wallet_accounts WHERE user_id = ?", [userId]);
 
-        // Helper for Avatar URL
-        const getAvatarUrl = (path) => {
+        // Helper for Normalizing URLs
+        const getFullUrl = (path) => {
             if (!path) return null;
-            const baseUrl = process.env.BASE_URL || 'https://webapp.prosfata.space';
-            return path.startsWith('http') ? path : `${baseUrl.replace(/\/$/, "")}/${path.replace(/^\//, "")}`;
+            const baseUrl = (process.env.BASE_URL || 'https://webapp.prosfata.space').replace(/\/$/, '');
+            return path.startsWith('http') ? path.replace('http://', 'https://') : `${baseUrl}/${path.replace(/^\//, '')}`;
         };
 
         return res.json({
@@ -246,11 +247,10 @@ export async function getRiderDashboard(req, res, next) {
             data: {
                 profile: {
                     name: rider.full_name,
-                    avatar: getAvatarUrl(rider.profile_image),
+                    avatar: getFullUrl(rider.profile_image),
                     is_online: Boolean(rider.is_online),
                     shift_active: activeShift.length > 0
                 },
-                // 🔥 UPDATED FINANCIALS: Reflecting Hub Liability vs Withdrawable Balance
                 financials: {
                     hub_cash_on_hand: parseFloat(rider.cash_held_liability || 0).toFixed(2),
                     withdrawable_balance: parseFloat(wallet[0]?.balance || 0).toFixed(2),
@@ -268,7 +268,11 @@ export async function getRiderDashboard(req, res, next) {
                     id: t.id,
                     ref: t.booking_code,
                     status: t.status,
-                    customer: { name: t.customer_name, phone: t.customer_phone },
+                    customer: {
+                        name: t.customer_name,
+                        phone: t.customer_phone,
+                        profile_image: getFullUrl(t.customer_image) // 🟢 Added full customer photo URL
+                    },
                     location: {
                         address: [t.house_no, t.road_no, t.address_line].filter(Boolean).join(', ') || 'Address Provided',
                         landmark: t.landmark,
