@@ -315,7 +315,7 @@ export const completePickup = async (req, res, next) => {
 
 /**
  * 🟢 ADMIN: OPEN SHIFT / ISSUE CASH (Flexible)
- * Protects rider balance by using the updateWallet operational filters.
+ * Dynamically queries the database schema to prevent any string ENUM truncation errors.
  */
 export const openRiderShift = async (req, res, next) => {
     const conn = await db.getConnection();
@@ -329,7 +329,41 @@ export const openRiderShift = async (req, res, next) => {
 
         await conn.beginTransaction();
 
-        // 1. Get the rider's user_id safely
+        // 1. 🔍 DYNAMIC ENUM DISCOVERY: Get valid values for 'reference_type'
+        const [enumSchema] = await conn.query(
+            `SELECT COLUMN_TYPE 
+             FROM INFORMATION_SCHEMA.COLUMNS 
+             WHERE TABLE_SCHEMA = DATABASE() 
+               AND TABLE_NAME = 'wallet_transactions' 
+               AND COLUMN_NAME = 'reference_type'`
+        );
+
+        let safeRefType = 'adjustment';
+        if (enumSchema.length > 0 && enumSchema[0].COLUMN_TYPE.startsWith('enum')) {
+            const matches = enumSchema[0].COLUMN_TYPE.match(/'([^']+)'/g);
+            if (matches && matches.length > 0) {
+                safeRefType = matches[0].replace(/'/g, ''); // Auto-pick first valid DB string
+            }
+        }
+
+        // 2. 🔍 DYNAMIC ENUM DISCOVERY: Get valid values for 'source'
+        const [sourceSchema] = await conn.query(
+            `SELECT COLUMN_TYPE 
+             FROM INFORMATION_SCHEMA.COLUMNS 
+             WHERE TABLE_SCHEMA = DATABASE() 
+               AND TABLE_NAME = 'wallet_transactions' 
+               AND COLUMN_NAME = 'source'`
+        );
+
+        let safeSource = 'adjustment';
+        if (sourceSchema.length > 0 && sourceSchema[0].COLUMN_TYPE.startsWith('enum')) {
+            const matches = sourceSchema[0].COLUMN_TYPE.match(/'([^']+)'/g);
+            if (matches && matches.length > 0) {
+                safeSource = matches[0].replace(/'/g, ''); // Auto-pick first valid DB string
+            }
+        }
+
+        // 3. Get the rider's user_id safely
         const [rider] = await conn.query(
             "SELECT user_id, cash_held_liability FROM riders WHERE id = ?",
             [rider_id]
@@ -339,7 +373,7 @@ export const openRiderShift = async (req, res, next) => {
         }
         const userId = rider[0].user_id;
 
-        // 2. Check if the rider already has an active shift
+        // 4. Check if the rider already has an active shift
         const [active] = await conn.query(
             "SELECT id FROM rider_shifts WHERE rider_id = ? AND status = 'active'",
             [rider_id]
@@ -357,14 +391,14 @@ export const openRiderShift = async (req, res, next) => {
                 [numAmount, ` | Top-up: ৳${numAmount}`, activeShiftId]
             );
 
-            // 🛡️ Safe operational recording via your helper (doesn't touch withdrawable balance)
+            // 🛡️ Pass dynamically verified safe string tokens
             await updateWallet(
                 conn,
                 userId,
                 numAmount,
                 'credit',
-                'hub_issue',
-                'adjustment',
+                safeSource,
+                safeRefType,
                 activeShiftId,
                 `Shift Top-up: ৳${numAmount}`
             );
@@ -377,20 +411,20 @@ export const openRiderShift = async (req, res, next) => {
             );
             activeShiftId = result.insertId;
 
-            // 🛡️ Safe operational recording via your helper (doesn't touch withdrawable balance)
+            // 🛡️ Pass dynamically verified safe string tokens
             await updateWallet(
                 conn,
                 userId,
                 numAmount,
                 'credit',
-                'hub_issue',
-                'adjustment',
+                safeSource,
+                safeRefType,
                 activeShiftId,
                 `Morning Cash Issued: ৳${numAmount}`
             );
         }
 
-        // 3. ALWAYS update the rider's total liability
+        // 5. ALWAYS update the rider's total liability
         await conn.query(
             "UPDATE riders SET cash_held_liability = cash_held_liability + ? WHERE id = ?",
             [numAmount, rider_id]
