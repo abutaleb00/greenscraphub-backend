@@ -24,20 +24,14 @@ const saveNotification = async (conn, userId, titleKey, bodyKey, placeholders = 
 
 /**
  * UNIFIED WALLET HELPER
- * Precision-safe, race-condition protected, and Leader System aware.
+ * Explicitly accepts 'isOperational' as a parameter to prevent string matching bugs.
  */
-const updateWallet = async (conn, userId, amount, type, source, refType, refId, descEn) => {
+const updateWallet = async (conn, userId, amount, type, source, refType, refId, descEn, isOperational = false) => {
     const numericAmount = Math.abs(parseFloat(amount)) || 0;
     if (numericAmount <= 0) return null;
 
-    // 🛡️ LEADER SYSTEM PROTECTION: 
-    // These sources represent Company Cash movement, not Rider Earnings.
-    // They must NEVER affect the 'balance' column.
-    const operationalSources = ['hub_issue', 'hub_settlement', 'customer_payout', 'adjustment'];
-    const isOperational = operationalSources.includes(source);
-
     try {
-        // 1. 🟢 FIXED: Check amount to distinguish between Initial Morning Issue and Shift Top-ups
+        // 1. Idempotency Check
         const [existing] = await conn.query(
             "SELECT id FROM wallet_transactions WHERE reference_type = ? AND reference_id = ? AND source = ? AND amount = ?",
             [refType, refId, source, numericAmount]
@@ -67,8 +61,8 @@ const updateWallet = async (conn, userId, amount, type, source, refType, refId, 
         // 3. Calculate Balance
         let balanceAfter = balanceBefore;
 
+        // 🛡️ Safe Check: Only update balance if it is explicitly NOT an operational transaction
         if (!isOperational) {
-            // Only update balance if it's NOT a Hub/Operational transaction
             balanceAfter = type === 'credit'
                 ? parseFloat((balanceBefore + numericAmount).toFixed(2))
                 : parseFloat((balanceBefore - numericAmount).toFixed(2));
@@ -400,7 +394,8 @@ export const openRiderShift = async (req, res, next) => {
                 safeSource,
                 safeRefType,
                 activeShiftId,
-                `Shift Top-up: ৳${numAmount}`
+                `Shift Top-up: ৳${numAmount}`,
+                true // 👈 Explicitly marks as an operational transaction
             );
 
         } else {
@@ -420,7 +415,8 @@ export const openRiderShift = async (req, res, next) => {
                 safeSource,
                 safeRefType,
                 activeShiftId,
-                `Morning Cash Issued: ৳${numAmount}`
+                `Morning Cash Issued: ৳${numAmount}`,
+                true // 👈 Explicitly marks as an operational transaction
             );
         }
 
