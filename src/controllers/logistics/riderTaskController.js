@@ -332,7 +332,7 @@ export const getMyTasks = async (req, res, next) => {
         const totalLiability = parseFloat(liabilityRow[0].total_liability || 0);
 
         // 3. Get Base URL from Environment variables (strip trailing slash if present)
-        const baseUrl = (process.env.BASE_URL || '').replace(/\/$/, '');
+        const baseUrl = (process.env.BASE_URL || 'https://webapp.prosfata.space').replace(/\/$/, '');
 
         // 4. Transform Tasks for UI Consistency
         const missionQueue = tasks.map(task => {
