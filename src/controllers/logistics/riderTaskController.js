@@ -859,7 +859,7 @@ export const getRiderHistory = async (req, res, next) => {
             SELECT 
                 p.id, 
                 p.booking_code, 
-                p.status, -- CRITICAL: Returned for frontend logic
+                p.status, 
                 p.completed_at, 
                 p.created_at,
                 -- Total scrap value collected
@@ -876,13 +876,13 @@ export const getRiderHistory = async (req, res, next) => {
                 -- Historical snapshot of the payment mode (salary/commission)
                 p.payment_mode_snapshot as payment_mode,
                 u.full_name as customer_name,
+                u.profile_image as customer_image,
                 adr.address_line
             FROM pickups p
             JOIN customers c ON p.customer_id = c.id
             JOIN users u ON c.user_id = u.id
             LEFT JOIN addresses adr ON p.customer_address_id = adr.id
             WHERE p.rider_id = ? 
-              -- Include all statuses relevant to the rider's task list
               AND p.status IN ('accepted', 'rider_on_way', 'arrived', 'weighing', 'completed', 'finalized')
             ORDER BY 
                 CASE 
@@ -892,10 +892,15 @@ export const getRiderHistory = async (req, res, next) => {
                 p.created_at DESC 
             LIMIT 50`, [riderId]);
 
+        // BASE_URL and URL Normalization Helper
+        const baseUrl = (process.env.BASE_URL || 'https://webapp.prosfata.space').replace(/\/$/, '');
+        const getFullUrl = (path) => (!path ? null : (path.startsWith('http') ? path.replace('http://', 'https://') : `${baseUrl}/${path.replace(/^\//, '')}`));
+
         // Clean data for the Frontend
         const formattedHistory = history.map(item => ({
             ...item,
-            status: item.status || 'pending', // Fallback for safety
+            customer_image: getFullUrl(item.customer_image), // 🟢 Added full URL for customer profile photo
+            status: item.status || 'pending',
             total_value: parseFloat(item.total_value || 0).toFixed(2),
             estimated_amount: parseFloat(item.estimated_amount || 0).toFixed(2),
             incentive: parseFloat(item.incentive || 0).toFixed(2),
@@ -922,13 +927,14 @@ export const getHistoryDetail = async (req, res, next) => {
         const { id } = req.params;
         const rider = await getRiderInfo(req);
 
-        const baseUrl = process.env.BASE_URL || 'https://webapp.prosfata.space';
-        const getFullUrl = (path) => (!path ? null : (path.startsWith('http') ? path : `${baseUrl}/${path.replace(/^\//, '')}`));
+        const baseUrl = (process.env.BASE_URL || 'https://webapp.prosfata.space').replace(/\/$/, '');
+        const getFullUrl = (path) => (!path ? null : (path.startsWith('http') ? path.replace('http://', 'https://') : `${baseUrl}/${path.replace(/^\//, '')}`));
 
-        // 1. Fetch Master Record with Financial Result
+        // 1. Fetch Master Record with Financial Result & Customer profile_image
         const [pickup] = await db.query(`
             SELECT 
                 p.*, u.full_name as customer_name, u.phone as customer_phone, 
+                u.profile_image as customer_image,
                 addr.address_line, addr.landmark
             FROM pickups p
             JOIN customers c ON p.customer_id = c.id
@@ -939,6 +945,8 @@ export const getHistoryDetail = async (req, res, next) => {
         );
 
         if (!pickup.length) throw new ApiError(404, "History record not found.");
+
+        const record = pickup[0];
 
         // 2. Fetch Itemized Final Audit including User Photos
         const [items] = await db.query(`
@@ -962,7 +970,7 @@ export const getHistoryDetail = async (req, res, next) => {
                 ...item,
                 subtotal: (parseFloat(item.actual_weight) * parseFloat(item.final_rate_per_unit)).toFixed(2),
                 product_image: getFullUrl(item.product_image),
-                user_photos: photosArray.map(p => getFullUrl(p)) // 🔥 These are the missing photos
+                user_photos: photosArray.map(p => getFullUrl(p))
             };
         });
 
@@ -973,13 +981,25 @@ export const getHistoryDetail = async (req, res, next) => {
             WHERE pickup_id = ?
             ORDER BY created_at ASC`, [id]);
 
+        // Parse and resolve proof_image_after
+        let parsedRiderProofs = [];
+        if (record.proof_image_after) {
+            try {
+                const parsed = JSON.parse(record.proof_image_after);
+                parsedRiderProofs = Array.isArray(parsed) ? parsed.map(p => getFullUrl(p)) : [getFullUrl(parsed)];
+            } catch (e) {
+                // If it's a raw string instead of a stringified JSON array
+                parsedRiderProofs = [getFullUrl(record.proof_image_after)];
+            }
+        }
+
         res.json({
             success: true,
             data: {
                 pickup: {
-                    ...pickup[0],
-                    // Also format the proof_image_after (rider's upload) if it exists
-                    proof_image_after: pickup[0].proof_image_after ? JSON.parse(pickup[0].proof_image_after).map(p => getFullUrl(p)) : []
+                    ...record,
+                    customer_image: getFullUrl(record.customer_image), // 🟢 Appends full BASE_URL for customer profile photo
+                    proof_image_after: parsedRiderProofs
                 },
                 items: transformedItems,
                 audit_trail: timeline

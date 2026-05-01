@@ -95,14 +95,16 @@ const updateWallet = async (conn, userId, amount, type, source, refType, refId, 
 };
 
 /**
- * 1. GET PICKUP DETAILS (Real-App Tracking + Timeline)
+ * 1. GET PICKUP DETAILS (Real-App Tracking + Timeline with Rider profile image)
  */
 export const getPickupDetails = async (req, res, next) => {
     try {
         const { id } = req.params;
+
+        // 1. Fetch Pickup Master Data including the rider's profile image
         const [pickupRows] = await db.query(
             `SELECT p.*, u.full_name as customer_name, u.phone as customer_phone, u.email as customer_email,
-                r_u.full_name as rider_name, r_u.phone as rider_phone,
+                r_u.full_name as rider_name, r_u.phone as rider_phone, r_u.profile_image as rider_image,
                 r.current_latitude as rider_live_lat, r.current_longitude as rider_live_lng,
                 ag.business_name as hub_name, ag.latitude as hub_lat, ag.longitude as hub_lng,
                 addr.address_line, addr.latitude as addr_lat, addr.longitude as addr_lng
@@ -119,22 +121,36 @@ export const getPickupDetails = async (req, res, next) => {
         if (!pickupRows.length) throw new ApiError(404, "Pickup not found");
         const pickup = pickupRows[0];
 
+        // BASE_URL and URL Normalization Helper
         const getFullUrl = (path) => {
             if (!path) return null;
-            if (path.startsWith('http')) return path;
-            return `${process.env.BASE_URL || 'https://webapp.prosfata.space'}/${path.replace(/^\//, "")}`;
+            if (path.startsWith('http')) return path.replace('http://', 'https://');
+            const baseUrl = (process.env.BASE_URL || 'https://webapp.prosfata.space').replace(/\/$/, '');
+            return `${baseUrl}/${path.replace(/^\//, "")}`;
         };
 
+        // 2. Fetch the associated pickup items
         const [items] = await db.query(
             `SELECT pi.*, si.name_en, si.name_bn, si.unit, si.image_url as product_image
              FROM pickup_items pi JOIN scrap_items si ON pi.item_id = si.id WHERE pi.pickup_id = ?`, [id]
         );
 
+        // 3. Normalize all item and catalog image URLs
+        const transformedItems = items.map(item => ({
+            ...item,
+            product_image: getFullUrl(item.product_image)
+        }));
+
         res.json({
             success: true,
             data: {
-                pickup: { ...pickup, proof_image_before: getFullUrl(pickup.proof_image_before), proof_image_after: getFullUrl(pickup.proof_image_after) },
-                items,
+                pickup: {
+                    ...pickup,
+                    rider_image: getFullUrl(pickup.rider_image),
+                    proof_image_before: getFullUrl(pickup.proof_image_before),
+                    proof_image_after: getFullUrl(pickup.proof_image_after)
+                },
+                items: transformedItems,
             }
         });
     } catch (err) { next(err); }
