@@ -321,7 +321,7 @@ export const getMyTasks = async (req, res, next) => {
                 END ASC, 
                 p.scheduled_date ASC`, [riderId]);
 
-        // 2. Calculate Total Liability (Cash collected but not settled to Hub)
+        // 2. Calculate Total Liability
         const [liabilityRow] = await db.query(`
             SELECT SUM(rider_collected_cash) as total_liability 
             FROM pickups 
@@ -331,7 +331,10 @@ export const getMyTasks = async (req, res, next) => {
 
         const totalLiability = parseFloat(liabilityRow[0].total_liability || 0);
 
-        // 3. Transform Tasks for UI Consistency
+        // 3. Get Base URL from Environment variables (strip trailing slash if present)
+        const baseUrl = (process.env.BASE_URL || '').replace(/\/$/, '');
+
+        // 4. Transform Tasks for UI Consistency
         const missionQueue = tasks.map(task => {
             const addressParts = [];
             if (task.house_no) addressParts.push(`House ${task.house_no}`);
@@ -339,14 +342,25 @@ export const getMyTasks = async (req, res, next) => {
             if (task.address_line) addressParts.push(task.address_line);
             if (task.landmark) addressParts.push(`(${task.landmark})`);
 
-            // Normalize profile image URL fallback (converts insecure links to HTTPS)
-            const normalizedImage = task.customer_image 
-                ? task.customer_image.replace('http://', 'https://') 
-                : null;
+            // 🟢 FULL ADDRESS CONCATENATION LOGIC
+            let fullCustomerImageUrl = null;
+            if (task.customer_image) {
+                if (task.customer_image.startsWith('http://') || task.customer_image.startsWith('https://')) {
+                    // It's already a complete URL, just sanitize protocol
+                    fullCustomerImageUrl = task.customer_image.replace('http://', 'https://');
+                } else {
+                    // It's a relative storage path (e.g., /uploads/profiles/image.png)
+                    const cleanImagePath = task.customer_image.startsWith('/')
+                        ? task.customer_image
+                        : `/${task.customer_image}`;
+
+                    fullCustomerImageUrl = `${baseUrl}${cleanImagePath}`;
+                }
+            }
 
             return {
                 ...task,
-                customer_image: normalizedImage,
+                customer_image: fullCustomerImageUrl,
                 display_address: addressParts.length > 0 ? addressParts.join(', ') : "Location not specified",
                 estimated_amount: parseFloat(task.estimated_amount || 0).toFixed(2),
                 is_urgent: new Date(task.scheduled_date) <= new Date()
