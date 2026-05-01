@@ -329,7 +329,7 @@ export const openRiderShift = async (req, res, next) => {
 
         await conn.beginTransaction();
 
-        // 1. Get the rider's user_id and current balance safely
+        // 1. Get the rider's user_id safely
         const [rider] = await conn.query(
             "SELECT user_id, cash_held_liability FROM riders WHERE id = ?",
             [rider_id]
@@ -339,13 +339,13 @@ export const openRiderShift = async (req, res, next) => {
         }
         const userId = rider[0].user_id;
 
-        // Fetch the current wallet balance to calculate balance_before and balance_after
+        // 🟢 FIXED: Using 'wallet_accounts' instead of 'wallets'
         const [wallet] = await conn.query(
-            "SELECT id, balance FROM wallets WHERE user_id = ?",
+            "SELECT id, balance FROM wallet_accounts WHERE user_id = ?",
             [userId]
         );
         if (!wallet.length) {
-            throw new Error("Rider wallet not found");
+            throw new Error("Rider wallet account not found");
         }
         const walletId = wallet[0].id;
         const balanceBefore = parseFloat(wallet[0].balance);
@@ -369,7 +369,7 @@ export const openRiderShift = async (req, res, next) => {
                 [numAmount, ` | Top-up: ৳${numAmount}`, activeShiftId]
             );
 
-            // Directly insert the transaction with explicitly mapped valid ENUM strings
+            // Log directly into transactions
             await conn.query(
                 `INSERT INTO wallet_transactions 
                     (wallet_id, type, source, reference_type, reference_id, amount, balance_before, balance_after, description_en, status) 
@@ -392,7 +392,7 @@ export const openRiderShift = async (req, res, next) => {
             );
             activeShiftId = result.insertId;
 
-            // Directly insert the transaction with explicitly mapped valid ENUM strings
+            // Log directly into transactions
             await conn.query(
                 `INSERT INTO wallet_transactions 
                     (wallet_id, type, source, reference_type, reference_id, amount, balance_before, balance_after, description_en, status) 
@@ -408,9 +408,9 @@ export const openRiderShift = async (req, res, next) => {
             );
         }
 
-        // 3. Update the wallet balance in the wallets table
+        // 3. 🟢 FIXED: Update the balance inside 'wallet_accounts'
         await conn.query(
-            "UPDATE wallets SET balance = balance + ? WHERE id = ?",
+            "UPDATE wallet_accounts SET balance = balance + ?, last_transaction_at = NOW() WHERE id = ?",
             [numAmount, walletId]
         );
 
