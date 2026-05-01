@@ -392,7 +392,7 @@ export const getTaskDetail = async (req, res, next) => {
         const { id } = req.params;
         const rider = await getRiderInfo(req);
 
-        // 1. Fetch Pickup Master Data with Schedule Highlights
+        // 1. Fetch Pickup Master Data with Schedule Highlights & Customer profile_image
         const [taskRows] = await db.query(`
             SELECT 
                 p.id, p.booking_code, p.status, p.base_amount, p.customer_note,
@@ -401,6 +401,7 @@ export const getTaskDetail = async (req, res, next) => {
                 p.scheduled_date, p.scheduled_time_slot,
                 -- Customer Details
                 u.full_name as customer_name, u.phone as customer_phone,
+                u.profile_image as customer_image,
                 addr.address_line, addr.house_no, addr.road_no, addr.landmark,
                 addr.latitude as addr_lat, addr.longitude as addr_lng, 
                 p.rider_id, p.created_at as order_made_at
@@ -444,9 +445,11 @@ export const getTaskDetail = async (req, res, next) => {
             [id]
         );
 
-        const baseUrl = process.env.BASE_URL || 'https://webapp.prosfata.space';
-        const getFullUrl = (path) => (!path ? null : (path.startsWith('http') ? path : `${baseUrl}/${path.replace(/^\//, '')}`));
+        // BASE_URL and URL Normalization Helper
+        const baseUrl = (process.env.BASE_URL || 'https://webapp.prosfata.space').replace(/\/$/, '');
+        const getFullUrl = (path) => (!path ? null : (path.startsWith('http') ? path.replace('http://', 'https://') : `${baseUrl}/${path.replace(/^\//, '')}`));
 
+        // 4. Transform Items with complete URLs
         const transformedItems = items.map(item => {
             let photosArray = [];
             try { photosArray = item.user_uploaded_photo ? JSON.parse(item.user_uploaded_photo) : []; } catch (e) { photosArray = []; }
@@ -465,7 +468,7 @@ export const getTaskDetail = async (req, res, next) => {
             data: {
                 pickup: {
                     ...task,
-                    // Highlights for UI
+                    customer_image: getFullUrl(task.customer_image), // 🟢 Appends full BASE_URL to the customer image
                     formatted_schedule: `${new Date(task.scheduled_date).toDateString()} | ${task.scheduled_time_slot}`,
                 },
                 scenarios: {
@@ -474,7 +477,6 @@ export const getTaskDetail = async (req, res, next) => {
                     base_fare: parseFloat(task.base_amount || 0).toFixed(2)
                 },
                 items: transformedItems,
-                // Full history of the order for the rider
                 order_timeline: timeline
             }
         });
