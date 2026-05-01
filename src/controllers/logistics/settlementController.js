@@ -323,6 +323,10 @@ export const openRiderShift = async (req, res, next) => {
         const { rider_id, amount_issued, notes } = req.body;
         const numAmount = parseFloat(amount_issued);
 
+        if (isNaN(numAmount) || numAmount <= 0) {
+            return res.status(400).json({ success: false, message: "Valid amount is required" });
+        }
+
         await conn.beginTransaction();
 
         // 1. Check if the rider already has an active shift
@@ -330,6 +334,12 @@ export const openRiderShift = async (req, res, next) => {
             "SELECT id FROM rider_shifts WHERE rider_id = ? AND status = 'active'",
             [rider_id]
         );
+
+        const [rider] = await conn.query("SELECT user_id FROM riders WHERE id = ?", [rider_id]);
+        if (!rider.length) {
+            throw new Error("Rider node not found");
+        }
+        const userId = rider[0].user_id;
 
         if (active.length > 0) {
             // SCENARIO: TOP-UP (Shift already exists)
@@ -341,9 +351,17 @@ export const openRiderShift = async (req, res, next) => {
                 [numAmount, ` | Top-up: ৳${numAmount}`, shiftId]
             );
 
-            // Log the top-up in the ledger
-            const [rider] = await conn.query("SELECT user_id FROM riders WHERE id = ?", [rider_id]);
-            await updateWallet(conn, rider[0].user_id, numAmount, 'credit', 'hub_issue', 'shift', shiftId, `Shift Top-up: ৳${numAmount}`);
+            // 🟢 FIXED: 'hub_issue' is a valid source, but we change the reference_type from 'shift' to 'adjustment'
+            await updateWallet(
+                conn,
+                userId,
+                numAmount,
+                'credit',
+                'hub_issue',  // 🟢 Valid source from your ENUM
+                'adjustment', // 🟢 Valid reference_type fallback
+                shiftId,
+                `Shift Top-up: ৳${numAmount}`
+            );
 
         } else {
             // SCENARIO: NEW SHIFT
@@ -352,8 +370,17 @@ export const openRiderShift = async (req, res, next) => {
                 [rider_id, req.user.id, numAmount, notes]
             );
 
-            const [rider] = await conn.query("SELECT user_id FROM riders WHERE id = ?", [rider_id]);
-            await updateWallet(conn, rider[0].user_id, numAmount, 'credit', 'hub_issue', 'shift', result.insertId, `Morning Cash Issued: ৳${numAmount}`);
+            // 🟢 FIXED: 'hub_issue' is a valid source, but we change the reference_type from 'shift' to 'adjustment'
+            await updateWallet(
+                conn,
+                userId,
+                numAmount,
+                'credit',
+                'hub_issue',  // 🟢 Valid source from your ENUM
+                'adjustment', // 🟢 Valid reference_type fallback
+                result.insertId,
+                `Morning Cash Issued: ৳${numAmount}`
+            );
         }
 
         // 2. ALWAYS update the rider's total liability
