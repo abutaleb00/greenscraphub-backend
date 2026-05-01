@@ -339,7 +339,7 @@ export const openRiderShift = async (req, res, next) => {
         }
         const userId = rider[0].user_id;
 
-        // 🟢 FIXED: Using 'wallet_accounts' instead of 'wallets'
+        // Fetch user wallet account from 'wallet_accounts'
         const [wallet] = await conn.query(
             "SELECT id, balance FROM wallet_accounts WHERE user_id = ?",
             [userId]
@@ -369,11 +369,11 @@ export const openRiderShift = async (req, res, next) => {
                 [numAmount, ` | Top-up: ৳${numAmount}`, activeShiftId]
             );
 
-            // Log directly into transactions
+            // 🟢 FIXED: Changed source to 'adjustment' to strictly avoid truncation errors
             await conn.query(
                 `INSERT INTO wallet_transactions 
                     (wallet_id, type, source, reference_type, reference_id, amount, balance_before, balance_after, description_en, status) 
-                 VALUES (?, 'credit', 'hub_issue', 'adjustment', ?, ?, ?, ?, ?, 'completed')`,
+                 VALUES (?, 'credit', 'adjustment', 'adjustment', ?, ?, ?, ?, ?, 'completed')`,
                 [
                     walletId,
                     activeShiftId,
@@ -392,11 +392,11 @@ export const openRiderShift = async (req, res, next) => {
             );
             activeShiftId = result.insertId;
 
-            // Log directly into transactions
+            // 🟢 FIXED: Changed source to 'adjustment' to strictly avoid truncation errors
             await conn.query(
                 `INSERT INTO wallet_transactions 
                     (wallet_id, type, source, reference_type, reference_id, amount, balance_before, balance_after, description_en, status) 
-                 VALUES (?, 'credit', 'hub_issue', 'adjustment', ?, ?, ?, ?, ?, 'completed')`,
+                 VALUES (?, 'credit', 'adjustment', 'adjustment', ?, ?, ?, ?, ?, 'completed')`,
                 [
                     walletId,
                     activeShiftId,
@@ -408,7 +408,7 @@ export const openRiderShift = async (req, res, next) => {
             );
         }
 
-        // 3. 🟢 FIXED: Update the balance inside 'wallet_accounts'
+        // 3. Update the balance inside 'wallet_accounts'
         await conn.query(
             "UPDATE wallet_accounts SET balance = balance + ?, last_transaction_at = NOW() WHERE id = ?",
             [numAmount, walletId]
