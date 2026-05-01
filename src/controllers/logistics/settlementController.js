@@ -329,9 +329,45 @@ export const openRiderShift = async (req, res, next) => {
 
         await conn.beginTransaction();
 
-        // 1. Get the rider's user_id safely
+        // 1. Get valid ENUM values for 'reference_type' directly from the database
+        const [enumSchema] = await conn.query(
+            `SELECT COLUMN_TYPE 
+             FROM INFORMATION_SCHEMA.COLUMNS 
+             WHERE TABLE_SCHEMA = DATABASE() 
+               AND TABLE_NAME = 'wallet_transactions' 
+               AND COLUMN_NAME = 'reference_type'`
+        );
+
+        let safeRefType = 'adjustment'; // Default fallback
+        if (enumSchema.length > 0 && enumSchema[0].COLUMN_TYPE.startsWith('enum')) {
+            // Extract the actual string options from enum('option1','option2'...)
+            const matches = enumSchema[0].COLUMN_TYPE.match(/'([^']+)'/g);
+            if (matches && matches.length > 0) {
+                // Pick the very first valid enum option the DB accepts
+                safeRefType = matches[0].replace(/'/g, '');
+            }
+        }
+
+        // 2. Get valid ENUM values for 'source' column
+        const [sourceSchema] = await conn.query(
+            `SELECT COLUMN_TYPE 
+             FROM INFORMATION_SCHEMA.COLUMNS 
+             WHERE TABLE_SCHEMA = DATABASE() 
+               AND TABLE_NAME = 'wallet_transactions' 
+               AND COLUMN_NAME = 'source'`
+        );
+
+        let safeSource = 'adjustment'; // Default fallback
+        if (sourceSchema.length > 0 && sourceSchema[0].COLUMN_TYPE.startsWith('enum')) {
+            const matches = sourceSchema[0].COLUMN_TYPE.match(/'([^']+)'/g);
+            if (matches && matches.length > 0) {
+                safeSource = matches[0].replace(/'/g, '');
+            }
+        }
+
+        // 3. Get the rider's user_id safely
         const [rider] = await conn.query(
-            "SELECT user_id, cash_held_liability FROM riders WHERE id = ?", 
+            "SELECT user_id, cash_held_liability FROM riders WHERE id = ?",
             [rider_id]
         );
         if (!rider.length) {
@@ -341,7 +377,7 @@ export const openRiderShift = async (req, res, next) => {
 
         // Fetch user wallet account from 'wallet_accounts'
         const [wallet] = await conn.query(
-            "SELECT id, balance FROM wallet_accounts WHERE user_id = ?", 
+            "SELECT id, balance FROM wallet_accounts WHERE user_id = ?",
             [userId]
         );
         if (!wallet.length) {
@@ -351,7 +387,7 @@ export const openRiderShift = async (req, res, next) => {
         const balanceBefore = parseFloat(wallet[0].balance);
         const balanceAfter = balanceBefore + numAmount;
 
-        // 2. Check if the rider already has an active shift
+        // 4. Check if the rider already has an active shift
         const [active] = await conn.query(
             "SELECT id FROM rider_shifts WHERE rider_id = ? AND status = 'active'",
             [rider_id]
@@ -369,13 +405,15 @@ export const openRiderShift = async (req, res, next) => {
                 [numAmount, ` | Top-up: ৳${numAmount}`, activeShiftId]
             );
 
-            // 🟢 Explicit column assignment to prevent truncation/mismatch
+            // Insert using the dynamically matched DB safe options
             await conn.query(
                 `INSERT INTO wallet_transactions 
                     (wallet_id, type, source, reference_type, reference_id, amount, balance_before, balance_after, description_en, status) 
-                 VALUES (?, 'credit', 'adjustment', 'adjustment', ?, ?, ?, ?, ?, 'completed')`,
+                 VALUES (?, 'credit', ?, ?, ?, ?, ?, ?, ?, 'completed')`,
                 [
                     walletId,
+                    safeSource,
+                    safeRefType,
                     activeShiftId,
                     numAmount,
                     balanceBefore,
@@ -392,13 +430,15 @@ export const openRiderShift = async (req, res, next) => {
             );
             activeShiftId = result.insertId;
 
-            // 🟢 Explicit column assignment to prevent truncation/mismatch
+            // Insert using the dynamically matched DB safe options
             await conn.query(
                 `INSERT INTO wallet_transactions 
                     (wallet_id, type, source, reference_type, reference_id, amount, balance_before, balance_after, description_en, status) 
-                 VALUES (?, 'credit', 'adjustment', 'adjustment', ?, ?, ?, ?, ?, 'completed')`,
+                 VALUES (?, 'credit', ?, ?, ?, ?, ?, ?, ?, 'completed')`,
                 [
                     walletId,
+                    safeSource,
+                    safeRefType,
                     activeShiftId,
                     numAmount,
                     balanceBefore,
@@ -408,13 +448,13 @@ export const openRiderShift = async (req, res, next) => {
             );
         }
 
-        // 3. Update the balance inside 'wallet_accounts'
+        // 5. Update the balance inside 'wallet_accounts'
         await conn.query(
             "UPDATE wallet_accounts SET balance = balance + ?, last_transaction_at = NOW() WHERE id = ?",
             [numAmount, walletId]
         );
 
-        // 4. ALWAYS update the rider's total liability
+        // 6. ALWAYS update the rider's total liability
         await conn.query(
             "UPDATE riders SET cash_held_liability = cash_held_liability + ? WHERE id = ?",
             [numAmount, rider_id]
