@@ -33,7 +33,7 @@ const updateWallet = async (conn, userId, amount, type, source, refType, refId, 
     // 🛡️ LEADER SYSTEM PROTECTION: 
     // These sources represent Company Cash movement, not Rider Earnings.
     // They must NEVER affect the 'balance' column.
-    const operationalSources = ['hub_issue', 'hub_settlement', 'customer_payout'];
+    const operationalSources = ['hub_issue', 'hub_settlement', 'customer_payout', 'adjustment'];
     const isOperational = operationalSources.includes(source);
 
     try {
@@ -315,7 +315,7 @@ export const completePickup = async (req, res, next) => {
 
 /**
  * 🟢 ADMIN: OPEN SHIFT / ISSUE CASH (Flexible)
- * Allows both starting a shift AND topping up an active one.
+ * Protects rider balance by using the updateWallet operational filters.
  */
 export const openRiderShift = async (req, res, next) => {
     const conn = await db.getConnection();
@@ -329,43 +329,7 @@ export const openRiderShift = async (req, res, next) => {
 
         await conn.beginTransaction();
 
-        // 1. Get valid ENUM values for 'reference_type' directly from the database
-        const [enumSchema] = await conn.query(
-            `SELECT COLUMN_TYPE 
-             FROM INFORMATION_SCHEMA.COLUMNS 
-             WHERE TABLE_SCHEMA = DATABASE() 
-               AND TABLE_NAME = 'wallet_transactions' 
-               AND COLUMN_NAME = 'reference_type'`
-        );
-
-        let safeRefType = 'adjustment'; // Default fallback
-        if (enumSchema.length > 0 && enumSchema[0].COLUMN_TYPE.startsWith('enum')) {
-            // Extract the actual string options from enum('option1','option2'...)
-            const matches = enumSchema[0].COLUMN_TYPE.match(/'([^']+)'/g);
-            if (matches && matches.length > 0) {
-                // Pick the very first valid enum option the DB accepts
-                safeRefType = matches[0].replace(/'/g, '');
-            }
-        }
-
-        // 2. Get valid ENUM values for 'source' column
-        const [sourceSchema] = await conn.query(
-            `SELECT COLUMN_TYPE 
-             FROM INFORMATION_SCHEMA.COLUMNS 
-             WHERE TABLE_SCHEMA = DATABASE() 
-               AND TABLE_NAME = 'wallet_transactions' 
-               AND COLUMN_NAME = 'source'`
-        );
-
-        let safeSource = 'adjustment'; // Default fallback
-        if (sourceSchema.length > 0 && sourceSchema[0].COLUMN_TYPE.startsWith('enum')) {
-            const matches = sourceSchema[0].COLUMN_TYPE.match(/'([^']+)'/g);
-            if (matches && matches.length > 0) {
-                safeSource = matches[0].replace(/'/g, '');
-            }
-        }
-
-        // 3. Get the rider's user_id safely
+        // 1. Get the rider's user_id safely
         const [rider] = await conn.query(
             "SELECT user_id, cash_held_liability FROM riders WHERE id = ?",
             [rider_id]
@@ -375,19 +339,7 @@ export const openRiderShift = async (req, res, next) => {
         }
         const userId = rider[0].user_id;
 
-        // Fetch user wallet account from 'wallet_accounts'
-        const [wallet] = await conn.query(
-            "SELECT id, balance FROM wallet_accounts WHERE user_id = ?",
-            [userId]
-        );
-        if (!wallet.length) {
-            throw new Error("Rider wallet account not found");
-        }
-        const walletId = wallet[0].id;
-        const balanceBefore = parseFloat(wallet[0].balance);
-        const balanceAfter = balanceBefore + numAmount;
-
-        // 4. Check if the rider already has an active shift
+        // 2. Check if the rider already has an active shift
         const [active] = await conn.query(
             "SELECT id FROM rider_shifts WHERE rider_id = ? AND status = 'active'",
             [rider_id]
@@ -405,21 +357,16 @@ export const openRiderShift = async (req, res, next) => {
                 [numAmount, ` | Top-up: ৳${numAmount}`, activeShiftId]
             );
 
-            // Insert using the dynamically matched DB safe options
-            await conn.query(
-                `INSERT INTO wallet_transactions 
-                    (wallet_id, type, source, reference_type, reference_id, amount, balance_before, balance_after, description_en, status) 
-                 VALUES (?, 'credit', ?, ?, ?, ?, ?, ?, ?, 'completed')`,
-                [
-                    walletId,
-                    safeSource,
-                    safeRefType,
-                    activeShiftId,
-                    numAmount,
-                    balanceBefore,
-                    balanceAfter,
-                    `Shift Top-up: ৳${numAmount}`
-                ]
+            // 🛡️ Safe operational recording via your helper (doesn't touch withdrawable balance)
+            await updateWallet(
+                conn,
+                userId,
+                numAmount,
+                'credit',
+                'hub_issue',
+                'adjustment',
+                activeShiftId,
+                `Shift Top-up: ৳${numAmount}`
             );
 
         } else {
@@ -430,31 +377,20 @@ export const openRiderShift = async (req, res, next) => {
             );
             activeShiftId = result.insertId;
 
-            // Insert using the dynamically matched DB safe options
-            await conn.query(
-                `INSERT INTO wallet_transactions 
-                    (wallet_id, type, source, reference_type, reference_id, amount, balance_before, balance_after, description_en, status) 
-                 VALUES (?, 'credit', ?, ?, ?, ?, ?, ?, ?, 'completed')`,
-                [
-                    walletId,
-                    safeSource,
-                    safeRefType,
-                    activeShiftId,
-                    numAmount,
-                    balanceBefore,
-                    balanceAfter,
-                    `Morning Cash Issued: ৳${numAmount}`
-                ]
+            // 🛡️ Safe operational recording via your helper (doesn't touch withdrawable balance)
+            await updateWallet(
+                conn,
+                userId,
+                numAmount,
+                'credit',
+                'hub_issue',
+                'adjustment',
+                activeShiftId,
+                `Morning Cash Issued: ৳${numAmount}`
             );
         }
 
-        // 5. Update the balance inside 'wallet_accounts'
-        await conn.query(
-            "UPDATE wallet_accounts SET balance = balance + ?, last_transaction_at = NOW() WHERE id = ?",
-            [numAmount, walletId]
-        );
-
-        // 6. ALWAYS update the rider's total liability
+        // 3. ALWAYS update the rider's total liability
         await conn.query(
             "UPDATE riders SET cash_held_liability = cash_held_liability + ? WHERE id = ?",
             [numAmount, rider_id]
