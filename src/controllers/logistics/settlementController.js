@@ -409,84 +409,86 @@ export const settleRiderIntent = async (req, res, next) => {
  * 5. EVENING: SETTLE SHIFT & RETURN CASH (Admin Finalizes)
  * Fixed: Now looks for 'settlement_pending' status and resets liability.
  */
+/**
+ * 🟢 ADMIN: SETTLE SHIFT & INGEST INVENTORY
+ * Finalizes shift, clears cash liability, and moves scrap to Hub stock.
+ */
 export const settleRiderShift = async (req, res, next) => {
     const conn = await db.getConnection();
     try {
         const { shift_id, cash_returned, scrap_value, notes } = req.body;
-
         await conn.beginTransaction();
 
-        // 1. Fetch the shift. We allow 'active' OR 'settlement_pending' to be settled.
-        // We also lock the row (FOR UPDATE) to prevent double-settlement.
+        // 1. Get Shift & Rider Info
         const [shiftRows] = await conn.query(
             "SELECT * FROM rider_shifts WHERE id = ? AND status IN ('active', 'settlement_pending') FOR UPDATE",
             [shift_id]
         );
-
-        if (!shiftRows.length) {
-            throw new ApiError(404, "No active or pending shift found for this ID.");
-        }
-
+        if (!shiftRows.length) throw new ApiError(404, "Shift record not found.");
         const shift = shiftRows[0];
 
-        // 2. Update the Shift Record
-        await conn.query(
-            `UPDATE rider_shifts SET 
-                cash_returned = ?, 
-                scrap_value_received = ?, 
-                status = 'completed', 
-                closed_at = NOW(), 
-                notes = ? 
-             WHERE id = ?`,
-            [cash_returned, scrap_value, notes, shift_id]
-        );
-
-        // 3. Reset Rider Liability & Inventory
-        // We subtract the cash returned from liability and reset the truck load to 0.
-        await conn.query(
-            `UPDATE riders SET 
-                cash_held_liability = cash_held_liability - ?, 
-                total_collected_weight_kg = 0 
-             WHERE id = ?`,
-            [cash_returned, shift.rider_id]
-        );
-
-        // 4. Mark all pickups from this shift as settled
-        await conn.query(
-            `UPDATE pickups SET 
-                is_settled_to_hub = 1 
-             WHERE rider_id = ? AND status = 'completed' AND is_settled_to_hub = 0`,
+        // 2. Fetch all completed pickups by this rider that haven't been settled to hub yet
+        const [pendingPickups] = await conn.query(
+            "SELECT id FROM pickups WHERE rider_id = ? AND status = 'completed' AND is_settled_to_hub = 0",
             [shift.rider_id]
         );
 
-        // 5. Update Ledger (Using the helper we built)
-        // We use 'customer_payout' style logic here so it doesn't turn the personal wallet negative
-        const [rider] = await conn.query("SELECT user_id FROM riders WHERE id = ?", [shift.rider_id]);
+        // 3. INVENTORY LOGIC: Move items to Hub Stock
+        if (pendingPickups.length > 0) {
+            const pickupIds = pendingPickups.map(p => p.id);
 
-        await updateWallet(
-            conn,
-            rider[0].user_id,
-            cash_returned,
-            'debit',
-            'hub_settlement',
-            'shift',
-            shift_id,
-            `Handover to Hub: ৳${cash_returned} | ${scrap_value}kg`
+            // Get item weights and categories
+            const [itemsToStock] = await conn.query(`
+                SELECT pi.actual_weight, si.category_id 
+                FROM pickup_items pi
+                JOIN scrap_items si ON pi.item_id = si.id
+                WHERE pi.pickup_id IN (?)`, [pickupIds]);
+
+            // Update Hub Inventory
+            for (const item of itemsToStock) {
+                if (parseFloat(item.actual_weight) <= 0) continue;
+                await conn.query(`
+                    INSERT INTO hub_inventory (agent_id, category_id, current_weight)
+                    VALUES ((SELECT agent_id FROM pickups WHERE id = ?), ?, ?)
+                    ON DUPLICATE KEY UPDATE 
+                        current_weight = current_weight + VALUES(current_weight),
+                        last_updated_at = NOW()`,
+                    [pickupIds[0], item.category_id, item.actual_weight]
+                );
+            }
+
+            // Mark these specific orders as Settled
+            await conn.query(
+                "UPDATE pickups SET is_settled_to_hub = 1 WHERE id IN (?)",
+                [pickupIds]
+            );
+        }
+
+        // 4. SHIFT & LIABILITY LOGIC
+        // Close the shift
+        await conn.query(
+            `UPDATE rider_shifts SET cash_returned = ?, scrap_value_received = ?, status = 'completed', closed_at = NOW(), notes = ? WHERE id = ?`,
+            [cash_returned, scrap_value, notes, shift_id]
         );
 
-        await conn.commit();
+        // Deduct liability (preventing negative values)
+        await conn.query(
+            "UPDATE riders SET cash_held_liability = GREATEST(0, cash_held_liability - ?), total_collected_weight_kg = 0 WHERE id = ?",
+            [cash_returned, shift.rider_id]
+        );
 
-        res.json({
-            success: true,
-            message: "Settlement successful. Rider liability updated."
-        });
+        // 5. FINANCE: Log the transaction
+        const [riderUser] = await conn.query("SELECT user_id FROM riders WHERE id = ?", [shift.rider_id]);
+        await updateWallet(conn, riderUser[0].user_id, cash_returned, 'debit', 'hub_settlement', 'shift', shift_id, `Shift Settle: ৳${cash_returned} | ${scrap_value}kg`);
+
+        await conn.commit();
+        res.json({ success: true, message: "Shift closed and inventory synced to Hub." });
 
     } catch (err) {
         if (conn) await conn.rollback();
-        console.error("[SETTLE_ERROR]", err.message);
         next(err);
     } finally {
-        if (conn) conn.release();
+        conn.release();
     }
 };
 
