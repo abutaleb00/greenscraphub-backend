@@ -329,61 +329,92 @@ export const openRiderShift = async (req, res, next) => {
 
         await conn.beginTransaction();
 
-        // 1. Check if the rider already has an active shift
-        const [active] = await conn.query(
-            "SELECT id FROM rider_shifts WHERE rider_id = ? AND status = 'active'",
+        // 1. Get the rider's user_id and current balance safely
+        const [rider] = await conn.query(
+            "SELECT user_id, cash_held_liability FROM riders WHERE id = ?",
             [rider_id]
         );
-
-        const [rider] = await conn.query("SELECT user_id FROM riders WHERE id = ?", [rider_id]);
         if (!rider.length) {
             throw new Error("Rider node not found");
         }
         const userId = rider[0].user_id;
 
+        // Fetch the current wallet balance to calculate balance_before and balance_after
+        const [wallet] = await conn.query(
+            "SELECT id, balance FROM wallets WHERE user_id = ?",
+            [userId]
+        );
+        if (!wallet.length) {
+            throw new Error("Rider wallet not found");
+        }
+        const walletId = wallet[0].id;
+        const balanceBefore = parseFloat(wallet[0].balance);
+        const balanceAfter = balanceBefore + numAmount;
+
+        // 2. Check if the rider already has an active shift
+        const [active] = await conn.query(
+            "SELECT id FROM rider_shifts WHERE rider_id = ? AND status = 'active'",
+            [rider_id]
+        );
+
+        let activeShiftId = null;
+
         if (active.length > 0) {
-            // SCENARIO: TOP-UP (Shift already exists)
-            const shiftId = active[0].id;
+            // SCENARIO A: TOP-UP (Shift already exists)
+            activeShiftId = active[0].id;
 
             // Increment the cash_issued on the existing shift
             await conn.query(
                 "UPDATE rider_shifts SET cash_issued = cash_issued + ?, notes = CONCAT(COALESCE(notes,''), ?) WHERE id = ?",
-                [numAmount, ` | Top-up: ৳${numAmount}`, shiftId]
+                [numAmount, ` | Top-up: ৳${numAmount}`, activeShiftId]
             );
 
-            // 🟢 FIXED: 'hub_issue' is a valid source, but we change the reference_type from 'shift' to 'adjustment'
-            await updateWallet(
-                conn,
-                userId,
-                numAmount,
-                'credit',
-                'hub_issue',  // 🟢 Valid source from your ENUM
-                'adjustment', // 🟢 Valid reference_type fallback
-                shiftId,
-                `Shift Top-up: ৳${numAmount}`
+            // Directly insert the transaction with explicitly mapped valid ENUM strings
+            await conn.query(
+                `INSERT INTO wallet_transactions 
+                    (wallet_id, type, source, reference_type, reference_id, amount, balance_before, balance_after, description_en, status) 
+                 VALUES (?, 'credit', 'hub_issue', 'adjustment', ?, ?, ?, ?, ?, 'completed')`,
+                [
+                    walletId,
+                    activeShiftId,
+                    numAmount,
+                    balanceBefore,
+                    balanceAfter,
+                    `Shift Top-up: ৳${numAmount}`
+                ]
             );
 
         } else {
-            // SCENARIO: NEW SHIFT
+            // SCENARIO B: NEW SHIFT
             const [result] = await conn.query(
                 "INSERT INTO rider_shifts (rider_id, admin_id, cash_issued, status, notes) VALUES (?, ?, ?, 'active', ?)",
                 [rider_id, req.user.id, numAmount, notes]
             );
+            activeShiftId = result.insertId;
 
-            // 🟢 FIXED: 'hub_issue' is a valid source, but we change the reference_type from 'shift' to 'adjustment'
-            await updateWallet(
-                conn,
-                userId,
-                numAmount,
-                'credit',
-                'hub_issue',  // 🟢 Valid source from your ENUM
-                'adjustment', // 🟢 Valid reference_type fallback
-                result.insertId,
-                `Morning Cash Issued: ৳${numAmount}`
+            // Directly insert the transaction with explicitly mapped valid ENUM strings
+            await conn.query(
+                `INSERT INTO wallet_transactions 
+                    (wallet_id, type, source, reference_type, reference_id, amount, balance_before, balance_after, description_en, status) 
+                 VALUES (?, 'credit', 'hub_issue', 'adjustment', ?, ?, ?, ?, ?, 'completed')`,
+                [
+                    walletId,
+                    activeShiftId,
+                    numAmount,
+                    balanceBefore,
+                    balanceAfter,
+                    `Morning Cash Issued: ৳${numAmount}`
+                ]
             );
         }
 
-        // 2. ALWAYS update the rider's total liability
+        // 3. Update the wallet balance in the wallets table
+        await conn.query(
+            "UPDATE wallets SET balance = balance + ? WHERE id = ?",
+            [numAmount, walletId]
+        );
+
+        // 4. ALWAYS update the rider's total liability
         await conn.query(
             "UPDATE riders SET cash_held_liability = cash_held_liability + ? WHERE id = ?",
             [numAmount, rider_id]
