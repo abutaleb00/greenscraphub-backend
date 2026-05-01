@@ -155,23 +155,30 @@ export const assignRiderController = async (req, res, next) => {
                     });
                 }
 
-                // B. PUSH NOTIFICATIONS
+                // To Customer (Target: customer)
                 if (data.customer_fcm) {
-                    await sendPushNotification(data.customer_fcm, "Rider Assigned! 🚚",
+                    await sendPushNotification(
+                        data.customer_fcm,
+                        "Rider Assigned! 🚚",
                         `${data.rider_name} is on the way for pickup ${data.booking_code}.`,
-                        { orderId: pickupId.toString(), type: "order_update" }
-                    );
-                }
-                if (data.rider_fcm) {
-                    await sendPushNotification(data.rider_fcm, "New Task! 📦",
-                        `Task ${data.booking_code} assigned. Tap to view location.`,
-                        {
-                            orderId: pickupId.toString(),
-                            type: "NEW_MISSION" // 🔥 This is the key for the frontend listener
-                        }
+                        { orderId: pickupId.toString(), type: "order_update" },
+                        'customer' // Explicitly target Customer App package
                     );
                 }
 
+                // To Rider (Target: rider)
+                if (data.rider_fcm) {
+                    await sendPushNotification(
+                        data.rider_fcm,
+                        "New Task! 📦",
+                        `Task ${data.booking_code} assigned. Tap to view location.`,
+                        {
+                            orderId: pickupId.toString(),
+                            type: "NEW_MISSION"
+                        },
+                        'rider' // Explicitly target Rider App package
+                    );
+                }
                 // C. EMAIL
                 if (data.rider_email && !data.rider_email.includes('example.com')) {
                     await sendRiderAssignmentEmail(data.rider_email, {
