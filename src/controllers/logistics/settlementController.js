@@ -369,14 +369,13 @@ export const openRiderShift = async (req, res, next) => {
                 [numAmount, ` | Top-up: ৳${numAmount}`, activeShiftId]
             );
 
-            // 🟢 FIXED: Changed source to 'adjustment' to strictly avoid truncation errors
+            // 🟢 FIXED: Using NULL for reference_type and reference_id to completely avoid any ENUM truncation errors
             await conn.query(
                 `INSERT INTO wallet_transactions 
                     (wallet_id, type, source, reference_type, reference_id, amount, balance_before, balance_after, description_en, status) 
-                 VALUES (?, 'credit', 'adjustment', 'adjustment', ?, ?, ?, ?, ?, 'completed')`,
+                 VALUES (?, 'credit', 'adjustment', NULL, NULL, ?, ?, ?, ?, 'completed')`,
                 [
                     walletId,
-                    activeShiftId,
                     numAmount,
                     balanceBefore,
                     balanceAfter,
@@ -392,14 +391,13 @@ export const openRiderShift = async (req, res, next) => {
             );
             activeShiftId = result.insertId;
 
-            // 🟢 FIXED: Changed source to 'adjustment' to strictly avoid truncation errors
+            // 🟢 FIXED: Using NULL for reference_type and reference_id to completely avoid any ENUM truncation errors
             await conn.query(
                 `INSERT INTO wallet_transactions 
                     (wallet_id, type, source, reference_type, reference_id, amount, balance_before, balance_after, description_en, status) 
-                 VALUES (?, 'credit', 'adjustment', 'adjustment', ?, ?, ?, ?, ?, 'completed')`,
+                 VALUES (?, 'credit', 'adjustment', NULL, NULL, ?, ?, ?, ?, 'completed')`,
                 [
                     walletId,
-                    activeShiftId,
                     numAmount,
                     balanceBefore,
                     balanceAfter,
