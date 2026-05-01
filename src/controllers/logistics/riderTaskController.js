@@ -193,25 +193,26 @@ export async function getRiderDashboard(req, res, next) {
         // 2. Fetch Active Missions (Optimized Queue with Customer profile_image)
         const [activeTasks] = await db.query(
             `SELECT 
-                p.id, p.booking_code, p.status, p.scheduled_time_slot,
-                u.full_name AS customer_name, u.phone AS customer_phone,
-                u.profile_image AS customer_image,
-                adr.address_line, adr.house_no, adr.road_no, adr.landmark,
-                adr.latitude, adr.longitude
-            FROM pickups p
-            INNER JOIN customers c ON p.customer_id = c.id
-            INNER JOIN users u ON c.user_id = u.id
-            LEFT JOIN addresses adr ON p.customer_address_id = adr.id
-            WHERE p.rider_id = ? 
-              AND p.status NOT IN ('completed', 'cancelled')
-              AND p.is_deleted = 0
-            ORDER BY 
-                CASE 
-                    WHEN p.status = 'weighing' THEN 1
-                    WHEN p.status = 'arrived' THEN 2
-                    WHEN p.status = 'rider_on_way' THEN 3
-                    ELSE 4 
-                END ASC, p.scheduled_date ASC`,
+        p.id, p.booking_code, p.status, p.scheduled_time_slot,
+        p.scheduled_date,
+        u.full_name AS customer_name, u.phone AS customer_phone,
+        u.profile_image AS customer_image,
+        adr.address_line, adr.house_no, adr.road_no, adr.landmark,
+        adr.latitude, adr.longitude
+        FROM pickups p
+        INNER JOIN customers c ON p.customer_id = c.id
+        INNER JOIN users u ON c.user_id = u.id
+        LEFT JOIN addresses adr ON p.customer_address_id = adr.id
+        WHERE p.rider_id = ? 
+        AND p.status NOT IN ('completed', 'cancelled')
+        AND p.is_deleted = 0
+        ORDER BY 
+        CASE 
+            WHEN p.status = 'weighing' THEN 1
+            WHEN p.status = 'arrived' THEN 2
+            WHEN p.status = 'rider_on_way' THEN 3
+            ELSE 4 
+        END ASC, p.scheduled_date ASC`,
             [riderId]
         );
 
@@ -268,6 +269,7 @@ export async function getRiderDashboard(req, res, next) {
                     id: t.id,
                     ref: t.booking_code,
                     status: t.status,
+                    scheduled_date: t.scheduled_date,
                     customer: {
                         name: t.customer_name,
                         phone: t.customer_phone,
