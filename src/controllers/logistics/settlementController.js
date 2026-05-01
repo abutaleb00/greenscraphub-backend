@@ -37,10 +37,10 @@ const updateWallet = async (conn, userId, amount, type, source, refType, refId, 
     const isOperational = operationalSources.includes(source);
 
     try {
-        // 1. Idempotency Check
+        // 1. 🟢 FIXED: Check amount to distinguish between Initial Morning Issue and Shift Top-ups
         const [existing] = await conn.query(
-            "SELECT id FROM wallet_transactions WHERE reference_type = ? AND reference_id = ? AND source = ?",
-            [refType, refId, source]
+            "SELECT id FROM wallet_transactions WHERE reference_type = ? AND reference_id = ? AND source = ? AND amount = ?",
+            [refType, refId, source, numericAmount]
         );
         if (existing.length > 0) return existing[0].id;
 
@@ -342,7 +342,7 @@ export const openRiderShift = async (req, res, next) => {
         if (enumSchema.length > 0 && enumSchema[0].COLUMN_TYPE.startsWith('enum')) {
             const matches = enumSchema[0].COLUMN_TYPE.match(/'([^']+)'/g);
             if (matches && matches.length > 0) {
-                safeRefType = matches[0].replace(/'/g, ''); // Auto-pick first valid DB string
+                safeRefType = matches[0].replace(/'/g, '');
             }
         }
 
@@ -359,7 +359,7 @@ export const openRiderShift = async (req, res, next) => {
         if (sourceSchema.length > 0 && sourceSchema[0].COLUMN_TYPE.startsWith('enum')) {
             const matches = sourceSchema[0].COLUMN_TYPE.match(/'([^']+)'/g);
             if (matches && matches.length > 0) {
-                safeSource = matches[0].replace(/'/g, ''); // Auto-pick first valid DB string
+                safeSource = matches[0].replace(/'/g, '');
             }
         }
 
