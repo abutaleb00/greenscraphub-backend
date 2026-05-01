@@ -293,12 +293,13 @@ export const getMyTasks = async (req, res, next) => {
         const rider = await getRiderInfo(req);
         const riderId = rider.id;
 
-        // 1. Fetch Current Active Missions
+        // 1. Fetch Current Active Missions with customer profile_image
         const [tasks] = await db.query(`
             SELECT 
                 p.id, p.booking_code, p.status, p.scheduled_date, 
                 p.scheduled_time_slot, p.customer_note,
                 u.full_name as customer_name, u.phone as customer_phone,
+                u.profile_image as customer_image,
                 addr.address_line, addr.house_no, addr.road_no, addr.landmark,
                 addr.latitude, addr.longitude,
                 p.base_amount as estimated_amount,
@@ -320,7 +321,7 @@ export const getMyTasks = async (req, res, next) => {
                 END ASC, 
                 p.scheduled_date ASC`, [riderId]);
 
-        // 2. NEW: Calculate Total Liability (Cash collected but not settled to Hub)
+        // 2. Calculate Total Liability (Cash collected but not settled to Hub)
         const [liabilityRow] = await db.query(`
             SELECT SUM(rider_collected_cash) as total_liability 
             FROM pickups 
@@ -338,8 +339,14 @@ export const getMyTasks = async (req, res, next) => {
             if (task.address_line) addressParts.push(task.address_line);
             if (task.landmark) addressParts.push(`(${task.landmark})`);
 
+            // Normalize profile image URL fallback (converts insecure links to HTTPS)
+            const normalizedImage = task.customer_image 
+                ? task.customer_image.replace('http://', 'https://') 
+                : null;
+
             return {
                 ...task,
+                customer_image: normalizedImage,
                 display_address: addressParts.length > 0 ? addressParts.join(', ') : "Location not specified",
                 estimated_amount: parseFloat(task.estimated_amount || 0).toFixed(2),
                 is_urgent: new Date(task.scheduled_date) <= new Date()
@@ -350,7 +357,7 @@ export const getMyTasks = async (req, res, next) => {
             success: true,
             meta: {
                 total_active: missionQueue.length,
-                total_liability: totalLiability.toFixed(2), // Match the UI Dashboard
+                total_liability: totalLiability.toFixed(2),
                 currency: "BDT"
             },
             data: missionQueue
