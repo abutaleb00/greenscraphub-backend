@@ -183,9 +183,10 @@ export const verifyAndRegister = async (req, res, next) => {
           [settings.referral_bonus_points, referredByCustomerId]
         );
 
+        // 🟢 FIXED: Changed 'referral_bonus' to 'earn' to match valid DB ENUM options
         await conn.query(
-          "INSERT INTO point_transactions (customer_id, amount, type, description) VALUES (?, ?, 'referral_bonus', ?)",
-          [referredByCustomerId, settings.referral_bonus_points, `Referral bonus for inviting ${data.full_name}`]
+          "INSERT INTO point_transactions (customer_id, amount, type, description) VALUES (?, ?, 'earn', ?)",
+          [referredByCustomerId, settings.referral_bonus_points, `Referral Bonus: Invited ${data.full_name}`]
         );
       }
     }
