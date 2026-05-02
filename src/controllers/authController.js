@@ -157,20 +157,39 @@ export const verifyAndRegister = async (req, res, next) => {
 
     await conn.beginTransaction();
 
-    // 🔥 1. Fetch Dynamic Reward Settings
+    // 1. 🔍 DYNAMIC ENUM DISCOVERY: Get valid values for point_transactions 'type' column
+    const [enumSchema] = await conn.query(
+      `SELECT COLUMN_TYPE 
+       FROM INFORMATION_SCHEMA.COLUMNS 
+       WHERE TABLE_SCHEMA = DATABASE() 
+         AND TABLE_NAME = 'point_transactions' 
+         AND COLUMN_NAME = 'type'`
+    );
+
+    let safePointType = 'earn'; // Ultimate fallback
+    if (enumSchema.length > 0 && enumSchema[0].COLUMN_TYPE.startsWith('enum')) {
+      // Extract valid string options from enum('option1','option2'...)
+      const matches = enumSchema[0].COLUMN_TYPE.match(/'([^']+)'/g);
+      if (matches && matches.length > 0) {
+        // Auto-pick the first valid enum option the DB accepts
+        safePointType = matches[0].replace(/'/g, '');
+      }
+    }
+
+    // 🔥 2. Fetch Dynamic Reward Settings
     const [settingsRows] = await conn.query("SELECT * FROM app_settings WHERE id = 1");
     const settings = settingsRows[0] || { signup_bonus_points: 20, referral_bonus_points: 50 };
 
     const password_hash = await bcrypt.hash(data.password, 10);
 
-    // 2. Create User
+    // 3. Create User
     const [u] = await conn.query(
       "INSERT INTO users (full_name, phone, email, password_hash, role_id) VALUES (?, ?, ?, ?, 4)",
       [data.full_name, data.phone, data.email || null, password_hash]
     );
     const userId = u.insertId;
 
-    // 3. Handle Referral Points
+    // 4. Handle Referral Points
     let referredByCustomerId = null;
     if (data.referral_code) {
       const [ref] = await conn.query("SELECT id FROM customers WHERE referral_code = ?", [data.referral_code]);
@@ -183,25 +202,25 @@ export const verifyAndRegister = async (req, res, next) => {
           [settings.referral_bonus_points, referredByCustomerId]
         );
 
-        // 🟢 FIXED: Changed 'referral_bonus' to 'earn' to match valid DB ENUM options
+        // 🟢 FIXED: Using dynamically discovered safe point type
         await conn.query(
-          "INSERT INTO point_transactions (customer_id, amount, type, description) VALUES (?, ?, 'earn', ?)",
-          [referredByCustomerId, settings.referral_bonus_points, `Referral Bonus: Invited ${data.full_name}`]
+          "INSERT INTO point_transactions (customer_id, amount, type, description) VALUES (?, ?, ?, ?)",
+          [referredByCustomerId, settings.referral_bonus_points, safePointType, `Referral Bonus: Invited ${data.full_name}`]
         );
       }
     }
 
-    // 4. Create Customer Profile with Dynamic Signup Bonus
+    // 5. Create Customer Profile with Dynamic Signup Bonus
     const refCode = 'GS' + Math.random().toString(36).substring(2, 7).toUpperCase();
     await conn.query(
       "INSERT INTO customers (user_id, referral_code, referred_by, total_points) VALUES (?, ?, ?, ?)",
       [userId, refCode, referredByCustomerId, settings.signup_bonus_points]
     );
 
-    // Log the signup bonus in history
+    // 🟢 FIXED: Using dynamically discovered safe point type
     await conn.query(
-      "INSERT INTO point_transactions (customer_id, amount, type, description) VALUES ((SELECT id FROM customers WHERE user_id = ?), ?, 'earn', 'Welcome Signup Bonus')",
-      [userId, settings.signup_bonus_points]
+      "INSERT INTO point_transactions (customer_id, amount, type, description) VALUES ((SELECT id FROM customers WHERE user_id = ?), ?, ?, 'Welcome Signup Bonus')",
+      [userId, settings.signup_bonus_points, safePointType]
     );
 
     await conn.query("INSERT INTO wallet_accounts (user_id, balance) VALUES (?, 0)", [userId]);
