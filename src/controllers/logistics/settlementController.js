@@ -89,8 +89,8 @@ const updateWallet = async (conn, userId, amount, type, source, refType, refId, 
 };
 
 /**
- * 1. GET PICKUP DETAILS (Master Data + Items + Timeline History)
- * Fix: Corrected Joins for Divisions, Districts, and Upazilas using name_en/name_bn.
+ * 1. GET PICKUP DETAILS (Full Master Data + Items + Timeline + Tracking)
+ * This code is structured to match the app's expectations for MapView and Timeline.
  */
 export const getPickupDetails = async (req, res, next) => {
     try {
@@ -118,15 +118,11 @@ export const getPickupDetails = async (req, res, next) => {
              WHERE p.id = ?`, [id]
         );
 
-        if (!pickupRows.length) throw new ApiError(404, "Pickup not found");
+        if (!pickupRows.length) {
+            return res.status(404).json({ success: false, message: "Pickup not found" });
+        }
 
-        // Use language-specific names for the final object
         const rawPickup = pickupRows[0];
-        const pickup = {
-            ...rawPickup,
-            district_name: req.headers['accept-language'] === 'bn' ? rawPickup.district_name_bn : rawPickup.district_name_en,
-            upazila_name: req.headers['accept-language'] === 'bn' ? rawPickup.upazila_name_bn : rawPickup.upazila_name_en,
-        };
 
         // BASE_URL and URL Normalization Helper
         const getFullUrl = (path) => {
@@ -136,7 +132,30 @@ export const getPickupDetails = async (req, res, next) => {
             return `${baseUrl}/${path.replace(/^\//, "")}`;
         };
 
-        // 2. Fetch associated pickup items
+        // 2. 🔥 NEW: Construct the Tracking object for the MapView
+        // The app expects data.tracking.origin and data.tracking.destination
+        const tracking = {
+            origin: {
+                latitude: rawPickup.rider_live_lat || rawPickup.hub_lat,
+                longitude: rawPickup.rider_live_lng || rawPickup.hub_lng
+            },
+            destination: {
+                latitude: rawPickup.addr_lat,
+                longitude: rawPickup.addr_lng
+            }
+        };
+
+        // 3. Map the correct Language fields for District/Upazila
+        const pickup = {
+            ...rawPickup,
+            district_name: req.headers['accept-language'] === 'bn' ? rawPickup.district_name_bn : rawPickup.district_name_en,
+            upazila_name: req.headers['accept-language'] === 'bn' ? rawPickup.upazila_name_bn : rawPickup.upazila_name_en,
+            rider_image: getFullUrl(rawPickup.rider_image),
+            proof_image_before: getFullUrl(rawPickup.proof_image_before),
+            proof_image_after: getFullUrl(rawPickup.proof_image_after)
+        };
+
+        // 4. Fetch associated pickup items
         const [items] = await db.query(
             `SELECT pi.*, si.name_en, si.name_bn, si.unit, si.image_url as product_image
              FROM pickup_items pi 
@@ -144,7 +163,13 @@ export const getPickupDetails = async (req, res, next) => {
              WHERE pi.pickup_id = ?`, [id]
         );
 
-        // 3. Fetch Pickup Timeline (Activity History)
+        const transformedItems = items.map(item => ({
+            ...item,
+            product_image: getFullUrl(item.product_image),
+            user_photos: item.user_photos ? JSON.parse(item.user_photos).map(p => getFullUrl(p)) : []
+        }));
+
+        // 5. Fetch Pickup Timeline (Activity History)
         const [timeline] = await db.query(
             `SELECT pt.*, u.full_name as changer_name 
              FROM pickup_timeline pt
@@ -153,26 +178,17 @@ export const getPickupDetails = async (req, res, next) => {
              ORDER BY pt.created_at DESC`, [id]
         );
 
-        // 4. Normalize Data for App Consumption
-        const transformedItems = items.map(item => ({
-            ...item,
-            product_image: getFullUrl(item.product_image),
-            user_photos: item.user_photos ? JSON.parse(item.user_photos).map(p => getFullUrl(p)) : []
-        }));
-
+        // 6. Final Response Object
         res.json({
             success: true,
             data: {
-                pickup: {
-                    ...pickup,
-                    rider_image: getFullUrl(pickup.rider_image),
-                    proof_image_before: getFullUrl(pickup.proof_image_before),
-                    proof_image_after: getFullUrl(pickup.proof_image_after)
-                },
+                pickup: pickup,
                 items: transformedItems,
-                timeline: timeline
+                timeline: timeline,
+                tracking: tracking // 👈 This enables the Map and Polylines
             }
         });
+
     } catch (err) {
         console.error("Pickup Details Error:", err.message);
         next(err);
