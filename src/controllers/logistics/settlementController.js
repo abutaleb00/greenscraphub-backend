@@ -89,7 +89,7 @@ const updateWallet = async (conn, userId, amount, type, source, refType, refId, 
 };
 
 /**
- * 1. GET PICKUP DETAILS (Real-App Tracking + Timeline with Rider profile image)
+ * 1. GET PICKUP DETAILS (Master Data + Items + Timeline History)
  */
 export const getPickupDetails = async (req, res, next) => {
     try {
@@ -101,7 +101,8 @@ export const getPickupDetails = async (req, res, next) => {
                 r_u.full_name as rider_name, r_u.phone as rider_phone, r_u.profile_image as rider_image,
                 r.current_latitude as rider_live_lat, r.current_longitude as rider_live_lng,
                 ag.business_name as hub_name, ag.latitude as hub_lat, ag.longitude as hub_lng,
-                addr.address_line, addr.latitude as addr_lat, addr.longitude as addr_lng
+                addr.address_line, addr.latitude as addr_lat, addr.longitude as addr_lng,
+                dist.name as district_name, upz.name as upazila_name
              FROM pickups p 
              JOIN customers c ON p.customer_id = c.id 
              JOIN users u ON c.user_id = u.id
@@ -109,6 +110,8 @@ export const getPickupDetails = async (req, res, next) => {
              LEFT JOIN users r_u ON r.user_id = r_u.id
              LEFT JOIN agents ag ON p.agent_id = ag.id
              LEFT JOIN addresses addr ON p.customer_address_id = addr.id
+             LEFT JOIN districts dist ON addr.district_id = dist.id
+             LEFT JOIN upazilas upz ON addr.upazila_id = upz.id
              WHERE p.id = ?`, [id]
         );
 
@@ -126,13 +129,26 @@ export const getPickupDetails = async (req, res, next) => {
         // 2. Fetch the associated pickup items
         const [items] = await db.query(
             `SELECT pi.*, si.name_en, si.name_bn, si.unit, si.image_url as product_image
-             FROM pickup_items pi JOIN scrap_items si ON pi.item_id = si.id WHERE pi.pickup_id = ?`, [id]
+             FROM pickup_items pi 
+             JOIN scrap_items si ON pi.item_id = si.id 
+             WHERE pi.pickup_id = ?`, [id]
         );
 
-        // 3. Normalize all item and catalog image URLs
+        // 3. 🔥 NEW: Fetch Pickup Timeline (Activity History)
+        const [timeline] = await db.query(
+            `SELECT pt.*, u.full_name as changer_name 
+             FROM pickup_timeline pt
+             LEFT JOIN users u ON pt.changed_by = u.id
+             WHERE pt.pickup_id = ? 
+             ORDER BY pt.created_at DESC`, [id]
+        );
+
+        // 4. Normalize URLs for items
         const transformedItems = items.map(item => ({
             ...item,
-            product_image: getFullUrl(item.product_image)
+            product_image: getFullUrl(item.product_image),
+            // If you have user uploaded photos for items, normalize them here
+            user_photos: item.user_photos ? JSON.parse(item.user_photos).map(p => getFullUrl(p)) : []
         }));
 
         res.json({
@@ -145,9 +161,12 @@ export const getPickupDetails = async (req, res, next) => {
                     proof_image_after: getFullUrl(pickup.proof_image_after)
                 },
                 items: transformedItems,
+                timeline: timeline // This will now fix the app display
             }
         });
-    } catch (err) { next(err); }
+    } catch (err) {
+        next(err);
+    }
 };
 
 /**
