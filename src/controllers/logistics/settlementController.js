@@ -90,19 +90,22 @@ const updateWallet = async (conn, userId, amount, type, source, refType, refId, 
 
 /**
  * 1. GET PICKUP DETAILS (Master Data + Items + Timeline History)
+ * Fix: Corrected Joins for Divisions, Districts, and Upazilas using name_en/name_bn.
  */
 export const getPickupDetails = async (req, res, next) => {
     try {
         const { id } = req.params;
 
-        // 1. Fetch Pickup Master Data including the rider's profile image
+        // 1. Fetch Pickup Master Data with full Location details
         const [pickupRows] = await db.query(
-            `SELECT p.*, u.full_name as customer_name, u.phone as customer_phone, u.email as customer_email,
+            `SELECT p.*, 
+                u.full_name as customer_name, u.phone as customer_phone, u.email as customer_email,
                 r_u.full_name as rider_name, r_u.phone as rider_phone, r_u.profile_image as rider_image,
                 r.current_latitude as rider_live_lat, r.current_longitude as rider_live_lng,
                 ag.business_name as hub_name, ag.latitude as hub_lat, ag.longitude as hub_lng,
                 addr.address_line, addr.latitude as addr_lat, addr.longitude as addr_lng,
-                dist.name as district_name, upz.name as upazila_name
+                dist.name_en as district_name_en, dist.name_bn as district_name_bn,
+                upz.name_en as upazila_name_en, upz.name_bn as upazila_name_bn
              FROM pickups p 
              JOIN customers c ON p.customer_id = c.id 
              JOIN users u ON c.user_id = u.id
@@ -116,7 +119,14 @@ export const getPickupDetails = async (req, res, next) => {
         );
 
         if (!pickupRows.length) throw new ApiError(404, "Pickup not found");
-        const pickup = pickupRows[0];
+
+        // Use language-specific names for the final object
+        const rawPickup = pickupRows[0];
+        const pickup = {
+            ...rawPickup,
+            district_name: req.headers['accept-language'] === 'bn' ? rawPickup.district_name_bn : rawPickup.district_name_en,
+            upazila_name: req.headers['accept-language'] === 'bn' ? rawPickup.upazila_name_bn : rawPickup.upazila_name_en,
+        };
 
         // BASE_URL and URL Normalization Helper
         const getFullUrl = (path) => {
@@ -126,7 +136,7 @@ export const getPickupDetails = async (req, res, next) => {
             return `${baseUrl}/${path.replace(/^\//, "")}`;
         };
 
-        // 2. Fetch the associated pickup items
+        // 2. Fetch associated pickup items
         const [items] = await db.query(
             `SELECT pi.*, si.name_en, si.name_bn, si.unit, si.image_url as product_image
              FROM pickup_items pi 
@@ -134,7 +144,7 @@ export const getPickupDetails = async (req, res, next) => {
              WHERE pi.pickup_id = ?`, [id]
         );
 
-        // 3. 🔥 NEW: Fetch Pickup Timeline (Activity History)
+        // 3. Fetch Pickup Timeline (Activity History)
         const [timeline] = await db.query(
             `SELECT pt.*, u.full_name as changer_name 
              FROM pickup_timeline pt
@@ -143,11 +153,10 @@ export const getPickupDetails = async (req, res, next) => {
              ORDER BY pt.created_at DESC`, [id]
         );
 
-        // 4. Normalize URLs for items
+        // 4. Normalize Data for App Consumption
         const transformedItems = items.map(item => ({
             ...item,
             product_image: getFullUrl(item.product_image),
-            // If you have user uploaded photos for items, normalize them here
             user_photos: item.user_photos ? JSON.parse(item.user_photos).map(p => getFullUrl(p)) : []
         }));
 
@@ -161,10 +170,11 @@ export const getPickupDetails = async (req, res, next) => {
                     proof_image_after: getFullUrl(pickup.proof_image_after)
                 },
                 items: transformedItems,
-                timeline: timeline // This will now fix the app display
+                timeline: timeline
             }
         });
     } catch (err) {
+        console.error("Pickup Details Error:", err.message);
         next(err);
     }
 };
