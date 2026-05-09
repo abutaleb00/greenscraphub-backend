@@ -16,7 +16,7 @@ const app = express();
 
 /**
  * 1. PROXY CONFIGURATION
- * Crucial for Nginx/VPS to pass the real IP to Express
+ * Crucial for Nginx/VPS to pass the real IP to Express for Rate Limiting
  */
 app.set('trust proxy', 1);
 
@@ -28,42 +28,53 @@ app.use(helmet({
 
 /**
  * 3. TIERED RATE LIMITING CONFIGURATION
- * We use 'validate: false' to stop the IPv6 keyGenerator errors.
+ * Optimized for real-time tracking apps.
  */
 
-// A. Passive Limiter: For background syncs
-const passiveLimiter = rateLimit({
-  windowMs: 10 * 60 * 1000,
-  max: 1000,
+// A. Tracking Limiter: Specifically for live tracking and polling
+// This allows a high frequency of calls for maps without banning the user.
+const trackingLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 Minute
+  max: process.env.NODE_ENV === 'development' ? 5000 : 120, // 120 requests/min is safe for 10s polling
   standardHeaders: true,
   legacyHeaders: false,
-  validate: false, // 🔥 THIS STOPS ALL VALIDATION ERRORS
+  validate: false,
+  message: { success: false, message: "Live tracking frequency limit reached. Please wait." }
+});
+
+// B. Passive Limiter: For background syncs
+const passiveLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 2000,
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: false,
   message: { success: false, message: "Background sync limit exceeded." }
 });
 
-// B. Auth Limiter: Stricter security for Login/Register
+// C. Auth Limiter: Stricter security for Login/Register
 const authLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: 30,
+  max: 50,
   standardHeaders: true,
   legacyHeaders: false,
-  validate: false, // 🔥 THIS STOPS ALL VALIDATION ERRORS
+  validate: false,
   message: {
     success: false,
-    message: "Too many authentication attempts. Please try again in an hour."
+    message: "Too many login attempts. Please try again in an hour."
   }
 });
 
-// C. Global Limiter: General fallback
+// D. Global Limiter: General fallback (Made more friendly)
 const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 500,
+  windowMs: 5 * 60 * 1000, // Reduced window to 5 minutes for faster recovery
+  max: 1000,
   standardHeaders: true,
   legacyHeaders: false,
-  validate: false, // 🔥 THIS STOPS ALL VALIDATION ERRORS
+  validate: false,
   message: {
     success: false,
-    message: "Too many requests from this IP, please try again after 15 minutes."
+    message: "Too many requests. For security, please wait 5 minutes."
   }
 });
 
@@ -97,7 +108,6 @@ app.use(
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// For logging, we manually check the header or the trusted req.ip
 app.use(morgan((tokens, req, res) => {
   const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.ip;
   return [
@@ -112,7 +122,12 @@ app.use(morgan((tokens, req, res) => {
 
 /**
  * 6. APPLY RATE LIMITERS STRATEGICALLY
+ * Order matters: Apply specific routes before global fallback.
  */
+
+// Tracking route - apply the higher-limit tracker here
+app.use('/api/v1/pickups', trackingLimiter);
+
 app.use('/api/v1/notifications/sync-token', passiveLimiter);
 app.use('/api/v1/customers/dashboard', passiveLimiter);
 app.use('/api/v1/auth/me', passiveLimiter);
@@ -121,6 +136,7 @@ app.use('/api/v1/auth/login', authLimiter);
 app.use('/api/v1/auth/register', authLimiter);
 app.use('/api/v1/auth/forgot-password', authLimiter);
 
+// Global fallback
 app.use('/api/', globalLimiter);
 
 // 7. Static Folders
@@ -135,7 +151,6 @@ app.get('/', (req, res) => {
     success: true,
     message: 'GreenScrapHub API is Online',
     your_ip: req.headers['x-forwarded-for']?.split(',')[0] || req.ip,
-    timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'production'
   });
 });

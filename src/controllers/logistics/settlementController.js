@@ -90,11 +90,12 @@ const updateWallet = async (conn, userId, amount, type, source, refType, refId, 
 
 /**
  * 1. GET PICKUP DETAILS (Full Master Data + Items + Timeline + Tracking)
- * This code is structured to match the app's expectations for MapView and Timeline.
+ * Fixes: Bilingual Timeline notes and User-uploaded item photos parsing.
  */
 export const getPickupDetails = async (req, res, next) => {
     try {
         const { id } = req.params;
+        const lang = req.headers['accept-language'] === 'bn' ? 'bn' : 'en';
 
         // 1. Fetch Pickup Master Data with full Location details
         const [pickupRows] = await db.query(
@@ -132,8 +133,7 @@ export const getPickupDetails = async (req, res, next) => {
             return `${baseUrl}/${path.replace(/^\//, "")}`;
         };
 
-        // 2. 🔥 NEW: Construct the Tracking object for the MapView
-        // The app expects data.tracking.origin and data.tracking.destination
+        // 2. Construct the Tracking object for the MapView
         const tracking = {
             origin: {
                 latitude: rawPickup.rider_live_lat || rawPickup.hub_lat,
@@ -148,14 +148,14 @@ export const getPickupDetails = async (req, res, next) => {
         // 3. Map the correct Language fields for District/Upazila
         const pickup = {
             ...rawPickup,
-            district_name: req.headers['accept-language'] === 'bn' ? rawPickup.district_name_bn : rawPickup.district_name_en,
-            upazila_name: req.headers['accept-language'] === 'bn' ? rawPickup.upazila_name_bn : rawPickup.upazila_name_en,
+            district_name: lang === 'bn' ? rawPickup.district_name_bn : rawPickup.district_name_en,
+            upazila_name: lang === 'bn' ? rawPickup.upazila_name_bn : rawPickup.upazila_name_en,
             rider_image: getFullUrl(rawPickup.rider_image),
             proof_image_before: getFullUrl(rawPickup.proof_image_before),
             proof_image_after: getFullUrl(rawPickup.proof_image_after)
         };
 
-        // 4. Fetch associated pickup items
+        // 4. Fetch associated pickup items and Parse User Photos
         const [items] = await db.query(
             `SELECT pi.*, si.name_en, si.name_bn, si.unit, si.image_url as product_image
              FROM pickup_items pi 
@@ -163,20 +163,40 @@ export const getPickupDetails = async (req, res, next) => {
              WHERE pi.pickup_id = ?`, [id]
         );
 
-        const transformedItems = items.map(item => ({
-            ...item,
-            product_image: getFullUrl(item.product_image),
-            user_photos: item.user_photos ? JSON.parse(item.user_photos).map(p => getFullUrl(p)) : []
-        }));
+        const transformedItems = items.map(item => {
+            let photos = [];
+            try {
+                // If user_photos is a JSON string in DB, parse it. If already object/null, handle it.
+                photos = typeof item.user_photos === 'string' ? JSON.parse(item.user_photos) : (item.user_photos || []);
+            } catch (e) {
+                photos = [];
+            }
 
-        // 5. Fetch Pickup Timeline (Activity History)
-        const [timeline] = await db.query(
+            return {
+                ...item,
+                product_image: getFullUrl(item.product_image),
+                // Map through the array and get full URLs for all user-attached photos
+                user_photos: Array.isArray(photos) ? photos.map(p => getFullUrl(p)) : []
+            };
+        });
+
+        // 5. Fetch Pickup Timeline (Activity History) with Bilingual support
+        // Note: Assumes your pickup_timeline table has note_en and note_bn. 
+        // If it only has 'note', the frontend translation helper will handle it.
+        const [timelineRows] = await db.query(
             `SELECT pt.*, u.full_name as changer_name 
              FROM pickup_timeline pt
              LEFT JOIN users u ON pt.changed_by = u.id
              WHERE pt.pickup_id = ? 
              ORDER BY pt.created_at DESC`, [id]
         );
+
+        // Normalize timeline notes based on language
+        const timeline = timelineRows.map(log => ({
+            ...log,
+            // If DB has bilingual columns, use them, otherwise fallback to standard note
+            display_note: lang === 'bn' ? (log.note_bn || log.note) : (log.note_en || log.note)
+        }));
 
         // 6. Final Response Object
         res.json({
@@ -185,7 +205,7 @@ export const getPickupDetails = async (req, res, next) => {
                 pickup: pickup,
                 items: transformedItems,
                 timeline: timeline,
-                tracking: tracking // 👈 This enables the Map and Polylines
+                tracking: tracking
             }
         });
 
