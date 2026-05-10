@@ -256,7 +256,7 @@ export const createPickup = async (req, res, next) => {
                 // SMS and Email logic remains same, but using the range
                 let formattedPhone = customerPhone.trim();
                 if (formattedPhone.startsWith('0')) formattedPhone = '88' + formattedPhone;
-                const smsMessage = `পিকআপ অনুরোধ নিশ্চিত! কোড: ${bookingCode}. সম্ভাব্য মূল্য: ৳${totalEstMin.toFixed(0)}-${totalEstMax.toFixed(0)}. - Smart Scrap BD`;
+                const smsMessage = `পিকআপ অনুরোধ নিশ্চিত! কোড: ${bookingCode}. Smart Scrap BD`;
 
                 await axios.post('https://api.sms.net.bd/sendsms', {
                     api_key: process.env.SMS_API_KEY,
