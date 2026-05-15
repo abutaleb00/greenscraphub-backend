@@ -698,6 +698,11 @@ export const listCustomers = async (req, res, next) => {
                 u.id, u.full_name, u.phone, u.email, u.is_active, u.created_at,
                 w.balance,
                 
+                -- Influencer Fields
+                c.is_influencer,
+                c.influencer_reward_points,
+                c.referral_code,
+
                 -- Geographic IDs (Crucial for Edit Modal pre-filling)
                 addr.division_id, 
                 addr.district_id, 
@@ -717,10 +722,11 @@ export const listCustomers = async (req, res, next) => {
                 (SELECT MAX(created_at) FROM pickups WHERE customer_id = u.id) as last_order_date
                 
             FROM users u
+            -- Join customers table to get influencer status
+            LEFT JOIN customers c ON u.id = c.user_id
             LEFT JOIN wallet_accounts w ON u.id = w.user_id
             
             -- Improved Geographic Joins 
-            -- We fetch the 'Default' address or the most recent one if no default exists
             LEFT JOIN (
                 SELECT * FROM addresses 
                 WHERE id IN (
@@ -744,22 +750,23 @@ export const listCustomers = async (req, res, next) => {
 };
 
 /* --------------------------------------------------
-    ADMIN -> UPDATE CUSTOMER (Identity + Geography)
+    ADMIN -> UPDATE CUSTOMER (Identity + Geography + Influencer)
 -------------------------------------------------- */
 export const updateCustomer = async (req, res, next) => {
     const conn = await db.getConnection();
     try {
-        const { id } = req.params;
+        const { id } = req.params; // This is the user_id
         const {
             full_name, phone, email, is_active,
             address_line, division_id, district_id, upazila_id,
-            latitude, longitude // Capture these from your payload
+            latitude, longitude,
+            // Influencer Fields
+            is_influencer, influencer_reward_points, referral_code
         } = req.body;
 
         await conn.beginTransaction();
 
         // 1. Update Identity (users table)
-        // We use COALESCE to keep the old value if the new one is undefined/null
         const [userUpdate] = await conn.query(
             `UPDATE users SET 
                 full_name = COALESCE(?, full_name),
@@ -775,14 +782,26 @@ export const updateCustomer = async (req, res, next) => {
             throw new ApiError(404, "Customer not found.");
         }
 
-        // 2. Check if an address already exists for this user
+        // 2. Update Customer Profile (influencer status & points)
+        // Note: We also allow updating referral_code if provided (Admin power)
+        await conn.query(
+            `UPDATE customers SET 
+                is_influencer = COALESCE(?, is_influencer),
+                influencer_reward_points = COALESCE(?, influencer_reward_points),
+                referral_code = COALESCE(?, referral_code),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE user_id = ?`,
+            [is_influencer, influencer_reward_points, referral_code, id]
+        );
+
+        // 3. Check if an address already exists for this user
         const [existingAddr] = await conn.query(
             "SELECT id FROM addresses WHERE user_id = ? LIMIT 1",
             [id]
         );
 
         if (existingAddr.length > 0) {
-            // 3a. UPDATE existing address including Geospatial data
+            // 4a. UPDATE existing address
             await conn.query(
                 `UPDATE addresses SET 
                     address_line = COALESCE(?, address_line),
@@ -796,7 +815,7 @@ export const updateCustomer = async (req, res, next) => {
                 [address_line, division_id, district_id, upazila_id, latitude, longitude, id]
             );
         } else {
-            // 3b. INSERT a new address if one doesn't exist
+            // 4b. INSERT a new address if one doesn't exist
             await conn.query(
                 `INSERT INTO addresses (
                     user_id, label, address_line, division_id, 
@@ -809,11 +828,15 @@ export const updateCustomer = async (req, res, next) => {
         await conn.commit();
         res.json({
             success: true,
-            message: "Customer profile and precise location updated."
+            message: "Customer node, geography, and influencer status updated."
         });
 
     } catch (err) {
         await conn.rollback();
+        // Specific error handling for unique referral code constraint
+        if (err.code === 'ER_DUP_ENTRY') {
+            return next(new ApiError(400, "Referral code already in use by another user."));
+        }
         next(err);
     } finally {
         conn.release();
