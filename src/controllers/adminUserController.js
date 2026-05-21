@@ -698,10 +698,24 @@ export const listCustomers = async (req, res, next) => {
                 u.id, u.full_name, u.phone, u.email, u.is_active, u.created_at,
                 w.balance,
                 
-                -- Influencer Fields
+                -- Influencer/Customer Profile Info
                 c.is_influencer,
                 c.influencer_reward_points,
                 c.referral_code,
+
+                -- Promo Tracking Subqueries
+                (
+                    SELECT ref_cust.referral_code 
+                    FROM customers ref_cust 
+                    WHERE ref_cust.id = c.referred_by
+                ) as promo_used,
+
+                (
+                    SELECT ref_user.full_name 
+                    FROM users ref_user
+                    JOIN customers ref_cust ON ref_user.id = ref_cust.user_id
+                    WHERE ref_cust.id = c.referred_by
+                ) as promo_owner_name,
 
                 -- Geographic IDs (Crucial for Edit Modal pre-filling)
                 addr.division_id, 
@@ -722,7 +736,7 @@ export const listCustomers = async (req, res, next) => {
                 (SELECT MAX(created_at) FROM pickups WHERE customer_id = u.id) as last_order_date
                 
             FROM users u
-            -- Join customers table to get influencer status
+            -- Join customers table to get influencer status & referral pathing
             LEFT JOIN customers c ON u.id = c.user_id
             LEFT JOIN wallet_accounts w ON u.id = w.user_id
             
