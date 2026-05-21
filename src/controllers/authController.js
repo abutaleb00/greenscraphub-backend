@@ -11,6 +11,56 @@ import requestIp from 'request-ip';
 // Temporary store for OTPs and registration data
 const otpStore = new Map();
 
+/* -----------------------------------------------------
+    HELPER: NOTIFY ADMIN ON NEW CUSTOMER REGISTRATION
+----------------------------------------------------- */
+const notifyAdminOnRegistration = async (customerData) => {
+  try {
+    const transporter = nodemailer.createTransport({
+      host: process.env.MAIL_HOST,
+      port: parseInt(process.env.MAIL_PORT),
+      secure: process.env.MAIL_SECURE === 'true',
+      auth: {
+        user: process.env.MAIL_USER,
+        pass: process.env.MAIL_PASS,
+      },
+    });
+
+    await transporter.sendMail({
+      from: `"Smart Scrap BD System" <${process.env.MAIL_USER}>`,
+      to: "smartscrapbd@gmail.com",
+      subject: "🚨 New Customer Registration Alert",
+      html: `
+        <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 500px;">
+          <h2 style="color: #10B981; border-b: 2px solid #f4f4f4; padding-bottom: 10px;">New Account Registered</h2>
+          <p>A new customer has successfully completed verification and deployed an identity node on the platform.</p>
+          <table style="width: 100%; text-align: left; border-collapse: collapse; margin-top: 15px;">
+            <tr>
+              <th style="padding: 6px 0; color: #666;">Full Name:</th>
+              <td style="padding: 6px 0; font-weight: bold;">${customerData.full_name}</td>
+            </tr>
+            <tr>
+              <th style="padding: 6px 0; color: #666;">Phone Number:</th>
+              <td style="padding: 6px 0; font-weight: bold;">${customerData.phone}</td>
+            </tr>
+            <tr>
+              <th style="padding: 6px 0; color: #666;">Email Line:</th>
+              <td style="padding: 6px 0;">${customerData.email || 'N/A'}</td>
+            </tr>
+            <tr>
+              <th style="padding: 6px 0; color: #666;">Promo Used:</th>
+              <td style="padding: 6px 0; color: #2563EB; font-weight: bold;">${customerData.referral_code || 'None (Direct)'}</td>
+            </tr>
+          </table>
+          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+          <p style="font-size: 11px; color: #999; text-align: center;">Smart Scrap BD Ecosystem Automated Management Log</p>
+        </div>
+      `,
+    });
+  } catch (error) {
+    console.error("⚠️ [Admin Notification Email Failed]:", error.message);
+  }
+};
 const logActivity = async (req, userId, action, metadata = {}) => {
   try {
     const agent = useragent.parse(req.headers['user-agent']);
@@ -246,7 +296,13 @@ export const verifyAndRegister = async (req, res, next) => {
       method: 'Self-Registration',
       promo_used: data.referral_code || 'none'
     });
-
+    // 🟢 NEW: Trigger Background Admin Notification Email
+    notifyAdminOnRegistration({
+      full_name: data.full_name,
+      phone: data.phone,
+      email: data.email,
+      referral_code: data.referral_code
+    });
     const token = jwt.sign({ id: userId, role: 'customer' }, process.env.JWT_SECRET, { expiresIn: '7d' });
     res.status(201).json({
       success: true,

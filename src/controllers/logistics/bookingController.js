@@ -103,6 +103,47 @@ const sendPickupEmail = async (email, details) => {
     });
 };
 
+/* -----------------------------------------------------
+    HELPER: NOTIFY ADMIN ON NEW PICKUP CREATION
+----------------------------------------------------- */
+const notifyAdminOnPickupCreation = async (details) => {
+    try {
+        const transporter = nodemailer.createTransport({
+            host: process.env.MAIL_HOST,
+            port: parseInt(process.env.MAIL_PORT),
+            secure: process.env.MAIL_SECURE === 'true',
+            auth: {
+                user: process.env.MAIL_USER,
+                pass: process.env.MAIL_PASS,
+            },
+        });
+
+        await transporter.sendMail({
+            from: `"Smart Scrap BD System" <${process.env.MAIL_USER}>`,
+            to: "smartscrapbd@gmail.com",
+            subject: `🚨 New Pickup Request Alert - ${details.bookingCode}`,
+            html: `
+            <div style="font-family: sans-serif; padding: 20px; border: 1px solid #2563EB; border-radius: 15px; max-width: 600px;">
+                <h2 style="color: #2563EB; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; margin-top: 0;">New Order Dispatch Required</h2>
+                <p>A customer has submitted a new recycling pickup request that requires assignment.</p>
+                <div style="background: #f8fafc; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                    <p style="margin: 5px 0;"><strong>Booking Code:</strong> <span style="color: #2563EB; font-weight: bold;">${details.bookingCode}</span></p>
+                    <p style="margin: 5px 0;"><strong>Customer Name:</strong> ${details.customerName}</p>
+                    <p style="margin: 5px 0;"><strong>Customer Phone:</strong> ${details.customerPhone}</p>
+                    <p style="margin: 5px 0;"><strong>Target Date:</strong> ${details.scheduledDate}</p>
+                    <p style="margin: 5px 0;"><strong>Time Window:</strong> ${details.timeSlot}</p>
+                    <p style="margin: 5px 0;"><strong>Est. Valuation Range:</strong> ৳${details.totalEstMin} - ৳${details.totalEstMax}</p>
+                </div>
+                <p>Please log in to your Admin Dispatch Center Dashboard to route this assignment to an agent hub or independent rider.</p>
+                <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+                <p style="font-size: 11px; color: #94a3b8; text-align: center;">Smart Scrap BD Ecosystem Automated Management Log</p>
+            </div>
+        `,
+        });
+    } catch (error) {
+        console.error("⚠️ [Admin Pickup Notification Email Failed]:", error.message);
+    }
+};
 export const createPickup = async (req, res, next) => {
     const conn = await db.getConnection();
     try {
@@ -252,7 +293,16 @@ export const createPickup = async (req, res, next) => {
                         { orderId: pickupId.toString(), type: "order_update" }
                     );
                 }
-
+                // 🟢 NEW: Trigger Real-Time Admin Notification Email
+                await notifyAdminOnPickupCreation({
+                    bookingCode,
+                    customerName,
+                    customerPhone,
+                    scheduledDate: scheduled_date,
+                    timeSlot: scheduled_time_slot,
+                    totalEstMin: totalEstMin.toFixed(2),
+                    totalEstMax: totalEstMax.toFixed(2)
+                });
                 // SMS and Email logic remains same, but using the range
                 let formattedPhone = customerPhone.trim();
                 if (formattedPhone.startsWith('0')) formattedPhone = '88' + formattedPhone;
