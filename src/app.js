@@ -15,6 +15,13 @@ const __dirname = path.dirname(__filename);
 const app = express();
 
 /**
+ * 🟢 BACKGROUND AUTOMATION DAEMON INITIALIZATION
+ * এক্সপ্রেস ব্যাকএন্ড প্রসেস স্টার্ট হওয়ার সাথে সাথে ক্রন ওয়ার্কার মেমরিতে লোড হবে
+ * এবং লোকালহোস্ট ও প্রোডাকশন সার্ভারে প্রতি ১ মিনিট পর পর শিডিউল চেক করবে।
+ */
+import './services/marketingWorker.js';
+
+/**
  * 1. PROXY CONFIGURATION
  * Crucial for Nginx/VPS to pass the real IP to Express for Rate Limiting
  */

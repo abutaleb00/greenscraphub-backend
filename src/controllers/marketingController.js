@@ -25,7 +25,7 @@ const dispatchInstantEmail = async (transporter, to, subject, body) => {
 };
 
 /* -----------------------------------------------------
-    CAMPAIGN SUMMARY INDEX LIST
+    CAMPAIGN SUMMARY INDEX LIST (TIMEZONE FIXED)
 ----------------------------------------------------- */
 export const getCampaignsOverview = async (req, res, next) => {
     try {
@@ -33,10 +33,12 @@ export const getCampaignsOverview = async (req, res, next) => {
         const limit = parseInt(req.query.limit) || 10;
         const offset = (page - 1) * limit;
 
-        // Fetch campaigns with delivery ratio statistics computed inline
+        // 🟢 FIXED: CONVERT_TZ ব্যবহার করে UTC থেকে বাংলাদেশ টাইমে রূপান্তর করা হয়েছে
         const query = `
             SELECT 
-                mc.id, mc.title, mc.channel, mc.target_type, mc.scheduled_at, mc.status, mc.created_at,
+                mc.id, mc.title, mc.channel, mc.target_type, 
+                CONVERT_TZ(mc.scheduled_at, '+00:00', '+06:00') as scheduled_at, 
+                mc.status, mc.created_at,
                 u.full_name as created_by_name,
                 (SELECT COUNT(*) FROM marketing_queue WHERE campaign_id = mc.id) as total_targets,
                 (SELECT COUNT(*) FROM marketing_queue WHERE campaign_id = mc.id AND status = 'sent') as sent_count,
@@ -77,7 +79,6 @@ export const getCampaignHistoryLog = async (req, res, next) => {
         const limit = parseInt(req.query.limit) || 50;
         const offset = (page - 1) * limit;
 
-        // 🟢 FIXED: Added mc.content and mc.email_subject to selection scope
         const [campaignCheck] = await db.query(
             `SELECT id, title, channel, content, email_subject 
              FROM marketing_campaigns 
@@ -87,7 +88,6 @@ export const getCampaignHistoryLog = async (req, res, next) => {
 
         if (!campaignCheck.length) return next(new ApiError(404, "Target marketing campaign record not found."));
 
-        // 2. Fetch tracking details for targeted recipients
         const query = `
             SELECT 
                 mq.id, mq.recipient_destination, mq.status, mq.error_message, mq.sent_at,
@@ -108,7 +108,7 @@ export const getCampaignHistoryLog = async (req, res, next) => {
 
         res.json({
             success: true,
-            campaign: campaignCheck[0], // 🟢 This will now pass down content and email_subject to your client
+            campaign: campaignCheck[0],
             data: rows,
             meta: {
                 total_recipients: totalCountRows[0].total,
@@ -122,7 +122,7 @@ export const getCampaignHistoryLog = async (req, res, next) => {
 };
 
 /* -----------------------------------------------------
-    CAMPAIGN BUILDER (INSTANT & SCHEDULED HYBRID)
+    CAMPAIGN BUILDER (TIMEZONE ALIGNED)
 ----------------------------------------------------- */
 export const createMarketingCampaign = async (req, res, next) => {
     const conn = await db.getConnection();
@@ -134,14 +134,18 @@ export const createMarketingCampaign = async (req, res, next) => {
             return next(new ApiError(400, "Required orchestration configuration metadata missing."));
         }
 
-        // 🟢 Detect if this is an instant request
-        const isInstant = !scheduled_at || new Date(scheduled_at) <= new Date();
+        const nowInMs = Date.now();
+        const scheduleInMs = scheduled_at ? new Date(scheduled_at).getTime() : 0;
+
+        // ১০ সেকেন্ডের বাফার সহ ইনস্ট্যান্ট চেক
+        const isInstant = !scheduled_at || (scheduleInMs - nowInMs) <= 10000;
+
         const finalScheduledTime = isInstant ? new Date() : new Date(scheduled_at);
         const initialStatus = isInstant ? 'processing' : 'pending';
 
         await conn.beginTransaction();
 
-        // 1. Save Campaign Blueprint
+        // 1. Save Campaign Blueprint (COALESCE সরিয়ে সরাসরি ভ্যালু পাস করা হচ্ছে)
         const [campaignResult] = await conn.query(
             `INSERT INTO marketing_campaigns 
             (title, channel, content, email_subject, target_type, scheduled_at, status, created_by) 
@@ -188,7 +192,7 @@ export const createMarketingCampaign = async (req, res, next) => {
 
         await conn.commit();
 
-        // 🟢 4. IF INSTANT: Spin up immediate async execution worker pool right now
+        // 4. IF INSTANT: Spin up immediate background execution right now
         if (isInstant) {
             setImmediate(async () => {
                 try {
@@ -237,10 +241,10 @@ export const createMarketingCampaign = async (req, res, next) => {
             campaign_id: campaignId
         });
     } catch (err) {
-        await conn.rollback();
+        if (conn) await conn.rollback();
         next(err);
     } finally {
-        conn.release();
+        if (conn) conn.release();
     }
 };
 
@@ -255,7 +259,6 @@ export const cancelScheduledCampaign = async (req, res, next) => {
 
         await conn.beginTransaction();
 
-        // 1. Lock rows and check if the campaign is still eligible for termination
         const [campaigns] = await conn.query(
             "SELECT status, title FROM marketing_campaigns WHERE id = ? FOR UPDATE",
             [campaignId]
@@ -274,16 +277,13 @@ export const cancelScheduledCampaign = async (req, res, next) => {
             });
         }
 
-        // 2. Clear out mapped target records inside the delivery queue table
         await conn.query("DELETE FROM marketing_queue WHERE campaign_id = ?", [campaignId]);
 
-        // 3. Update parent campaign state flag to failed/canceled
         await conn.query(
             "UPDATE marketing_campaigns SET status = 'failed' WHERE id = ?",
             [campaignId]
         );
 
-        // 4. Log the action to activity history
         await conn.query(
             `INSERT INTO activity_logs (user_id, action, platform, browser, os, device, ip_address, metadata, created_at) 
              VALUES (?, 'CANCEL_CAMPAIGN', 'WEB', 'Marketing Engine', 'Server', 'System', '127.0.0.1', ?, NOW())`,
