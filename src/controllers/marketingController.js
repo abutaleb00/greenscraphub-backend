@@ -134,18 +134,23 @@ export const createMarketingCampaign = async (req, res, next) => {
             return next(new ApiError(400, "Required orchestration configuration metadata missing."));
         }
 
-        const nowInMs = Date.now();
-        const scheduleInMs = scheduled_at ? new Date(scheduled_at).getTime() : 0;
+        // 🟢 ১. কারেন্ট নোড প্রসেস সময়কে সরাসরি 'Asia/Dhaka' টাইমজোনে রূপান্তর
+        const bdtNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Dhaka" }));
 
-        // ১০ সেকেন্ডের বাফার সহ ইনস্ট্যান্ট চেক
-        const isInstant = !scheduled_at || (scheduleInMs - nowInMs) <= 10000;
+        // ফ্রন্টএন্ড থেকে আসা লোকাল টাইম স্ট্রিংকে অবজেক্টে রূপান্তর
+        const scheduleTimeObj = scheduled_at ? new Date(scheduled_at) : null;
+        const scheduleInMs = scheduleTimeObj ? scheduleTimeObj.getTime() : 0;
 
-        const finalScheduledTime = isInstant ? new Date() : new Date(scheduled_at);
+        // ১০ সেকেন্ডের রেস-কন্ডিশন বাফার সহ ইনস্ট্যান্ট চেক
+        const isInstant = !scheduled_at || (scheduleInMs - bdtNow.getTime()) <= 10000;
+
+        // 🟢 ২. ফাইনাল ডেট অ্যাসাইনমেন্ট (স্ট্রিং স্লাইস না করে সরাসরি পিওর ডেট অবজেক্ট ড্রাইভারকে পাস করা হচ্ছে)
+        const finalScheduledTime = isInstant ? bdtNow : scheduleTimeObj;
         const initialStatus = isInstant ? 'processing' : 'pending';
 
         await conn.beginTransaction();
 
-        // 1. Save Campaign Blueprint (COALESCE সরিয়ে সরাসরি ভ্যালু পাস করা হচ্ছে)
+        // 1. Save Campaign Blueprint
         const [campaignResult] = await conn.query(
             `INSERT INTO marketing_campaigns 
             (title, channel, content, email_subject, target_type, scheduled_at, status, created_by) 
@@ -220,7 +225,8 @@ export const createMarketingCampaign = async (req, res, next) => {
                                 } else {
                                     await dispatchInstantEmail(transporter, task.recipient_destination, email_subject, content);
                                 }
-                                await db.query("UPDATE marketing_queue SET status = 'sent', sent_at = NOW() WHERE id = ?", [task.id]);
+                                // 🟢 ৩. কিউ আপডেট স্টেটমেন্টেও কারেন্ট বাংলাদেশ টাইম লক করা হলো
+                                await db.query("UPDATE marketing_queue SET status = 'sent', sent_at = ? WHERE id = ?", [bdtNow, task.id]);
                             } catch (nodeErr) {
                                 await db.query("UPDATE marketing_queue SET status = 'failed', error_message = ? WHERE id = ?", [nodeErr.message.slice(0, 255), task.id]);
                             }

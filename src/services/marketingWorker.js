@@ -25,24 +25,30 @@ const dispatchEmailNode = async (transporter, to, subject, body) => {
 // 🟢 Background Automation Daemon (Orchestrated to evaluate precisely every 1 minute)
 cron.schedule('* * * * *', async () => {
     try {
-        // 1. UTC-Normalized Select: Grabs past-due pending tasks regardless of whether the server runs on UTC or BST
+        // 🟢 ১. নোড প্রসেস থেকে পিওর বাংলাদেশ স্ট্যান্ডার্ড টাইম (BST) জেনারেট
+        const bdtNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Dhaka" }));
+
+        console.log(`[CRON HEARTBEAT] Scanning for eligible campaigns at BST: ${bdtNow.toLocaleString('en-BD')}`);
+
+        // 🟢 ২. বাংলাদেশ সময় অনুযায়ী বর্তমান বা অতীত সময়ের পেন্ডিং ক্যাম্পেইন খোঁজা
         const [campaigns] = await db.query(
             `SELECT id, title, channel, content, email_subject 
-     FROM marketing_campaigns 
-     WHERE status = 'pending' 
-       AND scheduled_at <= NOW() 
-     LIMIT 1`
+             FROM marketing_campaigns 
+             WHERE status = 'pending' 
+               AND scheduled_at <= ? 
+             LIMIT 1`,
+            [bdtNow]
         );
 
-        if (!campaigns.length) return; // Exit quietly if no jobs are ready
+        if (!campaigns.length) return; // কোনো ক্যাম্পেইন রেডি না থাকলে নিরবে এক্সিট করবে
 
         const campaign = campaigns[0];
         console.log(`[MARKETING WORKER] Processing activated for campaign: ${campaign.title} (ID: ${campaign.id})`);
 
-        // 2. Set an atomic state lock instantly to avoid race conditions or double dispatches
+        // ৩. রেস কন্ডিশন বা ডাবল ডিসপ্যাচ এড়াতে তাৎক্ষণিক প্রসেসিং স্টেট লক
         await db.query("UPDATE marketing_campaigns SET status = 'processing' WHERE id = ?", [campaign.id]);
 
-        // 3. Collect queued targets mapped to this campaign
+        // ৪. এই ক্যাম্পেইনের সাথে ম্যাপ করা কিউড কাস্টমার লিস্ট সংগ্রহ
         const [queueItems] = await db.query(
             "SELECT id, recipient_destination FROM marketing_queue WHERE campaign_id = ? AND status = 'queued'",
             [campaign.id]
@@ -58,21 +64,21 @@ cron.schedule('* * * * *', async () => {
             });
         }
 
-        // 4. Batch Dispatch processing sequence loops
+        // ৫. ব্যাচ ডিসপ্যাচ সিকোয়েন্স লুপ (প্রতি ব্যাচে ৩০টি করে মেসেজ প্রসেস হবে)
         const batchSize = 30;
         for (let i = 0; i < queueItems.length; i += batchSize) {
             const chunk = queueItems.slice(i, i + batchSize);
 
             await Promise.all(chunk.map(async (task) => {
                 try {
-                    // 🟢 FIXED: Correctly referencing campaign context parameters within task arrays
                     if (campaign.channel === 'sms') {
                         await dispatchSMSNode(process.env.SMS_API_KEY, task.recipient_destination, campaign.content);
                     } else {
                         await dispatchEmailNode(transporter, task.recipient_destination, campaign.email_subject, campaign.content);
                     }
 
-                    await db.query("UPDATE marketing_queue SET status = 'sent', sent_at = UTC_TIMESTAMP() WHERE id = ?", [task.id]);
+                    // 🟢 ৬. কিউ আইটেম সাকসেস স্টেটমেন্টে সরাসরি কারেন্ট বাংলাদেশ টাইম লক করা হলো
+                    await db.query("UPDATE marketing_queue SET status = 'sent', sent_at = ? WHERE id = ?", [bdtNow, task.id]);
                 } catch (nodeErr) {
                     console.error(`[NODE ERROR] Dispatch failed to target ${task.recipient_destination}:`, nodeErr.message);
                     await db.query("UPDATE marketing_queue SET status = 'failed', error_message = ? WHERE id = ?", [nodeErr.message.slice(0, 255), task.id]);
@@ -80,7 +86,7 @@ cron.schedule('* * * * *', async () => {
             }));
         }
 
-        // 5. Wrap up state changes completely
+        // ৭. ক্যাম্পেইনের সামগ্রিক স্ট্যাটাস কমপ্লিট করা
         await db.query("UPDATE marketing_campaigns SET status = 'completed' WHERE id = ?", [campaign.id]);
         console.log(`[MARKETING WORKER] Successfully dispatched campaign layout ID: ${campaign.id}`);
 
