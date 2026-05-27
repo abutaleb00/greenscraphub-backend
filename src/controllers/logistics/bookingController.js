@@ -183,7 +183,6 @@ export const createPickup = async (req, res, next) => {
         const bookingCode = `GS-${upazila_id || '0'}-${Date.now().toString().slice(-4)}`;
 
         // 3. Create Main Pickup Entry 
-        // Note: Added min_total_amount and max_total_amount (make sure these columns exist in your pickups table)
         const [pickupResult] = await conn.query(
             `INSERT INTO pickups (
                 booking_code, customer_id, customer_address_id, 
@@ -207,8 +206,6 @@ export const createPickup = async (req, res, next) => {
             const item = parsedItems[i];
             const itemId = item.item_id || item.scrap_item_id;
 
-            // We use the rates passed from the mobile app to ensure the user sees exactly 
-            // what they saw on the confirmation screen.
             const minRate = parseFloat(item.min_rate) || 0;
             const maxRate = parseFloat(item.max_rate) || 0;
             const weight = parseFloat(item.estimated_weight || item.weight) || 0;
@@ -223,7 +220,6 @@ export const createPickup = async (req, res, next) => {
                 .filter(file => file.fieldname === `item_photos_${i}` || file.fieldname === 'photos')
                 .map(file => `/uploads/pickups/${file.filename}`);
 
-            // Insert into pickup_items including the min/max rates
             await conn.query(
                 `INSERT INTO pickup_items (
                     pickup_id, category_id, item_id, 
@@ -239,8 +235,8 @@ export const createPickup = async (req, res, next) => {
                     weight,
                     minRate,
                     maxRate,
-                    minRate, // Default final_rate to min until weighed
-                    itemMinTotal, // Default final_amount to min until weighed
+                    minRate,
+                    itemMinTotal,
                     JSON.stringify(itemPhotos)
                 ]
             );
@@ -293,7 +289,8 @@ export const createPickup = async (req, res, next) => {
                         { orderId: pickupId.toString(), type: "order_update" }
                     );
                 }
-                // 🟢 NEW: Trigger Real-Time Admin Notification Email
+
+                // Trigger Real-Time Admin Notification Email
                 await notifyAdminOnPickupCreation({
                     bookingCode,
                     customerName,
@@ -303,16 +300,30 @@ export const createPickup = async (req, res, next) => {
                     totalEstMin: totalEstMin.toFixed(2),
                     totalEstMax: totalEstMax.toFixed(2)
                 });
-                // SMS and Email logic remains same, but using the range
+
+                // Format Customer Phone Number
                 let formattedPhone = customerPhone.trim();
                 if (formattedPhone.startsWith('0')) formattedPhone = '88' + formattedPhone;
                 const smsMessage = `পিকআপ অনুরোধ নিশ্চিত! কোড: ${bookingCode}. Smart Scrap BD`;
 
-                await axios.post('https://api.sms.net.bd/sendsms', {
-                    api_key: process.env.SMS_API_KEY,
-                    msg: smsMessage,
-                    to: formattedPhone
-                }, { headers: { 'Content-Type': 'multipart/form-data' } });
+                // 🟢 NEW: Admin SMS Logic (Formatted to exact operator specifications)
+                const adminPhone = "8801925325050";
+                const adminSmsMessage = `New Pickup from ${customerName}`;
+
+                // Execute Both Customer and Admin SMS parallelly to maximize throughput
+                await Promise.all([
+                    axios.post('https://api.sms.net.bd/sendsms', {
+                        api_key: process.env.SMS_API_KEY,
+                        msg: smsMessage,
+                        to: formattedPhone
+                    }, { headers: { 'Content-Type': 'multipart/form-data' } }),
+
+                    axios.post('https://api.sms.net.bd/sendsms', {
+                        api_key: process.env.SMS_API_KEY,
+                        msg: adminSmsMessage,
+                        to: adminPhone
+                    }, { headers: { 'Content-Type': 'multipart/form-data' } })
+                ]);
 
                 if (customerEmail && !customerEmail.includes('example.com')) {
                     await sendPickupEmail(customerEmail, {
