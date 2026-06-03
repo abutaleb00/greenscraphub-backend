@@ -227,7 +227,7 @@ export const verifyAndRegister = async (req, res, next) => {
 
     await conn.beginTransaction();
 
-    // 🟢 ১. CRITICAL REAL-TIME DOUBLE CHECK (ইনসার্ট করার ঠিক আগে পুনরায় চেক)
+    // ১. CRITICAL REAL-TIME DOUBLE CHECK
     const cleanEmail = data.email && data.email.trim() !== "" ? data.email.trim() : null;
     let finalCheck = [];
 
@@ -245,11 +245,11 @@ export const verifyAndRegister = async (req, res, next) => {
 
     if (finalCheck.length > 0) {
       await conn.rollback();
-      otpStore.delete(phone); // মেমরি জটলা কমানোর জন্য ওটিপি ডিলিট
+      otpStore.delete(phone);
       return next(new ApiError(400, 'Phone or Email already registered'));
     }
 
-    // ২. DYNAMIC ENUM DISCOVERY: Get valid values for point_transactions 'type' column
+    // ২. DYNAMIC ENUM DISCOVERY
     const [enumSchema] = await conn.query(
       `SELECT COLUMN_TYPE 
        FROM INFORMATION_SCHEMA.COLUMNS 
@@ -258,7 +258,7 @@ export const verifyAndRegister = async (req, res, next) => {
          AND COLUMN_NAME = 'type'`
     );
 
-    let safePointType = 'earn'; // Ultimate fallback
+    let safePointType = 'earn';
     if (enumSchema.length > 0 && enumSchema[0].COLUMN_TYPE.startsWith('enum')) {
       const matches = enumSchema[0].COLUMN_TYPE.match(/'([^']+)'/g);
       if (matches && matches.length > 0) {
@@ -270,12 +270,13 @@ export const verifyAndRegister = async (req, res, next) => {
     const [settingsRows] = await conn.query("SELECT * FROM app_settings WHERE id = 1");
     const settings = settingsRows[0] || { signup_bonus_points: 20, referral_bonus_points: 50 };
 
+    // পাসওয়ার্ড হ্যাশ জেনারেট করা হচ্ছে
     const password_hash = await bcrypt.hash(data.password, 10);
 
-    // ৪. Create User (ইমেইল ফিল্ডটি ডাইনামিকালি নাল হ্যান্ডেল করা হয়েছে)
+    // 🟢 ৪. FIXED: প্লেসহোল্ডার এবং কুয়েরি প্যারামিটার অ্যারে সম্পূর্ণ সমান করা হয়েছে
     const [u] = await conn.query(
       "INSERT INTO users (full_name, phone, email, password_hash, role_id) VALUES (?, ?, ?, ?, 4)",
-      [data.full_name, data.phone.trim(), cleanEmail]
+      [data.full_name, data.phone.trim(), cleanEmail, password_hash]
     );
     const userId = u.insertId;
 
@@ -454,66 +455,65 @@ const createCustomerProfile = async (conn, userId, referralCodeInput) => {
 };
 
 /* -----------------------------------------------------
-    ADMIN → ONBOARD CUSTOMER (DIRECT)
+    HELPER: INITIALIZE CUSTOMER PROFILE
+    (Used by both self-reg and admin-onboarding)
 ----------------------------------------------------- */
-export const onboardCustomer = async (req, res, next) => {
-  const conn = await db.getConnection();
-  try {
-    const {
-      full_name, phone, email, password, referral_code,
-      address_line, division_id, district_id, upazila_id,
-      is_active, latitude, longitude
-    } = req.body;
+const createCustomerProfile = async (conn, userId, referralCodeInput) => {
+  // 🟢 ১. DYNAMIC ENUM DISCOVERY: Get valid values for point_transactions 'type' column
+  const [enumSchema] = await conn.query(
+    `SELECT COLUMN_TYPE 
+     FROM INFORMATION_SCHEMA.COLUMNS 
+     WHERE TABLE_SCHEMA = DATABASE() 
+       AND TABLE_NAME = 'point_transactions' 
+       AND COLUMN_NAME = 'type'`
+  );
 
-    // 1. Check if user already exists
-    const [exists] = await conn.query("SELECT id FROM users WHERE phone = ?", [phone]);
-    if (exists.length > 0) return next(new ApiError(400, 'User with this phone already exists'));
-
-    await conn.beginTransaction();
-
-    // 2. Create User (Role 4 = Customer)
-    const password_hash = await bcrypt.hash(password, 10);
-    const [u] = await conn.query(
-      "INSERT INTO users (full_name, phone, email, password_hash, role_id, is_active) VALUES (?, ?, ?, ?, 4, ?)",
-      [full_name, phone, email || null, password_hash, is_active || 1]
-    );
-    const userId = u.insertId;
-
-    // 3. Add Address Details WITH Lat/Long
-    // Ensure your 'addresses' table has latitude and longitude columns (DECIMAL 10,8 and 11,8)
-    await conn.query(
-      `INSERT INTO addresses (
-        user_id, address_line, division_id, district_id, upazila_id, 
-        latitude, longitude, is_default
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
-      [
-        userId,
-        address_line,
-        division_id,
-        district_id,
-        upazila_id,
-        latitude || null,
-        longitude || null
-      ]
-    );
-
-    // 4. Setup Profile & Referral via helper
-    await createCustomerProfile(conn, userId, referral_code);
-
-    // 5. Initialize Wallet
-    await conn.query("INSERT INTO wallet_accounts (user_id, balance) VALUES (?, 0)", [userId]);
-
-    await conn.commit();
-    res.status(201).json({
-      success: true,
-      message: "Customer identity node deployed with precise geo-coordinates."
-    });
-  } catch (err) {
-    await conn.rollback();
-    next(err);
-  } finally {
-    conn.release();
+  let safePointType = 'earn'; // Ultimate fallback
+  if (enumSchema.length > 0 && enumSchema[0].COLUMN_TYPE.startsWith('enum')) {
+    const matches = enumSchema[0].COLUMN_TYPE.match(/'([^']+)'/g);
+    if (matches && matches.length > 0) {
+      // Takes the first valid ENUM value dynamically (e.g., 'earn')
+      safePointType = matches[0].replace(/'/g, '');
+    }
   }
+
+  // 🔥 ২. Fetch Dynamic Settings
+  const [settingsRows] = await conn.query("SELECT * FROM app_settings WHERE id = 1");
+  const settings = settingsRows[0] || { signup_bonus_points: 20, referral_bonus_points: 50 };
+
+  let referredByCustomerId = null;
+  if (referralCodeInput) {
+    const [ref] = await conn.query("SELECT id FROM customers WHERE referral_code = ?", [referralCodeInput]);
+    if (ref.length > 0) {
+      referredByCustomerId = ref[0].id;
+
+      // Dynamic referral bonus for the referrer
+      await conn.query(
+        "UPDATE customers SET total_points = total_points + ? WHERE id = ?",
+        [settings.referral_bonus_points, referredByCustomerId]
+      );
+
+      // 🟢 ৩. FIXED: Replaced hardcoded 'referral_bonus' with safePointType
+      await conn.query(
+        "INSERT INTO point_transactions (customer_id, amount, type, description) VALUES (?, ?, ?, 'Referral bonus for inviting a new member')",
+        [referredByCustomerId, settings.referral_bonus_points, safePointType]
+      );
+    }
+  }
+
+  const newRefCode = 'GS' + Math.random().toString(36).substring(2, 7).toUpperCase();
+
+  // Create profile with dynamic signup points
+  await conn.query(
+    "INSERT INTO customers (user_id, referral_code, referred_by, total_points) VALUES (?, ?, ?, ?)",
+    [userId, newRefCode, referredByCustomerId, settings.signup_bonus_points]
+  );
+
+  // Log Signup bonus history for user
+  await conn.query(
+    "INSERT INTO point_transactions (customer_id, amount, type, description) VALUES ((SELECT id FROM customers WHERE user_id = ?), ?, ?, 'Admin Onboarding Welcome Bonus')",
+    [userId, settings.signup_bonus_points, safePointType]
+  );
 };
 /* -----------------------------------------------------
     LOGIN (Updated to include email)
