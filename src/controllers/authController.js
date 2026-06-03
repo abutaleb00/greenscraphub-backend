@@ -416,49 +416,6 @@ export const onboardStaff = async (req, res, next) => {
     (Used by both self-reg and admin-onboarding)
 ----------------------------------------------------- */
 const createCustomerProfile = async (conn, userId, referralCodeInput) => {
-  // 🔥 Fetch Dynamic Settings
-  const [settingsRows] = await conn.query("SELECT * FROM app_settings WHERE id = 1");
-  const settings = settingsRows[0] || { signup_bonus_points: 20, referral_bonus_points: 50 };
-
-  let referredByCustomerId = null;
-  if (referralCodeInput) {
-    const [ref] = await conn.query("SELECT id FROM customers WHERE referral_code = ?", [referralCodeInput]);
-    if (ref.length > 0) {
-      referredByCustomerId = ref[0].id;
-
-      // Dynamic referral bonus for the referrer
-      await conn.query(
-        "UPDATE customers SET total_points = total_points + ? WHERE id = ?",
-        [settings.referral_bonus_points, referredByCustomerId]
-      );
-
-      await conn.query(
-        "INSERT INTO point_transactions (customer_id, amount, type, description) VALUES (?, ?, 'referral_bonus', 'Referral bonus for inviting a new member')",
-        [referredByCustomerId, settings.referral_bonus_points]
-      );
-    }
-  }
-
-  const newRefCode = 'GS' + Math.random().toString(36).substring(2, 7).toUpperCase();
-
-  // Create profile with dynamic signup points
-  await conn.query(
-    "INSERT INTO customers (user_id, referral_code, referred_by, total_points) VALUES (?, ?, ?, ?)",
-    [userId, newRefCode, referredByCustomerId, settings.signup_bonus_points]
-  );
-
-  // Log Signup bonus history for user
-  await conn.query(
-    "INSERT INTO point_transactions (customer_id, amount, type, description) VALUES ((SELECT id FROM customers WHERE user_id = ?), ?, 'earn', 'Admin Onboarding Welcome Bonus')",
-    [userId, settings.signup_bonus_points]
-  );
-};
-
-/* -----------------------------------------------------
-    HELPER: INITIALIZE CUSTOMER PROFILE
-    (Used by both self-reg and admin-onboarding)
------------------------------------------------------ */
-const createCustomerProfile = async (conn, userId, referralCodeInput) => {
   // 🟢 ১. DYNAMIC ENUM DISCOVERY: Get valid values for point_transactions 'type' column
   const [enumSchema] = await conn.query(
     `SELECT COLUMN_TYPE 
