@@ -227,7 +227,29 @@ export const verifyAndRegister = async (req, res, next) => {
 
     await conn.beginTransaction();
 
-    // 1. 🔍 DYNAMIC ENUM DISCOVERY: Get valid values for point_transactions 'type' column
+    // 🟢 ১. CRITICAL REAL-TIME DOUBLE CHECK (ইনসার্ট করার ঠিক আগে পুনরায় চেক)
+    const cleanEmail = data.email && data.email.trim() !== "" ? data.email.trim() : null;
+    let finalCheck = [];
+
+    if (cleanEmail) {
+      [finalCheck] = await conn.query(
+        "SELECT id FROM users WHERE phone = ? OR email = ?",
+        [data.phone.trim(), cleanEmail]
+      );
+    } else {
+      [finalCheck] = await conn.query(
+        "SELECT id FROM users WHERE phone = ?",
+        [data.phone.trim()]
+      );
+    }
+
+    if (finalCheck.length > 0) {
+      await conn.rollback();
+      otpStore.delete(phone); // মেমরি জটলা কমানোর জন্য ওটিপি ডিলিট
+      return next(new ApiError(400, 'Phone or Email already registered'));
+    }
+
+    // ২. DYNAMIC ENUM DISCOVERY: Get valid values for point_transactions 'type' column
     const [enumSchema] = await conn.query(
       `SELECT COLUMN_TYPE 
        FROM INFORMATION_SCHEMA.COLUMNS 
@@ -244,26 +266,25 @@ export const verifyAndRegister = async (req, res, next) => {
       }
     }
 
-    // 🔥 2. Fetch Dynamic Reward Settings
+    // ৩. Fetch Dynamic Reward Settings
     const [settingsRows] = await conn.query("SELECT * FROM app_settings WHERE id = 1");
     const settings = settingsRows[0] || { signup_bonus_points: 20, referral_bonus_points: 50 };
 
     const password_hash = await bcrypt.hash(data.password, 10);
 
-    // 3. Create User
+    // ৪. Create User (ইমেইল ফিল্ডটি ডাইনামিকালি নাল হ্যান্ডেল করা হয়েছে)
     const [u] = await conn.query(
       "INSERT INTO users (full_name, phone, email, password_hash, role_id) VALUES (?, ?, ?, ?, 4)",
-      [data.full_name, data.phone, data.email || null, password_hash]
+      [data.full_name, data.phone.trim(), cleanEmail]
     );
     const userId = u.insertId;
 
-    // 4. Handle Referral & Influencer Logic
+    // ৫. Handle Referral & Influencer Logic
     let referredByCustomerId = null;
-    let finalSignupBonus = settings.signup_bonus_points; // Default starting value
+    let finalSignupBonus = settings.signup_bonus_points;
     let signupBonusDescription = 'Welcome Signup Bonus';
 
     if (data.referral_code) {
-      // Check if the referral code belongs to an existing customer (or influencer)
       const [refOwner] = await conn.query(
         "SELECT id, is_influencer, influencer_reward_points FROM customers WHERE referral_code = ?",
         [data.referral_code]
@@ -273,13 +294,9 @@ export const verifyAndRegister = async (req, res, next) => {
         referredByCustomerId = refOwner[0].id;
 
         if (refOwner[0].is_influencer) {
-          // --- CASE A: Influencer Code ---
           finalSignupBonus = refOwner[0].influencer_reward_points || settings.signup_bonus_points;
           signupBonusDescription = `Influencer Promo Bonus: ${data.referral_code}`;
-          // Note: We do NOT give points to the influencer here as they are managed via B2B/Special terms
         } else {
-          // --- CASE B: Regular Referral Code ---
-          // Award dynamic referral bonus to the Referrer
           await conn.query(
             "UPDATE customers SET total_points = total_points + ? WHERE id = ?",
             [settings.referral_bonus_points, referredByCustomerId]
@@ -293,14 +310,14 @@ export const verifyAndRegister = async (req, res, next) => {
       }
     }
 
-    // 5. Create Customer Profile with Calculated Bonus
+    // ৬. Create Customer Profile
     const refCode = 'GS' + Math.random().toString(36).substring(2, 7).toUpperCase();
     await conn.query(
       "INSERT INTO customers (user_id, referral_code, referred_by, total_points) VALUES (?, ?, ?, ?)",
       [userId, refCode, referredByCustomerId, finalSignupBonus]
     );
 
-    // 6. Record Point Transaction for the new user
+    // ৭. Record Point Transaction for the new user
     await conn.query(
       "INSERT INTO point_transactions (customer_id, amount, type, description) VALUES ((SELECT id FROM customers WHERE user_id = ?), ?, ?, ?)",
       [userId, finalSignupBonus, safePointType, signupBonusDescription]
@@ -316,13 +333,15 @@ export const verifyAndRegister = async (req, res, next) => {
       method: 'Self-Registration',
       promo_used: data.referral_code || 'none'
     });
-    // 🟢 NEW: Trigger Background Admin Notification Email
+
+    // Trigger Background Admin Notification Email
     notifyAdminOnRegistration({
       full_name: data.full_name,
       phone: data.phone,
-      email: data.email,
+      email: cleanEmail,
       referral_code: data.referral_code
     });
+
     const token = jwt.sign({ id: userId, role: 'customer' }, process.env.JWT_SECRET, { expiresIn: '7d' });
     res.status(201).json({
       success: true,
