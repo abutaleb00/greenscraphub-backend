@@ -8,7 +8,8 @@ import { awardReferralBonus } from './pointController.js';
 import axios from 'axios';
 import useragent from 'useragent';
 import requestIp from 'request-ip';
-// Temporary store for OTPs and registration data
+
+// Temporary volatile memory block for caching registration nodes and current OTP configurations
 const otpStore = new Map();
 
 /* -----------------------------------------------------
@@ -18,7 +19,7 @@ const notifyAdminOnRegistration = async (customerData) => {
   try {
     const transporter = nodemailer.createTransport({
       host: process.env.MAIL_HOST,
-      port: parseInt(process.env.MAIL_PORT),
+      port: parseInt(process.env.MAIL_PORT || "587"),
       secure: process.env.MAIL_SECURE === 'true',
       auth: {
         user: process.env.MAIL_USER,
@@ -32,7 +33,7 @@ const notifyAdminOnRegistration = async (customerData) => {
       subject: "🚨 New Customer Registration Alert",
       html: `
         <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 500px;">
-          <h2 style="color: #10B981; border-b: 2px solid #f4f4f4; padding-bottom: 10px;">New Account Registered</h2>
+          <h2 style="color: #10B981; border-bottom: 2px solid #f4f4f4; padding-bottom: 10px;">New Account Registered</h2>
           <p>A new customer has successfully completed verification and deployed an identity node on the platform.</p>
           <table style="width: 100%; text-align: left; border-collapse: collapse; margin-top: 15px;">
             <tr>
@@ -61,15 +62,17 @@ const notifyAdminOnRegistration = async (customerData) => {
     console.error("⚠️ [Admin Notification Email Failed]:", error.message);
   }
 };
+
+/* -----------------------------------------------------
+    HELPER: SYSTEM ACTIVITY LOG ENGINE
+----------------------------------------------------- */
 const logActivity = async (req, userId, action, metadata = {}) => {
   try {
     const agent = useragent.parse(req.headers['user-agent']);
 
-    // Improved IP detection
+    // Standardized proxy IP resolution
     let ip = requestIp.getClientIp(req);
 
-    // If you are behind a proxy (like Nginx), request-ip usually handles it, 
-    // but we can force a clean-up if it returns a list or IPv6 prefix
     if (ip && ip.startsWith('::ffff:')) {
       ip = ip.replace('::ffff:', '');
     }
@@ -89,7 +92,7 @@ const logActivity = async (req, userId, action, metadata = {}) => {
       agent.toAgent(),
       agent.os.toString(),
       agent.device.toString(),
-      ip === '::1' ? '127.0.0.1' : ip, // Normalize localhost
+      ip === '::1' ? '127.0.0.1' : ip,
       JSON.stringify(metadata)
     ];
 
@@ -98,6 +101,7 @@ const logActivity = async (req, userId, action, metadata = {}) => {
     console.error("[Activity Log Error]", error.message);
   }
 };
+
 /* -----------------------------------------------------
     HELPER: SEND SMS OTP (sms.net.bd)
 ----------------------------------------------------- */
@@ -137,7 +141,7 @@ const sendSMS = async (phone, otp) => {
 const sendEmailOTP = async (email, otp) => {
   const transporter = nodemailer.createTransport({
     host: process.env.MAIL_HOST,
-    port: parseInt(process.env.MAIL_PORT),
+    port: parseInt(process.env.MAIL_PORT || "587"),
     secure: process.env.MAIL_SECURE === 'true',
     auth: {
       user: process.env.MAIL_USER,
@@ -162,17 +166,78 @@ const sendEmailOTP = async (email, otp) => {
 };
 
 /* -----------------------------------------------------
+    HELPER: INITIALIZE CUSTOMER PROFILE
+    (Used by both self-reg and admin-onboarding)
+----------------------------------------------------- */
+const createCustomerProfile = async (conn, userId, referralCodeInput) => {
+  // 1. Dynamic Enum Schema Discovery: Matches valid point transaction structures
+  const [enumSchema] = await conn.query(
+    `SELECT COLUMN_TYPE 
+     FROM INFORMATION_SCHEMA.COLUMNS 
+     WHERE TABLE_SCHEMA = DATABASE() 
+       AND TABLE_NAME = 'point_transactions' 
+       AND COLUMN_NAME = 'type'`
+  );
+
+  let safePointType = 'earn';
+  if (enumSchema.length > 0 && enumSchema[0].COLUMN_TYPE.startsWith('enum')) {
+    const matches = enumSchema[0].COLUMN_TYPE.match(/'([^']+)'/g);
+    if (matches && matches.length > 0) {
+      safePointType = matches[0].replace(/'/g, '');
+    }
+  }
+
+  // 2. Load Active System Settings Node
+  const [settingsRows] = await conn.query("SELECT * FROM app_settings WHERE id = 1");
+  const settings = settingsRows[0] || { signup_bonus_points: 20, referral_bonus_points: 50 };
+
+  let referredByCustomerId = null;
+  if (referralCodeInput) {
+    const [ref] = await conn.query("SELECT id FROM customers WHERE referral_code = ?", [referralCodeInput]);
+    if (ref.length > 0) {
+      referredByCustomerId = ref[0].id;
+
+      // Disburse points assignment vector to Referrer target instance
+      await conn.query(
+        "UPDATE customers SET total_points = total_points + ? WHERE id = ?",
+        [settings.referral_bonus_points, referredByCustomerId]
+      );
+
+      // Log point conversion ledger history chain record
+      await conn.query(
+        "INSERT INTO point_transactions (customer_id, amount, type, description) VALUES (?, ?, ?, 'Referral bonus for inviting a new member')",
+        [referredByCustomerId, settings.referral_bonus_points, safePointType]
+      );
+    }
+  }
+
+  const newRefCode = 'GS' + Math.random().toString(36).substring(2, 7).toUpperCase();
+
+  // Create clean Customer database row index
+  await conn.query(
+    "INSERT INTO customers (user_id, referral_code, referred_by, total_points) VALUES (?, ?, ?, ?)",
+    [userId, newRefCode, referredByCustomerId, settings.signup_bonus_points]
+  );
+
+  // Log Welcome Signup distribution trace link entries
+  await conn.query(
+    "INSERT INTO point_transactions (customer_id, amount, type, description) VALUES ((SELECT id FROM customers WHERE user_id = ?), ?, ?, 'Admin Onboarding Welcome Bonus')",
+    [userId, settings.signup_bonus_points, safePointType]
+  );
+};
+
+/* -----------------------------------------------------
     CUSTOMER SELF-REGISTRATION (STEP 1: OTP REQUEST)
 ----------------------------------------------------- */
 export const registerRequest = async (req, res, next) => {
   try {
     const { phone, email, full_name, password, referral_code } = req.body;
 
-    // 🟢 1. Clean and validate email input safely
+    // Isolate blank string vectors to prevent dynamic schema evaluation conflicts
     const cleanEmail = email && email.trim() !== "" ? email.trim() : null;
     let exists = [];
 
-    // 🟢 2. Dynamic Safe Query Injection to prevent false positives
+    // Evaluate current context against unique constraint attributes
     if (cleanEmail) {
       [exists] = await db.query(
         "SELECT id FROM users WHERE phone = ? OR email = ?",
@@ -185,18 +250,15 @@ export const registerRequest = async (req, res, next) => {
       );
     }
 
-    // If matches found, block immediately with clean validation state
     if (exists.length > 0) {
       return next(new ApiError(400, 'Phone or Email already registered'));
     }
 
-    // 3. Generate Secure OTP Node Chunk
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // Store request context into volatile memory block safely
+    // Cache structural state inside volatile map matrix bounds securely
     otpStore.set(phone.trim(), { ...req.body, email: cleanEmail, otp, expires: Date.now() + 300000 });
 
-    // 4. Trigger Communication Gateways
     const smsSent = await sendSMS(phone, otp);
 
     if (cleanEmail && !cleanEmail.includes('example.com')) {
@@ -227,7 +289,7 @@ export const verifyAndRegister = async (req, res, next) => {
 
     await conn.beginTransaction();
 
-    // ১. CRITICAL REAL-TIME DOUBLE CHECK
+    // Real-Time double check processing step executing inside atomic transactions isolation layer
     const cleanEmail = data.email && data.email.trim() !== "" ? data.email.trim() : null;
     let finalCheck = [];
 
@@ -249,7 +311,7 @@ export const verifyAndRegister = async (req, res, next) => {
       return next(new ApiError(400, 'Phone or Email already registered'));
     }
 
-    // ২. DYNAMIC ENUM DISCOVERY
+    // Dynamic Enum tracking assignment loop logic execution sequence
     const [enumSchema] = await conn.query(
       `SELECT COLUMN_TYPE 
        FROM INFORMATION_SCHEMA.COLUMNS 
@@ -266,21 +328,18 @@ export const verifyAndRegister = async (req, res, next) => {
       }
     }
 
-    // ৩. Fetch Dynamic Reward Settings
     const [settingsRows] = await conn.query("SELECT * FROM app_settings WHERE id = 1");
     const settings = settingsRows[0] || { signup_bonus_points: 20, referral_bonus_points: 50 };
 
-    // পাসওয়ার্ড হ্যাশ জেনারেট করা হচ্ছে
     const password_hash = await bcrypt.hash(data.password, 10);
 
-    // 🟢 ৪. FIXED: প্লেসহোল্ডার এবং কুয়েরি প্যারামিটার অ্যারে সম্পূর্ণ সমান করা হয়েছে
+    // Synchronize query parameters layout precisely to fix MariaDB parameter mapping exceptions
     const [u] = await conn.query(
       "INSERT INTO users (full_name, phone, email, password_hash, role_id) VALUES (?, ?, ?, ?, 4)",
       [data.full_name, data.phone.trim(), cleanEmail, password_hash]
     );
     const userId = u.insertId;
 
-    // ৫. Handle Referral & Influencer Logic
     let referredByCustomerId = null;
     let finalSignupBonus = settings.signup_bonus_points;
     let signupBonusDescription = 'Welcome Signup Bonus';
@@ -311,14 +370,12 @@ export const verifyAndRegister = async (req, res, next) => {
       }
     }
 
-    // ৬. Create Customer Profile
     const refCode = 'GS' + Math.random().toString(36).substring(2, 7).toUpperCase();
     await conn.query(
       "INSERT INTO customers (user_id, referral_code, referred_by, total_points) VALUES (?, ?, ?, ?)",
       [userId, refCode, referredByCustomerId, finalSignupBonus]
     );
 
-    // ৭. Record Point Transaction for the new user
     await conn.query(
       "INSERT INTO point_transactions (customer_id, amount, type, description) VALUES ((SELECT id FROM customers WHERE user_id = ?), ?, ?, ?)",
       [userId, finalSignupBonus, safePointType, signupBonusDescription]
@@ -329,13 +386,11 @@ export const verifyAndRegister = async (req, res, next) => {
     await conn.commit();
     otpStore.delete(phone);
 
-    // LOG ACTIVITY: SIGNUP
     await logActivity(req, userId, 'SIGNUP', {
       method: 'Self-Registration',
       promo_used: data.referral_code || 'none'
     });
 
-    // Trigger Background Admin Notification Email
     notifyAdminOnRegistration({
       full_name: data.full_name,
       phone: data.phone,
@@ -366,7 +421,6 @@ export const onboardStaff = async (req, res, next) => {
     const { full_name, phone, email, password, role_name, agent_id } = req.body;
     const creatorRole = req.user.role;
 
-    // Security check
     if (role_name === 'agent' && creatorRole !== 'admin') {
       return next(new ApiError(403, "Only Admins can onboard new Agents"));
     }
@@ -384,7 +438,6 @@ export const onboardStaff = async (req, res, next) => {
     );
     const userId = u.insertId;
 
-    // Profile Creation
     if (role_name === 'rider') {
       await conn.query(
         "INSERT INTO riders (user_id, agent_id, vehicle_type) VALUES (?, ?, ?)",
@@ -398,7 +451,6 @@ export const onboardStaff = async (req, res, next) => {
       );
     }
 
-    // Initialize Wallet for earnings
     await conn.query("INSERT INTO wallet_accounts (user_id, balance) VALUES (?, 0)", [userId]);
 
     await conn.commit();
@@ -412,68 +464,65 @@ export const onboardStaff = async (req, res, next) => {
 };
 
 /* -----------------------------------------------------
-    HELPER: INITIALIZE CUSTOMER PROFILE
-    (Used by both self-reg and admin-onboarding)
+    ADMIN → ONBOARD CUSTOMER (DIRECT COORDINATE DEPLOYMENT)
 ----------------------------------------------------- */
-const createCustomerProfile = async (conn, userId, referralCodeInput) => {
-  // 🟢 ১. DYNAMIC ENUM DISCOVERY: Get valid values for point_transactions 'type' column
-  const [enumSchema] = await conn.query(
-    `SELECT COLUMN_TYPE 
-     FROM INFORMATION_SCHEMA.COLUMNS 
-     WHERE TABLE_SCHEMA = DATABASE() 
-       AND TABLE_NAME = 'point_transactions' 
-       AND COLUMN_NAME = 'type'`
-  );
+export const onboardCustomer = async (req, res, next) => {
+  const conn = await db.getConnection();
+  try {
+    const {
+      full_name, phone, email, password, referral_code,
+      address_line, division_id, district_id, upazila_id,
+      is_active, latitude, longitude
+    } = req.body;
 
-  let safePointType = 'earn'; // Ultimate fallback
-  if (enumSchema.length > 0 && enumSchema[0].COLUMN_TYPE.startsWith('enum')) {
-    const matches = enumSchema[0].COLUMN_TYPE.match(/'([^']+)'/g);
-    if (matches && matches.length > 0) {
-      // Takes the first valid ENUM value dynamically (e.g., 'earn')
-      safePointType = matches[0].replace(/'/g, '');
-    }
+    const [exists] = await conn.query("SELECT id FROM users WHERE phone = ?", [phone]);
+    if (exists.length > 0) return next(new ApiError(400, 'User with this phone already exists'));
+
+    await conn.beginTransaction();
+
+    const password_hash = await bcrypt.hash(password, 10);
+    const [u] = await conn.query(
+      "INSERT INTO users (full_name, phone, email, password_hash, role_id, is_active) VALUES (?, ?, ?, ?, 4, ?)",
+      [full_name, phone, email || null, password_hash, is_active || 1]
+    );
+    const userId = u.insertId;
+
+    await conn.query(
+      `INSERT INTO addresses (
+        user_id, address_line, division_id, district_id, upazila_id, 
+        latitude, longitude, is_default
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
+      [
+        userId,
+        address_line,
+        division_id,
+        district_id,
+        upazila_id,
+        latitude || null,
+        longitude || null
+      ]
+    );
+
+    // Call dynamic enum safety parsing structure workflow helper directly
+    await createCustomerProfile(conn, userId, referral_code);
+
+    await conn.query("INSERT INTO wallet_accounts (user_id, balance) VALUES (?, 0)", [userId]);
+
+    await conn.commit();
+    res.status(201).json({
+      success: true,
+      message: "Customer identity node deployed with precise geo-coordinates."
+    });
+  } catch (err) {
+    await conn.rollback();
+    next(err);
+  } finally {
+    conn.release();
   }
-
-  // 🔥 ২. Fetch Dynamic Settings
-  const [settingsRows] = await conn.query("SELECT * FROM app_settings WHERE id = 1");
-  const settings = settingsRows[0] || { signup_bonus_points: 20, referral_bonus_points: 50 };
-
-  let referredByCustomerId = null;
-  if (referralCodeInput) {
-    const [ref] = await conn.query("SELECT id FROM customers WHERE referral_code = ?", [referralCodeInput]);
-    if (ref.length > 0) {
-      referredByCustomerId = ref[0].id;
-
-      // Dynamic referral bonus for the referrer
-      await conn.query(
-        "UPDATE customers SET total_points = total_points + ? WHERE id = ?",
-        [settings.referral_bonus_points, referredByCustomerId]
-      );
-
-      // 🟢 ৩. FIXED: Replaced hardcoded 'referral_bonus' with safePointType
-      await conn.query(
-        "INSERT INTO point_transactions (customer_id, amount, type, description) VALUES (?, ?, ?, 'Referral bonus for inviting a new member')",
-        [referredByCustomerId, settings.referral_bonus_points, safePointType]
-      );
-    }
-  }
-
-  const newRefCode = 'GS' + Math.random().toString(36).substring(2, 7).toUpperCase();
-
-  // Create profile with dynamic signup points
-  await conn.query(
-    "INSERT INTO customers (user_id, referral_code, referred_by, total_points) VALUES (?, ?, ?, ?)",
-    [userId, newRefCode, referredByCustomerId, settings.signup_bonus_points]
-  );
-
-  // Log Signup bonus history for user
-  await conn.query(
-    "INSERT INTO point_transactions (customer_id, amount, type, description) VALUES ((SELECT id FROM customers WHERE user_id = ?), ?, ?, 'Admin Onboarding Welcome Bonus')",
-    [userId, settings.signup_bonus_points, safePointType]
-  );
 };
+
 /* -----------------------------------------------------
-    LOGIN (Updated to include email)
+    SYSTEM SESSION ACCESS: LOGIN CONTROL
 ----------------------------------------------------- */
 export const login = async (req, res, next) => {
   try {
@@ -494,7 +543,6 @@ export const login = async (req, res, next) => {
     const role = user.role_name.toLowerCase();
     const token = jwt.sign({ id: user.id, role }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
-    // LOG ACTIVITY: LOGIN
     await logActivity(req, user.id, 'LOGIN', { status: 'success' });
 
     res.json({
@@ -536,7 +584,6 @@ export const updateFcmToken = async (req, res, next) => {
 ----------------------------------------------------- */
 export const getMe = async (req, res, next) => {
   try {
-    // 1. Fetch User Profile Data
     const [rows] = await db.query(`
             SELECT 
                 u.id, u.full_name, u.phone, u.email, u.profile_image, 
@@ -556,7 +603,6 @@ export const getMe = async (req, res, next) => {
 
     const user = rows[0];
 
-    // 2. Handle Profile Image URL
     if (user.profile_image) {
       const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
       user.profile_image = user.profile_image.startsWith('http')
@@ -564,11 +610,7 @@ export const getMe = async (req, res, next) => {
         : `${baseUrl}${user.profile_image}`;
     }
 
-    /**
-     * 3. 🔥 NEW: FETCH GLOBAL APP SETTINGS
-     * This allows the app to show dynamic reward values and rates
-     */
-    const [settingsRows] = await db.query(`
+    const [settingsRows] = await conn.query(`
         SELECT 
             signup_bonus_points, 
             referral_bonus_points, 
@@ -579,7 +621,6 @@ export const getMe = async (req, res, next) => {
         WHERE id = 1
     `);
 
-    // Combine user data with app configuration
     res.json({
       success: true,
       data: user,
@@ -627,10 +668,11 @@ export const forgotPasswordRequest = async (req, res, next) => {
     if (user.email && !user.email.includes('example.com')) {
       try {
         await sendEmailOTP(user.email, otp);
-      } catch (e) { console.error("Mail failed during reset", e.message); }
+      } catch (e) {
+        console.error("Mail failed during reset", e.message);
+      }
     }
 
-    // LOG ACTIVITY: PASSWORD RESET REQUESTED
     await logActivity(req, user.id, 'PASSWORD_RESET_REQUEST');
 
     res.status(200).json({
@@ -661,7 +703,6 @@ export const resetPassword = async (req, res, next) => {
 
     otpStore.delete(`reset_${phone}`);
 
-    // LOG ACTIVITY: PASSWORD RESET COMPLETED
     if (user.length > 0) {
       await logActivity(req, user[0].id, 'PASSWORD_RESET_SUCCESS');
     }
@@ -676,7 +717,7 @@ export const resetPassword = async (req, res, next) => {
 };
 
 /* -----------------------------------------------------
-    UPDATE PROFILE (Multi-Role Support)
+    UPDATE PROFILE (Multi-Role Support Engine Matrix)
 ----------------------------------------------------- */
 export const updateProfile = async (req, res, next) => {
   const conn = await db.getConnection();
@@ -723,7 +764,6 @@ export const updateProfile = async (req, res, next) => {
 
     await conn.commit();
 
-    // LOG ACTIVITY: PROFILE_UPDATE
     await logActivity(req, userId, 'PROFILE_UPDATE');
 
     const [updatedRows] = await db.query(`
@@ -749,7 +789,7 @@ export const updateProfile = async (req, res, next) => {
 };
 
 /* -----------------------------------------------------
-    CHANGE PASSWORD (Separate for Security)
+    CHANGE PASSWORD (Separate Security Interface Layer)
 ----------------------------------------------------- */
 export const changePassword = async (req, res, next) => {
   try {
@@ -765,7 +805,6 @@ export const changePassword = async (req, res, next) => {
     const password_hash = await bcrypt.hash(newPassword, 10);
     await db.query("UPDATE users SET password_hash = ? WHERE id = ?", [password_hash, userId]);
 
-    // LOG ACTIVITY: SECURITY_PASSWORD_CHANGE
     await logActivity(req, userId, 'PASSWORD_CHANGE');
 
     res.status(200).json({
@@ -777,6 +816,9 @@ export const changePassword = async (req, res, next) => {
   }
 };
 
+/* -----------------------------------------------------
+    SESSION TERMINATION: LOGOUT CONTROL
+----------------------------------------------------- */
 export const logout = async (req, res, next) => {
   try {
     await logActivity(req, req.user.id, 'LOGOUT');
