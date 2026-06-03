@@ -168,19 +168,39 @@ export const registerRequest = async (req, res, next) => {
   try {
     const { phone, email, full_name, password, referral_code } = req.body;
 
-    const [exists] = await db.query(
-      "SELECT id FROM users WHERE phone = ? OR (email IS NOT NULL AND email = ?)",
-      [phone, email]
-    );
-    if (exists.length > 0) return next(new ApiError(400, 'Phone or Email already registered'));
+    // 🟢 1. Clean and validate email input safely
+    const cleanEmail = email && email.trim() !== "" ? email.trim() : null;
+    let exists = [];
 
+    // 🟢 2. Dynamic Safe Query Injection to prevent false positives
+    if (cleanEmail) {
+      [exists] = await db.query(
+        "SELECT id FROM users WHERE phone = ? OR email = ?",
+        [phone.trim(), cleanEmail]
+      );
+    } else {
+      [exists] = await db.query(
+        "SELECT id FROM users WHERE phone = ?",
+        [phone.trim()]
+      );
+    }
+
+    // If matches found, block immediately with clean validation state
+    if (exists.length > 0) {
+      return next(new ApiError(400, 'Phone or Email already registered'));
+    }
+
+    // 3. Generate Secure OTP Node Chunk
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    otpStore.set(phone, { ...req.body, otp, expires: Date.now() + 300000 });
 
+    // Store request context into volatile memory block safely
+    otpStore.set(phone.trim(), { ...req.body, email: cleanEmail, otp, expires: Date.now() + 300000 });
+
+    // 4. Trigger Communication Gateways
     const smsSent = await sendSMS(phone, otp);
 
-    if (email && !email.includes('example.com')) {
-      await sendEmailOTP(email, otp);
+    if (cleanEmail && !cleanEmail.includes('example.com')) {
+      await sendEmailOTP(cleanEmail, otp);
     }
 
     res.json({
