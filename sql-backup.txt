@@ -426,13 +426,14 @@ mysql -u root -p greenscraphub_db < /home/abutaleb/greenscraphub_db.sql
 
 sudo systemctl status mysql
 
-mysqldump -u root -p greenscraphub_db > /home/abutaleb/greenscraphub_db_backup-19-04-2026-latest.sql
+mysqldump -u root -p greenscraphub_db > /home/abutaleb/greenscraphub_db_backup-6-09-2026-latest.sql
 mysql -u root -p
 USE greenscraphub_db;
 SELECT DATABASE();
 
 SHOW TABLES;
 
+sudo certbot certonly --manual --preferred-challenges dns -d prosfata.space -d *.prosfata.space
 # Navigate to the project folder
 cd /var/www/greenscraphub-backend
 

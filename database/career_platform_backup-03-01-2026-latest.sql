@@ -1,0 +1,8061 @@
+/*M!999999\- enable the sandbox mode */ 
+-- MariaDB dump 10.19  Distrib 10.11.13-MariaDB, for debian-linux-gnu (x86_64)
+--
+-- Host: localhost    Database: career_platform
+-- ------------------------------------------------------
+-- Server version	10.11.13-MariaDB-0ubuntu0.24.04.1
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+
+--
+-- Table structure for table `accounting_settings`
+--
+
+DROP TABLE IF EXISTS `accounting_settings`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `accounting_settings` (
+  `id` tinyint(4) NOT NULL DEFAULT 1,
+  `hold_days` int(11) NOT NULL DEFAULT 7,
+  `platform_fee_pct` decimal(5,2) NOT NULL DEFAULT 10.00,
+  `processing_fee_pct` decimal(5,2) NOT NULL DEFAULT 2.90,
+  `processing_fee_fixed` decimal(10,2) NOT NULL DEFAULT 0.30,
+  `min_payout_amount` decimal(12,2) NOT NULL DEFAULT 20.00,
+  `currency` char(3) NOT NULL DEFAULT 'USD',
+  `auto_release_on_completion` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `accounting_settings`
+--
+
+LOCK TABLES `accounting_settings` WRITE;
+/*!40000 ALTER TABLE `accounting_settings` DISABLE KEYS */;
+INSERT INTO `accounting_settings` VALUES
+(1,7,20.00,1.90,0.40,20.00,'USD',0,'2025-09-07 18:46:29','2025-09-13 14:35:04');
+/*!40000 ALTER TABLE `accounting_settings` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `auth_revoked_tokens`
+--
+
+DROP TABLE IF EXISTS `auth_revoked_tokens`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `auth_revoked_tokens` (
+  `id` bigint(20) unsigned NOT NULL,
+  `token_hash` char(64) NOT NULL,
+  `user_id` bigint(20) unsigned DEFAULT NULL,
+  `expires_at` datetime NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `auth_revoked_tokens`
+--
+
+LOCK TABLES `auth_revoked_tokens` WRITE;
+/*!40000 ALTER TABLE `auth_revoked_tokens` DISABLE KEYS */;
+/*!40000 ALTER TABLE `auth_revoked_tokens` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `blog_categories`
+--
+
+DROP TABLE IF EXISTS `blog_categories`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `blog_categories` (
+  `id` int(11) NOT NULL,
+  `name` varchar(120) NOT NULL,
+  `slug` varchar(160) NOT NULL,
+  `is_active` tinyint(1) DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `blog_categories`
+--
+
+LOCK TABLES `blog_categories` WRITE;
+/*!40000 ALTER TABLE `blog_categories` DISABLE KEYS */;
+INSERT INTO `blog_categories` VALUES
+(1,'Career Development','career-development',1,'2025-09-26 21:29:49'),
+(2,'Interviewing','interviewing',1,'2025-09-26 21:30:04'),
+(3,'Résumé & Portfolio','r-sum-portfolio',1,'2025-09-26 21:30:16'),
+(4,'Learning Paths','learning-paths',1,'2025-09-26 21:30:47'),
+(5,'Tech & Tools','tech-tools',1,'2025-09-26 21:31:03'),
+(6,'Entrepreneurship','entrepreneurship',1,'2025-09-26 21:31:19'),
+(7,'Case Studies & Success','case-studies-success',1,'2025-09-26 21:31:37'),
+(8,'Industry Insights','industry-insights',1,'2025-09-26 21:31:52'),
+(9,'Freelancing & Consulting','freelancing-consulting',1,'2025-09-26 21:32:05'),
+(10,'Leadership & Management','leadership-management',1,'2025-09-26 21:32:21');
+/*!40000 ALTER TABLE `blog_categories` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `blog_comments`
+--
+
+DROP TABLE IF EXISTS `blog_comments`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `blog_comments` (
+  `id` int(11) NOT NULL,
+  `blog_id` int(11) NOT NULL,
+  `parent_id` int(11) DEFAULT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `author_name` varchar(100) DEFAULT NULL,
+  `author_email` varchar(190) DEFAULT NULL,
+  `body` text NOT NULL,
+  `status` enum('approved','pending','spam') NOT NULL DEFAULT 'pending',
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `blog_comments`
+--
+
+LOCK TABLES `blog_comments` WRITE;
+/*!40000 ALTER TABLE `blog_comments` DISABLE KEYS */;
+INSERT INTO `blog_comments` VALUES
+(1,2,NULL,NULL,'mustafizur142','mustafizur142@gmail.com','Awesome','pending','2025-09-28 10:10:42',NULL);
+/*!40000 ALTER TABLE `blog_comments` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `blog_post_categories`
+--
+
+DROP TABLE IF EXISTS `blog_post_categories`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `blog_post_categories` (
+  `blog_id` int(11) NOT NULL,
+  `category_id` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `blog_post_categories`
+--
+
+LOCK TABLES `blog_post_categories` WRITE;
+/*!40000 ALTER TABLE `blog_post_categories` DISABLE KEYS */;
+INSERT INTO `blog_post_categories` VALUES
+(1,1),
+(1,4),
+(3,1);
+/*!40000 ALTER TABLE `blog_post_categories` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `blog_post_tags`
+--
+
+DROP TABLE IF EXISTS `blog_post_tags`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `blog_post_tags` (
+  `blog_id` int(11) NOT NULL,
+  `tag_id` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `blog_post_tags`
+--
+
+LOCK TABLES `blog_post_tags` WRITE;
+/*!40000 ALTER TABLE `blog_post_tags` DISABLE KEYS */;
+INSERT INTO `blog_post_tags` VALUES
+(1,1),
+(1,2),
+(1,3),
+(3,4),
+(4,5),
+(4,6),
+(4,7),
+(4,8);
+/*!40000 ALTER TABLE `blog_post_tags` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `blog_posts`
+--
+
+DROP TABLE IF EXISTS `blog_posts`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `blog_posts` (
+  `id` int(11) NOT NULL,
+  `author_id` int(11) NOT NULL,
+  `title` varchar(200) NOT NULL,
+  `slug` varchar(220) NOT NULL,
+  `excerpt` varchar(320) DEFAULT NULL,
+  `content_html` longtext DEFAULT NULL,
+  `cover_image` varchar(512) DEFAULT NULL,
+  `status` enum('draft','pending','published','rejected','archived') NOT NULL DEFAULT 'draft',
+  `visibility` enum('public','unlisted','private') NOT NULL DEFAULT 'public',
+  `is_featured` tinyint(1) NOT NULL DEFAULT 0,
+  `allow_comments` tinyint(1) NOT NULL DEFAULT 1,
+  `reject_reason` text DEFAULT NULL,
+  `meta_title` varchar(160) DEFAULT NULL,
+  `meta_description` varchar(180) DEFAULT NULL,
+  `meta_keywords` varchar(255) DEFAULT NULL,
+  `canonical_url` varchar(255) DEFAULT NULL,
+  `og_image` varchar(512) DEFAULT NULL,
+  `schema_json` mediumtext DEFAULT NULL,
+  `read_time_minutes` smallint(6) DEFAULT NULL,
+  `published_at` datetime DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `blog_posts`
+--
+
+LOCK TABLES `blog_posts` WRITE;
+/*!40000 ALTER TABLE `blog_posts` DISABLE KEYS */;
+INSERT INTO `blog_posts` VALUES
+(1,4,'How to Choose the Right Mentor in 2025: A 7-Step Playbook','how-to-choose-the-right-mentor-in-2025-a-7-step-playbook','A crisp, 7-step process to find the right mentor for your goals—plus outreach templates and red flags to avoid.','<h2>How to Choose the Right Mentor in 2025: A 7-Step Playbook</h2><p><em>Good mentorship compresses years of trial and error into months of progress.</em></p><p> The challenge isn’t finding <strong>a</strong> mentor—it’s finding the <strong>right</strong> mentor for <strong>your</strong> goals. Use this weekend-friendly playbook.</p><h3>Step 1 — Write a one-paragraph goal</h3><p>Define success in 4–5 sentences. Include timeframe, constraints, and what <strong>you</strong> will do.</p><p> <strong>Example:</strong> “In 90 days I want to move from QA Analyst to SDET. I can invest 5–7 hrs/week. I’ll ship two portfolio projects and practice interviews weekly.”</p><h3>Step 2 — Pick the <em>stage-fit</em> mentor</h3><ul><li><strong>Breaking in:</strong> hands-on practitioners doing the job today.</li><li><strong>Leveling up:</strong> senior ICs who’ve solved your exact bottleneck.</li><li><strong>Leadership:</strong> managers with hiring + team-building experience.</li></ul><h3>Step 3 — Score candidates (15-minute matrix)</h3><p>Score 1–5 on:</p><ol><li><strong>Relevant wins:</strong> shipped products, roles, industries like yours</li><li><strong>Teaching signals:</strong> blogs, talks, code reviews, templates</li><li><strong>Availability:</strong> cadence that matches your timeline</li><li><strong>Style match:</strong> direct vs. supportive; async vs. live</li></ol><h3>Step 4 — Run a 25-minute chemistry call</h3><p>Ask:</p><ul><li>“What would a strong 60–90 day plan look like for my goal?”</li><li>“Where do mentees usually get stuck—and how do you unblock them?”</li><li>“What does success look like and how will we measure it?”</li></ul><h3>Step 5 — Red flags</h3><ul><li>Vague answers; no artifacts (rubrics, checklists, templates)</li><li>Guarantees about promotions/offers</li><li>Overbooked calendars or early reschedules</li></ul><h3>Step 6 — Confirm the plan in writing</h3><p>Send a short recap with cadence, deliverables, and success metrics.</p><h3>Step 7 — Be a great mentee</h3><ul><li>Arrive with a bullet agenda + completed homework</li><li>Keep one running doc for decisions and next steps</li><li>Share outcomes (good or bad) within 24–48 hours</li></ul><p><br></p>','/uploads/blogs/covers/1758922703230-business-ida.jpg','published','public',0,1,NULL,NULL,NULL,NULL,NULL,'/uploads/blogs/covers/1758922703230-business-ida.jpg',NULL,1,'2025-09-26 21:38:48','2025-09-26 21:38:22','2025-09-26 21:38:48'),
+(2,6,'Why Clients Complain About Coaching Programs & What Coaching Experts Can Do About It','why-clients-complain-about-coaching-programs-what-coaching-experts-can-do-about-it',NULL,'<h2><strong>Introduction: The Trust Problem</strong></h2><p><br></p><p>The coaching industry is booming, projected to exceed <strong>$27.5 billion by 2026</strong>. But behind the glossy marketing, many clients walk away disappointed.</p><p>On Reddit and professional forums like LinkedIn, common complaints emerge:</p><ul><li>Coaching is too generic</li><li>Programs are overpriced</li><li>Results are inconsistent</li><li>Accountability is lacking</li></ul><p><br></p><p>Worse yet, industry data shows <strong>82% of coaching businesses fail within two years</strong>, and <strong>47% of people distrust life coaches.</strong> Clearly, something’s broken.</p><p><br></p><p>In this post, Prosfata Inc. unpacks the five biggest reasons clients complain about coaching programs and offers a practical framework for avoiding these pitfalls when choosing a coach in 2025.</p><h2><br></h2><h2><strong>The Top Five Biggest Reasons Clients Complain About Coaching Programs</strong></h2><h3><br></h3><h3><strong>1. Generic and Ineffective Advice</strong></h3><p>One of the loudest client complaints is that coaching advice feels generic, repetitive, and uninspired.</p><p><strong>“Why do most coaching sessions feel like generic advice?”</strong></p><p><strong>“How can I tell if a coach is just regurgitating online content?”</strong></p><p>The issue: Many coaches rely on pre-packaged scripts and “mindset” clichés (“send 100 emails,” “change your mindset”) instead of personalized, context-specific strategies. Group programs amplify the problem; one-size-fits-all advice often fails to translate into measurable change.</p><h4><br></h4><h4><strong>Why It Happens — With Data</strong></h4><ul><li><strong>High failure and turnover in coaching businesses:</strong> Over 80% of coaching practices fail within their early years — a signal that many can’t sustain value or retain clients. Struggling coaches often cut corners or recycle content.</li><li><strong>Lack of specialization and real-world experience:</strong> The coaching market is wide open and unregulated. Many new coaches enter without domain expertise or a defined niche.</li><li><strong>Weak client satisfaction mechanisms:</strong> In other industries, a CSAT (Customer Satisfaction Score) above 70% is healthy. In coaching, many programs don’t measure CSAT or NPS at all, meaning “generic” programs survive behind polished marketing.</li></ul><h4><br></h4><h4><strong>Suggestions &amp; Data Gaps to Fill</strong></h4><ul><li>Coaching-specific CSAT/NPS surveys.</li><li>Retention rates in coaching programs (how many clients renew vs. churn).</li><li>Benchmark comparisons across niches (executive vs. life coaching).</li></ul><p><br></p><p><a href=\"https://prosfata.space/\" rel=\"noopener noreferrer\" target=\"_blank\"><strong>Prosfata Insight</strong></a><strong>:</strong></p><p>A legitimate coaching program should deliver <strong>customized sessions tailored to your industry, business model, and personal goals.</strong> At Prosfata, we:</p><ul><li>Build <strong>custom diagnostics</strong> before prescribing frameworks.</li><li>Design <strong>feedback loops</strong> into engagements (monthly surveys, sentiment scoring, dashboards).</li><li>Detect “generic advice fatigue” early and <strong>course-correct</strong>.</li></ul><h3><br></h3><h3><strong>2. High Costs and Scam-Like Practices</strong></h3><p>Another major frustration? The price tag.</p><p>The global coaching industry was worth <strong>$20 billion in 2023</strong> and is projected to hit <strong>$27.5 billion by 2026</strong>. Yet, only ~10–20% of clients report clear ROI from expensive programs (varies by niche). High-ticket coaching often charges <strong>$200–$10,000+</strong>, with some executive programs reaching <strong>$100,000.</strong></p><ul><li>“Why are coaching programs so expensive?”</li><li>“How do I know if a high-ticket program is worth it?”</li><li>“Are free discovery calls just sales pitches?”</li></ul><p><br></p><p><strong>The issue:</strong> When pricing is inflated without clear ROI, clients feel exploited. Many discover the “program” is recycled motivational content, upsold aggressively. Some are even pushed into credit card debt to join.</p><p><br></p><p><a href=\"https://prosfata.space/\" rel=\"noopener noreferrer\" target=\"_blank\"><strong>Prosfata Insight</strong></a><strong>:</strong></p><p>Before investing, demand <strong>transparent deliverables:</strong> What outcomes are being tracked? How will ROI be measured? At Prosfata, we help professionals build <strong>pricing models grounded in evidence and accountability</strong>, not hype.</p><h3><br></h3><h3><strong>3. Inconsistent Quality and Lack of Standards</strong></h3><p>Coaching is often described as the <strong>Wild West of professional services</strong>.</p><p>A 2022 ICF survey found only <strong>39% of coaches hold ICF credentials.</strong> Yet <strong>82% of clients say certification increases trust</strong> — showing the gap between expectations and reality.</p><ul><li>“Do coaching certifications matter in 2025?”</li><li>“Why is coaching unregulated?”</li><li>“Can anyone call themselves a coach?”</li></ul><p><br></p><p><strong>The reality:</strong> Unlike medicine, law, or therapy, coaching has no regulatory board. This creates massive variation in quality: some coaches are seasoned experts, others are brand-new.</p><p><br></p><p><a href=\"https://prosfata.space/\" rel=\"noopener noreferrer\" target=\"_blank\"><strong>Prosfata Insight</strong></a><strong>:</strong></p><p>The best coaches combine <strong>certification, domain expertise, and lived experience.</strong> Clients should look for:</p><ul><li>Evidence of outcomes (case studies, testimonials).</li><li>Clear industry expertise.</li><li>Transparent practices — not just a big social following.</li></ul><h3><br></h3><h3><strong>4. Lack of Accountability and Follow-Through</strong></h3><p>Even when coaching starts strong, clients often complain about poor follow-through.</p><p>A Harvard Business Review study found only <strong>35% of coaching programs include measurable goals.</strong> Less than 20% track outcomes post-engagement. Clients with structured accountability are <strong>2.5x more likely</strong> to report satisfaction.</p><ul><li>“Why do some coaches never check on progress?”</li><li>“Should coaches be responsible for client results?”</li><li>“Why do I feel dependent on my coach for motivation?”</li></ul><p>The issue: Many programs fail to build <strong>accountability systems</strong>. Without KPIs or dashboards, sessions become “talk therapy” without results.</p><p><br></p><p><a href=\"https://prosfata.space/\" rel=\"noopener noreferrer\" target=\"_blank\"><strong>Prosfata Insight</strong></a><strong>:</strong></p><p>A strong coaching program includes:</p><ul><li><strong>Progress dashboards</strong></li><li><strong>KPI tracking</strong></li><li><strong>CRM integrations</strong></li><li>This ensures accountability between sessions and proves ROI.</li></ul><h3><br></h3><h3><strong>5. Trust and Perception Problems</strong></h3><p>Finally, the coaching industry faces a <strong>trust deficit</strong>.</p><p>A 2021 YouGov survey found <strong>47% of people don’t trust life coaches.</strong> Scandals — fake testimonials, plagiarized content, false promises — reinforce skepticism.</p><ul><li><strong>“</strong>Why don’t people trust coaches?”</li><li>“How do I separate good coaches from fake gurus?”</li><li>“Why do so many coaches feel like influencers?”</li></ul><p><br></p><p><strong>The issue:</strong> With no regulation and inflated marketing, many clients feel coaches are <strong>more focused on branding than results.</strong></p><p><br></p><p><a href=\"https://prosfata.space/\" rel=\"noopener noreferrer\" target=\"_blank\"><strong>Prosfata Insight</strong></a><strong>:</strong></p><p>Trust comes from <strong>evidence, not aesthetics.</strong> Ask:</p><ul><li>“Can you show me results with clients like me?”</li><li>“Do you have transparent case studies and pricing?”</li></ul><h2><br></h2><h2><strong>Our Recommendation for Choosing a Coach</strong></h2><h3><strong>The REAL Checklist (Prosfata’s Framework)</strong></h3><p>To help professionals cut through hype, Prosfata recommends the <strong>REAL framework:</strong></p><ul><li><strong>R – Relevance:</strong> Does the coach’s expertise align with your goals/industry?</li><li><strong>E – Evidence:</strong> Do they provide case studies or measurable outcomes?</li><li><strong>A – Accountability:</strong> Do they track ROI &amp; progress?</li><li><strong>L – Longevity:</strong> Will methods last beyond the program?</li></ul><h2><br></h2><h2><strong>Case Example: From Generic Advice to Customized Growth</strong></h2><p>A mid-career consultant came to Prosfata frustrated after spending <strong>$3,000</strong> on a “mindset” program. We helped restructure with:</p><ul><li>Personalized framework informed by his <strong>industry background.</strong></li><li><strong>CRM system</strong> to track leads and progress.</li><li><strong>KPIs</strong> that proved ROI within 90 days.</li></ul><p><strong>Result:</strong> He recovered his investment and scaled sustainably with measurable coaching impact.</p><h2><br></h2><h2><strong>People Also Ask (FAQ)</strong></h2><ol><li><strong>Is coaching worth it in 2025, or just a scam? </strong> It depends. Coaching works when it’s personalized, accountable, and evidence-based.</li><li><strong>How do I know if my coach is qualified? </strong> Look for outcomes, case studies, and domain expertise — not just certifications.</li><li><strong>Why do some programs cost $10,000+? </strong> Often branding/hype. Always ask for ROI justification.</li><li><strong>What red flags should I watch for? </strong> Aggressive sales tactics, vague deliverables, fake testimonials, no measurable success metrics.</li><li><strong>How do I track if coaching is working? </strong> Use KPIs, dashboards, and milestones. Prosfata builds these into every program.</li></ol><h2><br></h2><h2><strong>Conclusion: Coaching Doesn’t Have to Disappoint</strong></h2><p>Coaching can deliver transformative results — but <strong>generic advice, inflated costs, inconsistent quality, poor accountability, and trust issues</strong> remain rampant.</p><p>The data confirms it:</p><ul><li><strong>80%+ of coaching businesses fail early.</strong></li><li><strong>47% of the public distrusts coaching.</strong></li><li><strong>Only 35% of programs measure outcomes.</strong></li></ul><p><br></p><p><strong>Prosfata Inc. is changing this.</strong> We help professionals build <strong>evidence-based, tech-enabled, accountable coaching programs</strong> that deliver ROI — not empty promises.</p>','/uploads/blogs/covers/1759002134794-coachign-experts-coachign-busineses-icf-certified-coaches.png','published','public',0,1,NULL,NULL,NULL,NULL,NULL,'/uploads/blogs/covers/1759002134794-coachign-experts-coachign-busineses-icf-certified-coaches.png',NULL,6,'2025-09-27 19:45:32','2025-09-27 19:32:53','2025-09-27 19:45:32'),
+(3,3,'SAmple','sample','hello','<p>hi</p>','/uploads/blogs/covers/1763412207340-2025-11-18_010334.png','rejected','public',0,1,'not work',NULL,NULL,NULL,NULL,'/uploads/blogs/covers/1763412207340-2025-11-18_010334.png',NULL,1,NULL,'2025-11-17 20:43:25','2025-11-17 20:47:59'),
+(4,6,'600 Million Workers: How AI Will Transform Knowledge Work, Not Replace It (2025-2031)','600-million-workers-how-ai-will-transform-knowledge-work-not-replace-it-2025-2031','600 million knowledge workers face an AI revolution. Learn the 3-stage timeline (2025-2031) and the T-Shaped skills needed to transform, not be replaced.','<p>The global professional workforce—encompassing over 600 million to 1 billion knowledge workers who generate trillions in economic value—is at a critical inflection point. Artificial Intelligence is not arriving to replace human expertise, but to radically transform it. This paper reveals a clear roadmap for how AI will reshape how professionals collaborate, create value, and define expertise over the next six years.</p><p>Our key insight is simple: By 2031, AI will not eliminate knowledge work. Instead, it will act as an unprecedented human amplifier, creating a new paradigm where professionals supervise sophisticated AI teams, focusing only on uniquely human capabilities like complex strategy, empathy, and ethical judgment.</p><h3><br></h3><h2><strong>The Knowledge Economy Landscape</strong></h2><p>Knowledge workers are the cognitive engine of the global economy, representing the 20-30% of the workforce responsible for creating, analyzing, and leveraging information—from managers and engineers to lawyers and healthcare specialists.</p><p>Economic Reality:</p><ul><li>Global knowledge-intensive industries generate substantial value; for example, they account for $2.4 trillion in the US alone (11% of GDP).</li><li>Two-thirds of global GDP is now derived from knowledge-driven services.</li></ul><p>To stay ahead, professionals must proactively sharpen their domain expertise, building a unique vertical portfolio that integrates AI as a core collaborator.</p><p><br></p><h2><strong>The Three-Stage AI Transformation Timeline (2025-2031)</strong></h2><p>The shift won\'t happen overnight. It will proceed through three distinct, evolutionary stages, moving AI from a simple tool to a strategic partner.</p><h3><br></h3><h3><strong>Stage 1: The AI Tool Era (2025–2027)</strong></h3><p>In this initial phase, AI systems function as <strong>sophisticated digital assistants</strong>, automating mundane and repetitive tasks to boost human productivity.</p><ul><li><strong>Function:</strong> AI handles initial drafts, compliance checks, data flags, and content generation. Think of AI as your tireless, capable intern.</li><li><strong>Impact:</strong> Expect a <strong>30-40% productivity gain</strong> for knowledge workers. For example, <strong>24% of US law firms</strong> are already using generative AI for research and drafting.</li><li><strong>Skill Focus:</strong> Learning effective <strong>prompting</strong> and detailed output review.</li></ul><h3><br></h3><h3><strong>Stage 2: The AI Collaboration Era (2028–2031)</strong></h3><p>AI evolves into a true <strong>team member</strong> co-creating solutions, participating in complex workflows, and independently managing entire segments of a process.</p><ul><li><strong>Function:</strong> Human-AI teams become the norm. AI agents handle front-line customer interactions, generative AI co-develops code (up to <strong>60-70%</strong> of routine code in IT), and algorithmic systems manage real-time resource allocation and risk assessment.</li><li><strong>Impact:</strong> McKinsey projects up to <strong>30% of work-hours</strong> will be automated, requiring <strong>44% of worker skills</strong> to be updated (WEF).</li><li><strong>New Roles:</strong> <strong>AI Supervisors, Prompt Engineers,</strong> and <strong>Algorithm Auditors</strong> emerge to oversee this new system.</li></ul><h3><br></h3><h3><strong>Stage 3: The Integration Era (Beyond 2031)</strong></h3><p>This phase is highly speculative, involving AI managing entire human-robot workflows, potentially enabling one human to supervise over 100+ systems. The focus shifts entirely to human oversight, ethical governance, and complex innovation.</p><p><br></p><h2><strong>Strategic Imperatives: Success in the Augmented Future</strong></h2><p>The shift is inevitable, but failure is not. Success for individuals and organizations hinges on proactive adaptation.</p><h3><br></h3><h3><strong>For Individual Professionals: The 3-Point Guide</strong></h3><ol><li><strong>Become AI-Bilingual:</strong> Master AI prompting, collaboration, and output validation.</li><li><strong>Develop T-Shaped Skills:</strong> Pair deep, unique expertise in your domain with broad AI and data literacy.</li><li><strong>Focus on the Irreplaceable:</strong> Prioritize creativity, empathy, complex problem-solving, and ethical judgment, as these are uniquely human traits that AI cannot replicate.</li></ol><h3><br></h3><h3><strong>For Organizations: The Transformation Playbook</strong></h3><ol><li><strong>Immediate Actions (2025):</strong> Audit all roles for AI augmentation potential and launch mandatory AI literacy programs for all staff.</li><li><strong>Short-term Strategy (2025-2027):</strong> Redesign jobs around human-AI collaboration and prioritize <strong>reskilling</strong> over immediate replacement.</li><li><strong>Long-term Vision (2028-2031):</strong> Develop adaptive organizational structures and new performance metrics for human-AI teams. The goal is to shift management from overseeing people to orchestrating intelligent systems.</li></ol><p><br></p><p><br></p><h2><strong>Conclusion: Embrace the Amplifier</strong></h2><p>The AI revolution in knowledge work is an opening act, not a final curtain. The period between 2025 and 2031 will be defined by <strong>amplification</strong>, not displacement. While <strong>30% of current work hours</strong> are projected to be automated, this will unleash unprecedented capacity for human value creation.</p><p><br></p><p>The greatest risk is not being replaced by AI, but being surpassed by a peer who leverages it better. The future belongs to those who view AI as their greatest amplifier, seamlessly blending human creativity and judgment with machine computational power.</p><p><br></p><p>The time to build your <strong>AI-augmented expertise</strong> is now.</p>',NULL,'pending','public',0,1,NULL,NULL,NULL,NULL,NULL,NULL,NULL,3,NULL,'2025-11-17 22:36:30','2025-12-13 19:54:05');
+/*!40000 ALTER TABLE `blog_posts` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `blog_tags`
+--
+
+DROP TABLE IF EXISTS `blog_tags`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `blog_tags` (
+  `id` int(11) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `slug` varchar(140) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `blog_tags`
+--
+
+LOCK TABLES `blog_tags` WRITE;
+/*!40000 ALTER TABLE `blog_tags` DISABLE KEYS */;
+INSERT INTO `blog_tags` VALUES
+(1,'mentorship','mentorship','2025-09-26 21:38:22'),
+(2,'career growth','career-growth','2025-09-26 21:38:22'),
+(3,'goal setting','goal-setting','2025-09-26 21:38:22'),
+(4,'hello','hello','2025-11-17 20:43:26'),
+(5,'ai augmented workforce knowledge work future of work ai transformation 2031 forecast','ai-augmented-workforce-knowledge-work-future-of-work-ai-transformation-2031-forecast','2025-11-17 23:05:26'),
+(6,'professional development career strategy skills gap organizational strategy management','professional-development-career-strategy-skills-gap-organizational-strategy-management','2025-11-17 23:05:26'),
+(7,'generative ai ai collaboration ai automation digital transformation emerging tech','generative-ai-ai-collaboration-ai-automation-digital-transformation-emerging-tech','2025-11-17 23:05:26'),
+(8,'t shaped skills reskilling human ai teams productivity gains strategic imperatives','t-shaped-skills-reskilling-human-ai-teams-productivity-gains-strategic-imperatives','2025-11-17 23:05:26');
+/*!40000 ALTER TABLE `blog_tags` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `categories`
+--
+
+DROP TABLE IF EXISTS `categories`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `categories` (
+  `id` int(11) NOT NULL,
+  `name` varchar(120) NOT NULL,
+  `slug` varchar(160) NOT NULL,
+  `description` text DEFAULT NULL,
+  `is_active` tinyint(1) DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `categories`
+--
+
+LOCK TABLES `categories` WRITE;
+/*!40000 ALTER TABLE `categories` DISABLE KEYS */;
+INSERT INTO `categories` VALUES
+(1,'Interview Prep 2','interview-prep-2','Mock interviews, feedback and drills',1,'2025-08-12 04:15:38'),
+(2,'Web Development','web-development','HTML, CSS, JS, frameworks',1,'2025-08-16 15:11:39'),
+(3,'Mobile Development','mobile-development','iOS, Android, cross-platform',1,'2025-08-16 15:11:39'),
+(4,'Data Science','data-science','Analytics, Python, SQL, visualization',1,'2025-08-16 15:11:39'),
+(5,'AI & Machine Learning','ai-ml','ML, DL, LLMs, MLOps',1,'2025-08-16 15:11:39'),
+(6,'Cloud & DevOps','cloud-devops','AWS, Azure, GCP, CI/CD, containers',1,'2025-08-16 15:11:39'),
+(7,'Cybersecurity','cybersecurity','Security, networks, ethical hacking',1,'2025-08-16 15:11:39'),
+(8,'Programming Languages','programming-languages','JS/TS, Python, Java, C#, Go, Rust',1,'2025-08-16 15:11:39'),
+(9,'Design & UX','design-ux','UI/UX, product design, Figma',1,'2025-08-16 15:11:39'),
+(10,'Product Management','product-management','Roadmaps, discovery, delivery',1,'2025-08-16 15:11:39'),
+(11,'Business & Entrepreneurship','business-entrepreneurship','Strategy, ops, startups',1,'2025-08-16 15:11:39'),
+(12,'Marketing','marketing','Digital, content, SEO/SEM',1,'2025-08-16 15:11:39'),
+(13,'Finance & Accounting','finance-accounting','FP&A, bookkeeping, investing',1,'2025-08-16 15:11:39'),
+(14,'Career Development','career-development','Interviews, resumes, soft skills',1,'2025-08-16 15:11:39'),
+(15,'Personal Productivity','personal-productivity','Time management, tools, habits',1,'2025-08-16 15:11:39'),
+(16,'New Category 2','new-category-2','This is for demo',1,'2025-08-17 14:11:40');
+/*!40000 ALTER TABLE `categories` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `chat_participants`
+--
+
+DROP TABLE IF EXISTS `chat_participants`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `chat_participants` (
+  `chat_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `joined_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `typing` tinyint(1) NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `chat_participants`
+--
+
+LOCK TABLES `chat_participants` WRITE;
+/*!40000 ALTER TABLE `chat_participants` DISABLE KEYS */;
+INSERT INTO `chat_participants` VALUES
+(1,2,'2025-08-12 15:44:42',0),
+(1,4,'2025-08-12 15:44:42',0),
+(2,3,'2025-08-12 15:54:17',0),
+(2,4,'2025-08-12 15:54:17',0),
+(3,3,'2025-08-18 00:33:24',0),
+(4,3,'2025-08-20 08:37:46',0),
+(4,5,'2025-08-20 08:37:46',0),
+(5,3,'2025-09-13 07:43:02',0),
+(5,9,'2025-09-13 07:43:02',0),
+(6,9,'2025-09-13 07:44:33',0),
+(7,5,'2025-09-13 07:46:18',0),
+(7,9,'2025-09-13 07:46:18',0),
+(8,10,'2025-09-13 07:47:06',0),
+(8,11,'2025-09-13 07:47:06',0),
+(9,3,'2025-09-13 07:58:46',0),
+(9,13,'2025-09-13 07:58:46',0),
+(10,3,'2025-09-16 01:00:46',0),
+(10,6,'2025-09-16 01:00:46',0),
+(11,2,'2025-09-25 10:27:24',0),
+(12,2,'2025-09-25 10:27:31',0),
+(12,3,'2025-09-25 10:27:31',0),
+(13,6,'2025-09-28 17:36:16',0),
+(13,16,'2025-09-28 17:36:16',0),
+(14,6,'2025-10-05 15:51:03',0),
+(14,15,'2025-10-05 15:51:03',0),
+(15,4,'2025-10-11 12:44:35',0),
+(15,5,'2025-10-11 12:44:35',0),
+(16,6,'2025-10-13 18:03:37',0),
+(16,18,'2025-10-13 18:03:37',0);
+/*!40000 ALTER TABLE `chat_participants` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `chat_reads`
+--
+
+DROP TABLE IF EXISTS `chat_reads`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `chat_reads` (
+  `chat_id` bigint(20) NOT NULL,
+  `user_id` bigint(20) NOT NULL,
+  `last_read_message_id` bigint(20) NOT NULL DEFAULT 0,
+  `read_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `chat_reads`
+--
+
+LOCK TABLES `chat_reads` WRITE;
+/*!40000 ALTER TABLE `chat_reads` DISABLE KEYS */;
+INSERT INTO `chat_reads` VALUES
+(1,2,56,'2025-09-28 07:09:53'),
+(1,4,52,'2025-09-27 11:11:28'),
+(2,3,57,'2025-10-05 05:09:29'),
+(2,4,63,'2025-10-11 12:44:40'),
+(3,1,23,'2025-08-20 10:11:27'),
+(3,3,17,'2025-08-17 18:42:42'),
+(5,3,40,'2025-09-14 11:57:27'),
+(9,3,43,'2025-09-23 17:25:41'),
+(10,3,48,'2025-09-20 04:45:30'),
+(10,6,61,'2025-10-13 18:07:50'),
+(12,2,54,'2025-09-28 07:09:36'),
+(12,3,58,'2025-10-05 05:09:24'),
+(2,3,64,'2025-12-16 06:01:27'),
+(2,3,64,'2025-12-16 06:01:53'),
+(2,3,64,'2025-12-31 09:31:57');
+/*!40000 ALTER TABLE `chat_reads` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `chats`
+--
+
+DROP TABLE IF EXISTS `chats`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `chats` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `is_group` tinyint(1) NOT NULL DEFAULT 0,
+  `name` varchar(100) DEFAULT NULL,
+  `photo` varchar(255) DEFAULT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `chats`
+--
+
+LOCK TABLES `chats` WRITE;
+/*!40000 ALTER TABLE `chats` DISABLE KEYS */;
+INSERT INTO `chats` VALUES
+(1,0,NULL,NULL,4,'2025-08-12 15:44:42','2025-08-12 15:44:42'),
+(2,0,NULL,NULL,4,'2025-08-12 15:54:17','2025-08-12 15:54:17'),
+(3,0,NULL,NULL,1,'2025-08-18 00:33:24','2025-08-18 00:33:24'),
+(4,0,NULL,NULL,3,'2025-08-20 08:37:46','2025-08-20 08:37:46'),
+(5,0,NULL,NULL,9,'2025-09-13 07:43:02','2025-09-13 07:43:02'),
+(6,0,NULL,NULL,9,'2025-09-13 07:44:33','2025-09-13 07:44:33'),
+(7,0,NULL,NULL,9,'2025-09-13 07:46:18','2025-09-13 07:46:18'),
+(8,0,NULL,NULL,11,'2025-09-13 07:47:06','2025-09-13 07:47:06'),
+(9,0,NULL,NULL,13,'2025-09-13 07:58:46','2025-09-13 07:58:46'),
+(10,0,NULL,NULL,6,'2025-09-16 01:00:46','2025-09-16 01:00:46'),
+(11,0,NULL,NULL,2,'2025-09-25 10:27:24','2025-09-25 10:27:24'),
+(12,0,NULL,NULL,2,'2025-09-25 10:27:31','2025-09-25 10:27:31'),
+(13,0,NULL,NULL,16,'2025-09-28 17:36:16','2025-09-28 17:36:16'),
+(14,0,NULL,NULL,6,'2025-10-05 15:51:03','2025-10-05 15:51:03'),
+(15,0,NULL,NULL,4,'2025-10-11 12:44:35','2025-10-11 12:44:35'),
+(16,0,NULL,NULL,6,'2025-10-13 18:03:37','2025-10-13 18:03:37');
+/*!40000 ALTER TABLE `chats` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `coaching_assignment_reviews`
+--
+
+DROP TABLE IF EXISTS `coaching_assignment_reviews`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `coaching_assignment_reviews` (
+  `id` int(11) NOT NULL,
+  `assignment_id` int(11) NOT NULL,
+  `version_id` int(11) NOT NULL,
+  `reviewer_id` int(11) NOT NULL,
+  `decision` enum('approved','changes_requested','rejected') NOT NULL,
+  `feedback` text DEFAULT NULL,
+  `score` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `coaching_assignment_reviews`
+--
+
+LOCK TABLES `coaching_assignment_reviews` WRITE;
+/*!40000 ALTER TABLE `coaching_assignment_reviews` DISABLE KEYS */;
+INSERT INTO `coaching_assignment_reviews` VALUES
+(1,6,1,3,'rejected',NULL,NULL,'2025-09-07 02:40:37'),
+(2,6,1,3,'rejected','Please make correction for next uses',30,'2025-09-07 03:08:48'),
+(3,6,1,3,'rejected','review it',NULL,'2025-09-07 03:26:17'),
+(4,6,1,3,'rejected','rejecteddd',NULL,'2025-09-07 03:32:12'),
+(5,6,1,3,'rejected','hii',NULL,'2025-09-07 03:36:29'),
+(6,6,2,3,'approved','Well done',90,'2025-09-07 03:38:09'),
+(7,8,3,3,'rejected','please resubmit',NULL,'2025-09-07 16:24:17'),
+(8,8,4,3,'rejected',NULL,NULL,'2025-09-07 16:27:25'),
+(9,8,5,6,'approved','Well done',80,'2025-09-16 01:03:26'),
+(10,8,5,6,'approved','Great insights on your product',60,'2025-09-16 01:04:24'),
+(11,6,2,6,'approved','Cool',10,'2025-09-16 01:04:57'),
+(12,8,5,3,'approved','Great Advice',5,'2025-09-25 07:26:31'),
+(13,9,6,6,'approved',NULL,NULL,'2025-09-28 20:28:28'),
+(14,12,7,6,'approved',NULL,NULL,'2025-09-29 22:57:41'),
+(15,12,7,6,'approved','asfga',NULL,'2025-09-29 22:57:51'),
+(16,12,7,6,'approved',NULL,NULL,'2025-09-29 22:58:12'),
+(17,12,7,3,'approved',NULL,NULL,'2025-10-05 07:18:31'),
+(18,13,8,6,'approved',NULL,NULL,'2025-10-13 17:43:48'),
+(19,14,9,6,'approved',NULL,NULL,'2025-10-13 17:43:55'),
+(20,15,10,6,'approved',NULL,NULL,'2025-10-18 14:37:15'),
+(21,17,12,3,'changes_requested','please change',NULL,'2025-10-20 10:54:46'),
+(22,17,13,3,'rejected',NULL,NULL,'2025-10-20 11:03:49'),
+(23,17,14,3,'changes_requested',NULL,NULL,'2025-10-20 16:05:53'),
+(24,17,15,3,'rejected',NULL,NULL,'2025-10-20 16:27:49'),
+(25,17,16,6,'approved',NULL,NULL,'2025-10-20 18:02:16'),
+(26,18,17,3,'rejected',NULL,NULL,'2025-10-22 08:14:20'),
+(27,10,18,3,'approved','Great Work. please be continue',NULL,'2025-10-24 04:57:43'),
+(28,23,19,3,'approved',NULL,NULL,'2025-10-25 22:14:21'),
+(29,23,19,3,'rejected',NULL,NULL,'2025-10-25 22:19:29'),
+(30,22,20,3,'approved','approved',NULL,'2025-10-25 22:20:45'),
+(36,29,23,6,'approved',NULL,NULL,'2025-10-26 20:47:39'),
+(37,27,22,6,'approved',NULL,NULL,'2025-10-26 20:47:46'),
+(38,36,30,6,'approved',NULL,NULL,'2025-10-28 14:18:45'),
+(47,37,31,6,'approved',NULL,NULL,'2025-10-31 00:35:15'),
+(48,38,32,6,'approved','well done',NULL,'2025-11-01 16:14:09'),
+(50,41,34,6,'approved','Not good enough chnage abc before we meet',NULL,'2025-11-10 20:17:17'),
+(51,42,35,6,'approved',NULL,NULL,'2025-11-14 20:17:04'),
+(52,39,33,6,'approved',NULL,NULL,'2025-11-17 12:12:06');
+/*!40000 ALTER TABLE `coaching_assignment_reviews` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `coaching_assignment_versions`
+--
+
+DROP TABLE IF EXISTS `coaching_assignment_versions`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `coaching_assignment_versions` (
+  `id` int(11) NOT NULL,
+  `assignment_id` int(11) NOT NULL,
+  `seq` int(11) NOT NULL,
+  `submitted_by` int(11) NOT NULL,
+  `submitted_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `text` longtext DEFAULT NULL,
+  `links_json` text DEFAULT NULL,
+  `files_json` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `coaching_assignment_versions`
+--
+
+LOCK TABLES `coaching_assignment_versions` WRITE;
+/*!40000 ALTER TABLE `coaching_assignment_versions` DISABLE KEYS */;
+INSERT INTO `coaching_assignment_versions` VALUES
+(1,6,1,2,'2025-09-07 00:14:27','<p>hello</p>','[]','[\"/uploads/assignments/1757182467154_Firefox_Cors_Uploads_____Team_Playbook__mobionizer_mdm_.pdf\"]'),
+(2,6,2,2,'2025-09-07 03:37:20','<p>Please check again</p>','[]','[]'),
+(3,8,1,2,'2025-09-07 15:49:39','<p>This my new update for your review</p>','[]','[\"/uploads/assignments/1757238579931_2025-09-03_160813.png\"]'),
+(4,8,2,2,'2025-09-07 16:25:07','<p>Resubmited data</p>','[]','[\"/uploads/assignments/1757240707773_2025-09-01_164846.png\"]'),
+(5,8,3,2,'2025-09-07 16:27:56','<p>resubmit -2</p>','[]','[\"/uploads/coaching/assignments/1757240876045_2025-09-04_110346.png\"]'),
+(6,9,1,2,'2025-09-25 10:24:41','Hello Norman','[\"https://www.facebook.com/\"]','[\"/uploads/coaching/assignments/1758795872785_full-stack-development.png\"]'),
+(7,12,1,17,'2025-09-28 20:27:26','<p><strong>My Coaching Assignment Response - Step #1</strong></p><p><strong>1. Type of Job I Do:</strong> I\'m a Senior Policy Analyst in the Department of Health, working on healthcare accessibility initiatives. My daily responsibilities include analyzing health data trends, drafting policy recommendations, coordinating with stakeholders across multiple agencies, and preparing briefing materials for senior leadership. I spend about 60% of my time on research and analysis, 30% in meetings and consultations, and 10% on administrative tasks.</p><p><strong>2. Passion Projects:</strong></p><ul><li><strong>Community Health Workshops</strong>: I volunteer weekends teaching digital literacy to seniors in my neighborhood, helping them navigate online healthcare portals and telehealth services</li><li><strong>Data Visualization Blog</strong>: I create infographics that translate complex health statistics into accessible visuals for the general public</li><li><strong>Mentorship Program</strong>: I mentor junior analysts in our department, focusing on effective communication and stakeholder engagement skills</li></ul><p><strong>3. What I\'m Curious About:</strong></p><ul><li><strong>AI for Policy Analysis</strong>: How machine learning could help identify patterns in large datasets to predict health outcomes and inform proactive policy decisions</li><li><strong>Cross-Cultural Communication</strong>: Better techniques for engaging diverse communities in policy development processes</li><li><strong>Process Automation</strong>: Which repetitive tasks in policy work could be streamlined to free up time for strategic thinking and stakeholder relationship building</li></ul><p>This background helps my coach understand I\'m analytically-minded, community-focused, and interested in leveraging technology to improve both efficiency and public service delivery.</p>','[]','[]'),
+(8,13,1,17,'2025-10-13 17:04:18','<p>Here is what i think and it si right we are on track to gettign there.</p>','[]','[]'),
+(9,14,1,17,'2025-10-13 17:04:54','','[]','[]'),
+(10,15,1,2,'2025-10-17 16:33:47','<p>https://prosfata.space/coaching/enrollments/22/assignment/1</p>','[]','[\"/uploads/coaching/assignments/1760718827385_1760708383722_Liveness_AntiSpoof_Bangla_English.pptx\"]'),
+(11,16,1,17,'2025-10-18 14:57:02','<p>Yes check this oit</p>','[]','[]'),
+(12,17,1,2,'2025-10-20 10:47:08','<p>hi</p>','[]','[]'),
+(13,17,2,2,'2025-10-20 10:55:42','<p>hii i changed the neww</p>','[]','[]'),
+(14,17,3,2,'2025-10-20 11:04:18','<p>geello</p>','[]','[]'),
+(15,17,4,2,'2025-10-20 16:13:27','<p>hi</p><p><br></p><p>fghgfhfg</p>','[]','[]'),
+(16,17,5,2,'2025-10-20 16:28:07','<p>ji</p>','[]','[]'),
+(17,18,1,17,'2025-10-21 11:01:16','<p>Bmc submited</p>','[]','[]'),
+(18,10,1,2,'2025-10-22 08:15:23','<p>fgfgfgfgf hiii</p>','[]','[]'),
+(19,23,1,2,'2025-10-25 15:04:18','<p>pleae check</p>','[]','[\"/uploads/coaching/assignments/1761383058373_2025-10-25_130149.png\"]'),
+(20,22,1,2,'2025-10-25 22:20:06','<p>hi complete my accsignments</p>','[]','[]'),
+(21,27,1,17,'2025-10-26 20:38:16','<p>attached</p>','[]','[\"/uploads/coaching/assignments/1761511096689_Lean_Canvas_Model.png\"]'),
+(22,27,2,17,'2025-10-26 20:38:18','<p>attached</p>','[]','[\"/uploads/coaching/assignments/1761511098164_Lean_Canvas_Model.png\"]'),
+(23,29,1,17,'2025-10-26 20:45:17','','[]','[]'),
+(24,33,1,2,'2025-10-27 16:02:22','','[]','[]'),
+(25,33,2,2,'2025-10-27 16:02:24','','[]','[]'),
+(26,34,1,17,'2025-10-28 00:39:56','<p>I am submitign and testing this</p>','[]','[]'),
+(27,32,1,17,'2025-10-28 00:40:24','<p>hahahahhhhhhhhhhhhhhhhhhhhhh</p>','[]','[]'),
+(28,36,1,17,'2025-10-28 14:17:54','<p>Submit test</p>','[]','[]'),
+(29,36,2,17,'2025-10-28 14:18:02','<p>Submit test</p>','[]','[]'),
+(30,36,3,17,'2025-10-28 14:18:04','<p>Submit test</p>','[]','[]'),
+(31,37,1,17,'2025-10-31 00:34:15','<p>Okay this is submitted</p>','[]','[]'),
+(32,38,1,17,'2025-11-01 16:13:27','<p>Dylan here</p>','[]','[]'),
+(33,39,1,17,'2025-11-03 13:59:04','<p>fyljhfljfhflfl</p>','[]','[]'),
+(34,41,1,17,'2025-11-10 20:16:08','<p>Sourena here submitting </p>','[]','[]'),
+(35,42,1,17,'2025-11-14 20:13:52','<p>Lisa</p>','[]','[]');
+/*!40000 ALTER TABLE `coaching_assignment_versions` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `coaching_assignments`
+--
+
+DROP TABLE IF EXISTS `coaching_assignments`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `coaching_assignments` (
+  `id` int(11) NOT NULL,
+  `enrollment_id` int(11) NOT NULL,
+  `step_id` int(11) DEFAULT NULL,
+  `step_seq` int(11) NOT NULL,
+  `title` varchar(200) NOT NULL,
+  `instructions` text DEFAULT NULL,
+  `due_at` datetime DEFAULT NULL,
+  `status` enum('not_started','submitted','in_review','changes_requested','approved','rejected','overdue') DEFAULT 'not_started'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `coaching_assignments`
+--
+
+LOCK TABLES `coaching_assignments` WRITE;
+/*!40000 ALTER TABLE `coaching_assignments` DISABLE KEYS */;
+INSERT INTO `coaching_assignments` VALUES
+(1,1,NULL,1,'Intake & Goals','Define goals & baseline','2025-08-20 00:00:00','not_started'),
+(2,1,NULL,3,'Self-paced','','2025-09-03 00:00:00','not_started'),
+(3,5,NULL,0,'',NULL,NULL,'not_started'),
+(4,5,NULL,0,'',NULL,NULL,'not_started'),
+(5,5,NULL,1,'',NULL,NULL,'not_started'),
+(6,5,9,1,'Introduction',NULL,NULL,'approved'),
+(7,4,19,1,'Assigment',NULL,NULL,'not_started'),
+(8,6,23,1,'Introductions','<p>Please provide your introductions. Let me know your skill and plan for next 1 week.</p>',NULL,'approved'),
+(9,6,41,3,'Practical Session #2 With Real Data','<p>Practical Session #2 With Real Data</p>',NULL,'approved'),
+(10,6,39,1,'Introductions','<p>Please provide your introductions. Let me know your skill and plan for next 1 week.</p>',NULL,'approved'),
+(11,7,181,1,'Intro','<p>Increasing Social Media Followers for all social media platform</p>',NULL,'not_started'),
+(12,12,206,1,'Assignment 1: Type of Job You Do, Any Passion Projects You Might Have, What Are You Curious About?','<p>Before we begin your coaching program, I need to learn more about you so I can tailor the training to your specific needs. Please prepare a short note that covers three key elements to the best of your ability:</p><ol><li><strong>The type of job you do</strong></li><li>Describe your current role in the public service. Include your main responsibilities and the kind of work you handle on a daily basis.</li><li><strong>Any passion projects you have</strong></li><li>Share personal or professional projects that matter to you. These could be volunteer activities, community work, research interests, or creative projects you enjoy outside your main job.</li><li><strong>What you are curious about</strong></li><li>Tell me what you want to learn or explore. This could be skills you want to develop, topics that interest you, or areas where you think AI could make a difference in your work or life.</li></ol><p><br></p><p>By completing this assignment, you give me the background I need to design a personalized coaching plan that fits your goals and helps you get the most value from the program.</p>',NULL,'approved'),
+(13,18,275,1,'Homework 1 (Weeks 2–3): Startup Snapshot & Current Challenge','<ul><li><strong>Founder task:</strong> Share <strong>pitch deck draft, mission, vision, milestones to date, and biggest challenge now</strong>.</li><li><strong>Result:</strong> Norman gets a full picture to tailor guidance. Founder gets clarity on what they want to achieve.</li></ul>',NULL,'approved'),
+(14,18,277,3,'Homework 2 (Weeks 5–6): Customer Validation & Product Testing','<ul><li><strong>Founder task:</strong> Conduct <strong>customer discovery or MVP testing</strong> (interviews, surveys, pilot runs).</li><li><strong>Result:</strong> Founders collect <strong>real customer insights</strong>, refine product features, and validate demand.</li></ul>',NULL,'approved'),
+(15,22,39,1,'Introductions','<p>Please provide your introductions. Let me know your skill and plan for next 1 week.</p>',NULL,'approved'),
+(16,18,293,1,'Homework 1 (Weeks 2–3): Startup Snapshot & Current Challenge','<ul><li><strong>Founder task:</strong> Share <strong>pitch deck draft, mission, vision, milestones to date, and biggest challenge now</strong>.</li><li><strong>Result:</strong> Norman gets a full picture to tailor guidance. Founder gets clarity on what they want to achieve.</li></ul>',NULL,'submitted'),
+(17,23,19,1,'Assigment',NULL,NULL,'approved'),
+(18,25,371,1,'Task Sprint 1: Startup & Team Reality Check to Set the Stage for a Custom & Targeted Coaching Program (Weeks 1-3)','<h3><strong>What You\'ll Do: A PowerPoint Presentation (PPT)</strong></h3><ul><li>Complete the Startup Snapshot Assessment: <a href=\"https://medium.com/lean-stack/what-is-the-right-fill-order-for-a-lean-canvas-f8071d0c6c8c\" rel=\"noopener noreferrer\" target=\"_blank\">Use the Lean Business Model Canvas by Ash Maurya</a> put it on a PowerPoint Presentation to facilitate our discussions.</li><li>Map your current challenges and blockers: include this in the same PPT.</li><li>Identify your #1 growth bottleneck: include this in the same PPT.</li><li>Document your assumptions about customers and market: include this in the same PPT.</li><li><strong>Submit as soon as you feel you have done comprehensive and enough work so we can start our first live one-on-one session.</strong></li></ul><p><br></p><h3><strong>What You\'ll Get:</strong></h3><ul><li>Crystal-clear articulation of where you are, the challenges you have, and what you believe must be done to help you succeed as an early stage startup.</li></ul><p><br></p><h3><strong>Time Investment:</strong> 2-7 hours/week of quality work between you and your team members or by yourself.</h3>',NULL,'rejected'),
+(19,5,480,1,'Introduction',NULL,NULL,'not_started'),
+(20,3,490,4,'Videos','<p>Videos: https://www.youtube.com/watch?v=9a3wWQrfQ08</p>',NULL,'not_started'),
+(21,3,487,1,'Assigment',NULL,NULL,'not_started'),
+(22,23,487,1,'Assigment',NULL,NULL,'approved'),
+(23,23,489,3,'Document 2','<p>Document 2</p>',NULL,'rejected'),
+(24,25,500,1,'Task Sprint 1: Startup & Team Reality Check to Set the Stage for a Custom & Targeted Coaching Program (Weeks 1-3)','<h3><strong>What You\'ll Do: A PowerPoint Presentation (PPT)</strong></h3><ul><li>What this instructional video from the founder of Lean Canvas and use the template below to follow the process to complete one complete canvas per top 3 ideas you want to develop into a business opportunity so we work together to choose the most immediate among them. </li><li>Complete the Startup Snapshot Assessment: <a href=\"https://medium.com/lean-stack/what-is-the-right-fill-order-for-a-lean-canvas-f8071d0c6c8c\" rel=\"noopener noreferrer\" target=\"_blank\">Use the Lean Business Model Canvas by Ash Maurya</a> put it on a PowerPoint Presentation to facilitate our discussions.</li><li>Map your current challenges and blockers: include this in the same PPT.</li><li>Identify your #1 growth bottleneck: include this in the same PPT.</li><li>Document your assumptions about customers and market: include this in the same PPT.</li><li><strong>Submit as soon as you feel you have done comprehensive and enough work so we can start our first live one-on-one session.</strong></li></ul><p><br></p><h3><strong>What You\'ll Get:</strong></h3><ul><li>Crystal-clear articulation of where you are, the challenges you have, and what you believe must be done to help you succeed as an early stage startup.</li></ul><p><br></p><h3><strong>Time Investment:</strong> 2-7 hours/week of quality work between you and your team members or by yourself.</h3>',NULL,'not_started'),
+(25,25,504,5,'Task Sprint 3: Traction Building Strategy (Weeks 8-11)','<h3><strong>What You\'ll Do:</strong></h3><ul><li>Launch your first marketing campaign</li><li>Close your first 3-5 pilot customers</li><li>Build your investor pitch deck</li><li>Create 90-day business plan</li></ul><h3><br></h3><h3><strong>What You\'ll Get:</strong></h3><ul><li>Real traction metrics (users, revenue, or LOIs)</li><li>Professional pitch deck (5-10 slides)</li><li>Executable 90 business plan</li><li>How to generate momentum you can show investors</li></ul><h3><br></h3><h3><strong>Time Investment:</strong> 5-6 hours/week</h3>',NULL,'not_started'),
+(26,28,431,1,'Task Sprint 1 (Weeks 1–2): Idea Portfolio + Early Discovery','<h3><strong>What You\'ll Do:</strong></h3><ul><li>Create <a href=\"https://medium.com/lean-stack/what-is-the-right-fill-order-for-a-lean-canvas-f8071d0c6c8c\" rel=\"noopener noreferrer\" target=\"_blank\"><strong>Lean Canvas</strong></a> (Ash Maurya) for <strong>2–3 different ideas</strong> (one canvas per idea).</li><li>Identify top 3 riskiest assumptions per idea.</li><li>Run <strong>8–10 discovery interviews</strong> total across those ideas (problem-focused).</li><li>Rank ideas using a simple <strong>RICE</strong> or <strong>Pain × Frequency × Access</strong> scorecard.</li></ul><p><br></p><p><strong>Submit to Unlock Live #1:</strong></p><ul><li>2–3 Lean Canvases (PDFs or Notion pages)</li><li>Interview notes (template) + pain ranking</li><li>Idea scorecard + recommendation for the top idea</li></ul><p><br></p><p><strong>Success Gate:</strong> ≥8 interviews + clear scorecard rationale.</p>',NULL,'not_started'),
+(27,25,506,1,'Task Sprint 1: Startup & Team Reality Check to Set the Stage for a Custom & Targeted Coaching Program (Weeks 1-3)','<h3><strong>What You\'ll Do: A PowerPoint Presentation (PPT)</strong></h3><ul><li>What this instructional video from the founder of Lean Canvas and use the template below to follow the process to complete one complete canvas per top 3 ideas you want to develop into a business opportunity so we work together to choose the most immediate among them.</li><li>Complete the Startup Snapshot Assessment: <a href=\"https://medium.com/lean-stack/what-is-the-right-fill-order-for-a-lean-canvas-f8071d0c6c8c\" rel=\"noopener noreferrer\" target=\"_blank\">Use the Lean Business Model Canvas by Ash Maurya</a> put it on a PowerPoint Presentation to facilitate our discussions.</li><li>Map your current challenges and blockers: include this in the same PPT.</li><li>Identify your #1 growth bottleneck: include this in the same PPT.</li><li>Document your assumptions about customers and market: include this in the same PPT.</li><li><strong>Submit as soon as you feel you have done comprehensive and enough work so we can start our first live one-on-one session.</strong></li></ul><p><br></p><h3><strong>What You\'ll Get:</strong></h3><ul><li>Crystal-clear articulation of where you are, the challenges you have, and what you believe must be done to help you succeed as an early stage startup.</li></ul><p><br></p><h3><strong>Time Investment:</strong> 2-7 hours/week of quality work between you and your team members or by yourself.</h3>',NULL,'approved'),
+(28,12,239,1,'Assignment 1: Type of Job You Do, Any Passion Projects You Might Have, What Are You Curious About?','<p>Before we begin your coaching program, I need to learn more about you so I can tailor the training to your specific needs. Please prepare a short note that covers three key elements to the best of your ability:</p><ol><li><strong>The type of job you do</strong></li><li>Describe your current role in the public service. Include your main responsibilities and the kind of work you handle on a daily basis.</li><li><strong>Any passion projects you have</strong></li><li>Share personal or professional projects that matter to you. These could be volunteer activities, community work, research interests, or creative projects you enjoy outside your main job.</li><li><strong>What you are curious about</strong></li><li>Tell me what you want to learn or explore. This could be skills you want to develop, topics that interest you, or areas where you think AI could make a difference in your work or life.</li></ol><p><br></p><p>By completing this assignment, you give me the background I need to design a personalized coaching plan that fits your goals and helps you get the most value from the program.</p>',NULL,'not_started'),
+(29,29,246,1,'Foundation & Context Mapping (Self-Paced Assignment - Week 1)','<p><strong>Duration:</strong> 1 week</p><p><strong>Type:</strong> Assignment</p><p><strong>Meeting Required:</strong> No</p><p><br></p><p><strong>What You\'ll Submit:</strong></p><ul><li>Your comprehensive teaching profile (subject area, grade level, years of experience, institutional context)</li><li>Detailed learner profile (student demographics, learning needs, class sizes, delivery format)</li><li>Current AI experience level (tools you\'ve tried, comfort level, previous training)</li><li>Teaching philosophy and pedagogical approach</li><li>Specific challenges you face in your current teaching environment</li><li>Your personal goals and expected outcomes from this coaching program</li><li>Share your institution’s AI Policy and ethical guidelines</li><li>Any institutional policies or constraints regarding AI use</li></ul><p><br></p><p><strong>Purpose:</strong> This foundational step allows me to design a completely personalized coaching experience. I analyze your context to prepare custom resources, examples, and strategies that directly address your teaching reality.</p>',NULL,'approved'),
+(30,26,506,1,'Task Sprint 1: Startup & Team Reality Check to Set the Stage for a Custom & Targeted Coaching Program (Weeks 1-3)','<h3><strong>What You\'ll Do: A PowerPoint Presentation (PPT)</strong></h3><ul><li>What this instructional video from the founder of Lean Canvas and use the template below to follow the process to complete one complete canvas per top 3 ideas you want to develop into a business opportunity so we work together to choose the most immediate among them.</li><li>Complete the Startup Snapshot Assessment: <a href=\"https://medium.com/lean-stack/what-is-the-right-fill-order-for-a-lean-canvas-f8071d0c6c8c\" rel=\"noopener noreferrer\" target=\"_blank\">Use the Lean Business Model Canvas by Ash Maurya</a> put it on a PowerPoint Presentation to facilitate our discussions.</li><li>Map your current challenges and blockers: include this in the same PPT.</li><li>Identify your #1 growth bottleneck: include this in the same PPT.</li><li>Document your assumptions about customers and market: include this in the same PPT.</li><li><strong>Submit as soon as you feel you have done comprehensive and enough work so we can start our first live one-on-one session.</strong></li></ul><p><br></p><h3><strong>What You\'ll Get:</strong></h3><ul><li>Crystal-clear articulation of where you are, the challenges you have, and what you believe must be done to help you succeed as an early stage startup.</li></ul><p><br></p><h3><strong>Time Investment:</strong> 2-7 hours/week of quality work between you and your team members or by yourself.</h3>',NULL,'not_started'),
+(31,30,513,1,'Task Sprint 1 (Weeks 1–2): Idea Portfolio + Early Discovery','<h3><strong>What You\'ll Do:</strong></h3><ul><li>Create <a href=\"https://medium.com/lean-stack/what-is-the-right-fill-order-for-a-lean-canvas-f8071d0c6c8c\" rel=\"noopener noreferrer\" target=\"_blank\"><strong>Lean Canvas</strong></a> (Ash Maurya) for <strong>2–3 different ideas</strong> (one canvas per idea).</li><li>Identify top 3 riskiest assumptions per idea.</li><li>Run <strong>8–10 discovery interviews</strong> total across those ideas (problem-focused).</li><li>Rank ideas using a simple <strong>RICE</strong> or <strong>Pain × Frequency × Access</strong> scorecard.</li></ul><p><br></p><p><strong>Submit to Unlock Live #1:</strong></p><ul><li>2–3 Lean Canvases (PDFs or Notion pages)</li><li>Interview notes (template) + pain ranking</li><li>Idea scorecard + recommendation for the top idea</li></ul><p><br></p><p><strong>Success Gate:</strong> ≥8 interviews + clear scorecard rationale.</p>',NULL,'not_started'),
+(32,25,531,1,'Task Sprint 1: Startup & Team Reality Check to Set the Stage for a Custom & Targeted Coaching Program (Weeks 1-3)','<h3><strong>What You\'ll Do: A PowerPoint Presentation (PPT)</strong></h3><ul><li>What this instructional video from the founder of Lean Canvas and use the template below to follow the process to complete one complete canvas per top 3 ideas you want to develop into a business opportunity so we work together to choose the most immediate among them.</li><li>Complete the Startup Snapshot Assessment: <a href=\"https://medium.com/lean-stack/what-is-the-right-fill-order-for-a-lean-canvas-f8071d0c6c8c\" rel=\"noopener noreferrer\" target=\"_blank\">Use the Lean Business Model Canvas by Ash Maurya</a> put it on a PowerPoint Presentation to facilitate our discussions.</li><li>Map your current challenges and blockers: include this in the same PPT.</li><li>Identify your #1 growth bottleneck: include this in the same PPT.</li><li>Document your assumptions about customers and market: include this in the same PPT.</li><li><strong>Submit as soon as you feel you have done comprehensive and enough work so we can start our first live one-on-one session.</strong></li></ul><p><br></p><h3><strong>What You\'ll Get:</strong></h3><ul><li>Crystal-clear articulation of where you are, the challenges you have, and what you believe must be done to help you succeed as an early stage startup.</li></ul><p><br></p><h3><strong>Time Investment:</strong> 2-7 hours/week of quality work between you and your team members or by yourself.</h3>',NULL,'submitted'),
+(33,32,531,1,'Task Sprint 1: Startup & Team Reality Check to Set the Stage for a Custom & Targeted Coaching Program (Weeks 1-3)','<h3><strong>What You\'ll Do: A PowerPoint Presentation (PPT)</strong></h3><ul><li>What this instructional video from the founder of Lean Canvas and use the template below to follow the process to complete one complete canvas per top 3 ideas you want to develop into a business opportunity so we work together to choose the most immediate among them.</li><li>Complete the Startup Snapshot Assessment: <a href=\"https://medium.com/lean-stack/what-is-the-right-fill-order-for-a-lean-canvas-f8071d0c6c8c\" rel=\"noopener noreferrer\" target=\"_blank\">Use the Lean Business Model Canvas by Ash Maurya</a> put it on a PowerPoint Presentation to facilitate our discussions.</li><li>Map your current challenges and blockers: include this in the same PPT.</li><li>Identify your #1 growth bottleneck: include this in the same PPT.</li><li>Document your assumptions about customers and market: include this in the same PPT.</li><li><strong>Submit as soon as you feel you have done comprehensive and enough work so we can start our first live one-on-one session.</strong></li></ul><p><br></p><h3><strong>What You\'ll Get:</strong></h3><ul><li>Crystal-clear articulation of where you are, the challenges you have, and what you believe must be done to help you succeed as an early stage startup.</li></ul><p><br></p><h3><strong>Time Investment:</strong> 2-7 hours/week of quality work between you and your team members or by yourself.</h3>',NULL,'submitted'),
+(34,25,533,3,'Task Sprint 2: Customer Discovery Lab (Weeks 4-8)','<h3><strong>What You\'ll Do:</strong></h3><ul><li>Interview 10-15 potential customers (insights from scripts provided) or test your MVP with real users</li><li>Document feedback and iterate</li><li>Validate pain point and willingness to pay</li></ul><h3><br></h3><h3><strong>What You\'ll Get:</strong></h3><ul><li>Early customer feedback</li><li>Proof your idea solves a real problem</li><li>Refined value proposition</li><li>First potential pilot customers to identify the right niche market that could pay for the solution if you launched it next week.</li><li>Templates for GTM and Funding Strategies and Revenue projection Excel doc.</li></ul><p><br></p><h3><strong>Time Investment:</strong> 4-5 hours/week</h3>',NULL,'submitted'),
+(35,25,539,3,'Task Sprint 2: Customer Discovery Lab (Weeks 4-8)','<h3><strong>What You\'ll Do:</strong></h3><ul><li>Interview 10-15 potential customers (insights from scripts provided) or test your MVP with real users</li><li>Document feedback and iterate</li><li>Validate pain point and willingness to pay</li></ul><h3><br></h3><h3><strong>What You\'ll Get:</strong></h3><ul><li>Early customer feedback</li><li>Proof your idea solves a real problem</li><li>Refined value proposition</li><li>First potential pilot customers to identify the right niche market that could pay for the solution if you launched it next week.</li><li>Templates for GTM and Funding Strategies and Revenue projection Excel doc.</li></ul><p><br></p><h3><strong>Time Investment:</strong> 4-5 hours/week</h3>',NULL,'not_started'),
+(36,25,537,1,'Task Sprint 1: Startup & Team Reality Check to Set the Stage for a Custom & Targeted Coaching Program (Weeks 1-3)','<h3><strong>What You\'ll Do: A PowerPoint Presentation (PPT)</strong></h3><ul><li>What this instructional video from the founder of Lean Canvas and use the template below to follow the process to complete one complete canvas per top 3 ideas you want to develop into a business opportunity so we work together to choose the most immediate among them.</li><li>Complete the Startup Snapshot Assessment: <a href=\"https://medium.com/lean-stack/what-is-the-right-fill-order-for-a-lean-canvas-f8071d0c6c8c\" rel=\"noopener noreferrer\" target=\"_blank\">Use the Lean Business Model Canvas by Ash Maurya</a> put it on a PowerPoint Presentation to facilitate our discussions.</li><li>Map your current challenges and blockers: include this in the same PPT.</li><li>Identify your #1 growth bottleneck: include this in the same PPT.</li><li>Document your assumptions about customers and market: include this in the same PPT.</li><li><strong>Submit as soon as you feel you have done comprehensive and enough work so we can start our first live one-on-one session.</strong></li></ul><p><br></p><h3><strong>What You\'ll Get:</strong></h3><ul><li>Crystal-clear articulation of where you are, the challenges you have, and what you believe must be done to help you succeed as an early stage startup.</li></ul><p><br></p><h3><strong>Time Investment:</strong> 2-7 hours/week of quality work between you and your team members or by yourself.</h3>',NULL,'approved'),
+(37,25,541,5,'Task Sprint 3: Traction Building Strategy (Weeks 8-11)','<h3><strong>What You\'ll Do:</strong></h3><ul><li>Launch your first marketing campaign</li><li>Close your first 3-5 pilot customers</li><li>Build your investor pitch deck</li><li>Create 90-day business plan</li></ul><h3><br></h3><h3><strong>What You\'ll Get:</strong></h3><ul><li>Real traction metrics (users, revenue, or LOIs)</li><li>Professional pitch deck (5-10 slides)</li><li>Executable 90 business plan</li><li>How to generate momentum you can show investors</li></ul><h3><br></h3><h3><strong>Time Investment:</strong> 5-6 hours/week</h3>',NULL,'approved'),
+(38,29,252,7,'Full Implementation & Mastery Demonstration (Self-Paced Experience - Weeks 9-10)','<p><strong>Duration:</strong> 2 weeks</p><p><strong>Type:</strong> Assignment</p><p><strong>Meeting Required:</strong> No</p><p><br></p><p><strong>What You\'ll Do:</strong></p><ul><li>Implement AI integration across selected areas of your life or career where you want to collaborate with AI</li><li>Experiment with one cutting-edge approach we discussed (AI tutors, collaborative AI projects, adaptive learning paths, etc.)</li><li>Mentor or share your new proposed approach with a colleague (if comfortable)</li><li>Create your personal AI integration playbook documenting your methods, favorite prompts, and best practices</li><li>Reflect on your journey from the program start to now.</li></ul><p><br></p><p><strong>What You\'ll Submit:</strong></p><ul><li>Your complete AI Integration Playbook (customized to your teaching context)</li><li>Evidence of expanded implementation (selected shareable work)</li><li>Documentation of your most advanced AI application experiment</li><li>Reflection on your professional transformation: What\'s changed in how you view AI, how you teach, think, and plan</li><li>Preparation for final debrief: insights you want to discuss, lingering questions, future goals</li></ul><p><br></p><p><strong>Purpose:</strong> Consolidate your learning into a sustainable, scalable practice that demonstrates mastery and positions you as an educational leader.</p>',NULL,'approved'),
+(39,33,583,5,'Task Sprint 3 (Weeks 5–6): ICP Sheet + Messaging Test (Wave 1)','<h3><strong>What You\'ll Do:</strong></h3><ul><li>Complete <strong>ICP sheet</strong> (role, firmographics, trigger events, watering holes).</li><li>Build a 10 (B2B) or a 5<strong>0-contact list (B2C)</strong> (CSV) matched to ICP.</li><li>Write <strong>2 outreach scripts</strong> (cold + warm) and send <strong>first 50</strong>.</li></ul><p><br></p><h3><strong>Submit to Unlock Live #3:</strong></h3><ul><li>ICP sheet + 50-contact CSV/10 B2B</li><li>Two scripts (final)</li><li>Outreach stats for first 50 sends</li></ul><p><br></p><p><strong>Success Gate:</strong> Reply rate ≥8% <strong>or</strong> ≥3 qualified calls booked.</p>',NULL,'approved'),
+(40,33,587,9,'Task Sprint 5 (Weeks 9–10): MVP v1 + Usability Runs','<h3><strong>What You\'ll Do:</strong></h3><ul><li>Build <strong>MVP v1</strong> (no-code/concierge/service SOP).</li><li>Run <strong>5–10 usability/shadow tests</strong> with ICP.</li><li>Define <strong>activation checklist</strong> and measure completion.</li></ul><p><br></p><h3><strong>Submit to Unlock Live #5:</strong></h3><ul><li>MVP link/SOP</li><li>Usability notes + short clips</li><li>Activation checklist + “Aha” definition</li></ul><p><br></p><p><strong>Success Gate:</strong> ≥70% complete core flow <strong>and</strong> ≥3 “I would pay” statements.</p>',NULL,'not_started'),
+(41,29,250,5,'Classroom Integration Pilot (Self-Paced Experience - Weeks 6-8)','<p><strong>Duration:</strong> 2 weeks</p><p><strong>Type:</strong> Assignment</p><p><strong>Meeting Required:</strong> No</p><p><br></p><p><strong>What You\'ll Do:</strong></p><ul><li>Implement at least one AI-integrated learning experience with your students</li><li>Design and deploy an AI-assisted assessment or feedback mechanism</li><li>Experiment with personalization strategies using AI insights</li><li>Facilitate a classroom discussion about AI ethics and responsible use (age-appropriate)</li><li>Gather student feedback on their learning experience</li><li>Document the complete cycle: planning, implementation, student response, and outcomes</li></ul><p><br></p><p><strong>What You\'ll Submit:</strong></p><ul><li>Comprehensive case study of your classroom pilot including lesson design, student work samples (anonymized), and outcome data</li><li>Student feedback summary and analysis</li><li>Personal reflections on what you learned about facilitation in an AI-integrated environment</li><li>Challenges encountered and creative solutions you developed</li><li>Questions about scaling or refining your approach</li></ul><p><br></p><p><strong>Purpose:</strong> Transform from AI experimenter to AI-integrated educator through real classroom application and student-centered learning.</p>',NULL,'approved'),
+(42,33,585,7,'ask Sprint 4 (Weeks 7–8): Messaging Test (Wave 2) + LOIs','<h3><strong>What You\'ll Do:</strong></h3><ul><li>Send remaining <strong>25+</strong> messages/10B2B.</li><li>Run <strong>5–8 discovery calls</strong>; negotiate <strong>LOIs</strong> for pilot testing.</li><li>Track outcomes per message variant.</li></ul><p><br></p><h3><strong>Submit to Unlock Live #4:</strong></h3><ul><li>Call notes (template)</li><li>≥1 signed <strong>LOI</strong> <em>or</em> total <strong>≥6 qualified calls</strong></li><li>Variant performance summary</li></ul><p><br></p><p><strong>Success Gate:</strong> Total 100 sends; ≥6 calls <strong>or</strong> ≥1 LOI.</p>',NULL,'approved');
+/*!40000 ALTER TABLE `coaching_assignments` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `coaching_bookings`
+--
+
+DROP TABLE IF EXISTS `coaching_bookings`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `coaching_bookings` (
+  `id` int(11) NOT NULL,
+  `enrollment_id` int(11) NOT NULL,
+  `step_seq` int(11) NOT NULL,
+  `meeting_id` int(11) NOT NULL,
+  `status` enum('scheduled','completed','no_show','rescheduled') DEFAULT 'scheduled'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `coaching_bookings`
+--
+
+LOCK TABLES `coaching_bookings` WRITE;
+/*!40000 ALTER TABLE `coaching_bookings` DISABLE KEYS */;
+INSERT INTO `coaching_bookings` VALUES
+(1,1,2,0,'scheduled'),
+(2,1,4,0,'scheduled');
+/*!40000 ALTER TABLE `coaching_bookings` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `coaching_enrollments`
+--
+
+DROP TABLE IF EXISTS `coaching_enrollments`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `coaching_enrollments` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `client_id` int(11) NOT NULL,
+  `coach_id` int(11) NOT NULL,
+  `template_id` int(11) NOT NULL,
+  `start_date` date NOT NULL,
+  `status` enum('active','paused','completed','cancelled') DEFAULT 'active',
+  `next_step_seq` int(11) DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `order_id` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=47 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `coaching_enrollments`
+--
+
+LOCK TABLES `coaching_enrollments` WRITE;
+/*!40000 ALTER TABLE `coaching_enrollments` DISABLE KEYS */;
+INSERT INTO `coaching_enrollments` VALUES
+(1,5,3,1,'2025-08-22','active',1,'2025-08-22 15:46:43',NULL),
+(2,0,0,3,'2025-09-01','active',1,'2025-09-01 07:35:08',6),
+(3,0,0,3,'2025-09-01','active',1,'2025-09-01 16:01:42',11),
+(4,2,3,3,'2025-09-02','active',1,'2025-09-01 18:21:09',13),
+(5,2,3,2,'2025-09-02','active',1,'2025-09-01 18:50:49',9),
+(6,2,3,5,'2025-09-07','active',1,'2025-09-07 08:45:16',15),
+(7,13,6,7,'2025-09-13','active',1,'2025-09-13 08:01:43',16),
+(8,16,6,6,'2025-09-28','active',1,'2025-09-28 15:29:43',26),
+(9,16,6,6,'2025-09-28','active',1,'2025-09-28 17:12:35',27),
+(10,16,6,6,'2025-09-28','active',1,'2025-09-28 17:37:56',28),
+(11,16,6,6,'2025-09-28','active',1,'2025-09-28 17:44:36',29),
+(12,17,6,9,'2025-09-28','active',1,'2025-09-28 20:22:03',31),
+(13,2,3,8,'2025-10-04','active',1,'2025-10-04 18:11:23',21),
+(14,4,6,9,'2025-10-05','active',1,'2025-10-05 07:35:08',25),
+(15,6,6,9,'2025-10-05','active',1,'2025-10-05 15:39:19',24),
+(16,18,6,6,'2025-10-12','active',1,'2025-10-12 18:14:46',34),
+(17,18,6,6,'2025-10-12','active',1,'2025-10-12 18:27:23',35),
+(18,17,6,6,'2025-10-12','active',1,'2025-10-12 18:31:04',36),
+(19,18,6,6,'2025-10-16','active',1,'2025-10-16 22:58:13',40),
+(20,3,6,10,'2025-10-17','active',1,'2025-10-17 13:19:06',33),
+(21,2,3,5,'2025-10-17','active',1,'2025-10-17 14:46:11',14),
+(22,2,3,5,'2025-10-17','active',1,'2025-10-17 16:30:24',41),
+(23,2,3,3,'2025-10-17','active',1,'2025-10-17 18:41:47',12),
+(24,17,6,13,'2025-10-19','active',1,'2025-10-19 17:37:38',42),
+(25,17,6,13,'2025-10-21','active',1,'2025-10-21 10:59:37',43),
+(26,18,6,13,'2025-10-23','active',1,'2025-10-23 18:43:48',45),
+(27,0,6,20,'0000-00-00','active',1,'2025-10-25 18:27:12',49),
+(28,2,6,20,'2025-10-26','active',1,'2025-10-26 18:18:15',55),
+(29,17,6,10,'2025-10-26','active',1,'2025-10-26 20:44:21',59),
+(30,18,6,20,'2025-10-26','active',1,'2025-10-26 21:22:23',62),
+(31,2,25,19,'2025-10-27','active',1,'2025-10-27 05:37:51',56),
+(32,2,6,13,'2025-10-27','active',1,'2025-10-27 05:42:02',63),
+(33,17,6,20,'2025-11-02','active',1,'2025-11-02 23:59:49',52),
+(34,2,3,22,'2025-11-03','active',1,'2025-11-03 09:17:26',64),
+(35,17,6,9,'2025-11-12','active',1,'2025-11-12 12:38:29',65),
+(36,2,6,20,'2025-12-30','active',1,'2025-12-30 15:47:37',78),
+(37,3,6,26,'2025-12-31','active',1,'2025-12-31 06:45:59',70),
+(38,2,3,8,'2025-12-31','active',1,'2025-12-31 16:56:26',82),
+(39,27,3,8,'2026-01-01','active',1,'2026-01-01 05:49:53',83),
+(42,3,3,22,'2026-01-02','active',1,'2026-01-02 17:04:57',46),
+(43,30,3,8,'2026-01-02','active',1,'2026-01-02 17:33:03',87),
+(46,35,3,8,'2026-01-03','active',1,'2026-01-03 11:04:47',92);
+/*!40000 ALTER TABLE `coaching_enrollments` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `coaching_orders`
+--
+
+DROP TABLE IF EXISTS `coaching_orders`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `coaching_orders` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `template_id` int(11) NOT NULL,
+  `amount` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `currency` varchar(10) NOT NULL DEFAULT 'USD',
+  `status` enum('pending','paid','failed','cancelled') NOT NULL DEFAULT 'pending',
+  `payment_status` enum('pending','paid','failed','cancelled') NOT NULL DEFAULT 'pending',
+  `payment_ref` varchar(128) DEFAULT NULL,
+  `stripe_payment_intent_id` varchar(64) DEFAULT NULL,
+  `provider_payment_intent_id` varchar(64) DEFAULT NULL,
+  `paid_at` datetime DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `deleted_at` datetime DEFAULT NULL,
+  `provider_session_id` varchar(255) DEFAULT NULL,
+  `meeting_link` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=93 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `coaching_orders`
+--
+
+LOCK TABLES `coaching_orders` WRITE;
+/*!40000 ALTER TABLE `coaching_orders` DISABLE KEYS */;
+INSERT INTO `coaching_orders` VALUES
+(1,3,1,499.00,'USD','pending','pending',NULL,NULL,NULL,NULL,'2025-08-22 17:43:23','2025-08-22 17:43:23',NULL,NULL,NULL),
+(2,3,1,499.00,'USD','pending','pending',NULL,NULL,NULL,NULL,'2025-08-22 17:43:23','2025-08-22 17:43:23',NULL,NULL,NULL),
+(3,3,3,20.00,'USD','pending','pending',NULL,NULL,NULL,NULL,'2025-08-23 14:10:01','2025-08-23 14:10:01',NULL,NULL,NULL),
+(4,3,3,20.00,'USD','pending','pending',NULL,NULL,NULL,NULL,'2025-08-23 14:10:01','2025-08-23 14:10:01',NULL,NULL,NULL),
+(5,3,2,20.00,'USD','pending','pending',NULL,NULL,NULL,NULL,'2025-08-23 14:29:03','2025-08-23 14:29:03',NULL,NULL,NULL),
+(6,2,3,20.00,'USD','paid','paid','pi_3S2SGe3RqEMUJuhk1QxxUL6w','pi_3S2SGe3RqEMUJuhk1QxxUL6w','pi_3S2SGe3RqEMUJuhk1QxxUL6w','2025-09-01 13:35:08','2025-08-24 08:55:52','2025-09-01 07:35:08',NULL,NULL,NULL),
+(7,2,3,20.00,'USD','paid','paid',NULL,NULL,'pi_3S2S5i3RqEMUJuhk1cwpLiph','2025-09-01 13:23:49','2025-08-24 08:55:52','2025-09-01 07:23:49',NULL,NULL,NULL),
+(8,2,2,20.00,'USD','pending','pending',NULL,NULL,NULL,NULL,'2025-08-24 09:49:05','2025-08-24 09:49:05',NULL,NULL,NULL),
+(9,2,2,20.00,'USD','paid','paid','pi_3S2coX3RqEMUJuhk1zfrTTgl','pi_3S2coX3RqEMUJuhk1zfrTTgl','pi_3S2coX3RqEMUJuhk1zfrTTgl','2025-09-02 00:50:48','2025-08-24 09:49:05','2025-09-01 18:50:48',NULL,NULL,NULL),
+(10,2,3,20.00,'USD','paid','paid','pi_3S2bSa3RqEMUJuhk04Y3L0PR','pi_3S2bSa3RqEMUJuhk04Y3L0PR','pi_3S2bSa3RqEMUJuhk04Y3L0PR','2025-09-01 23:24:04','2025-09-01 16:01:32','2025-09-01 17:24:04',NULL,NULL,NULL),
+(11,2,3,20.00,'USD','paid','paid','pi_3S2aAs3RqEMUJuhk147aoGln','pi_3S2aAs3RqEMUJuhk147aoGln','pi_3S2aAs3RqEMUJuhk147aoGln','2025-09-01 22:01:42','2025-09-01 16:01:32','2025-09-01 16:01:42',NULL,NULL,NULL),
+(12,2,3,20.00,'USD','paid','paid',NULL,'pi_3SJIau3RqEMUJuhk15PZlqrc','pi_3SJIau3RqEMUJuhk15PZlqrc','2025-10-17 18:41:40','2025-09-01 18:00:22','2025-10-17 18:41:47',NULL,NULL,NULL),
+(13,2,3,20.00,'USD','paid','paid','pi_3S2c1p3RqEMUJuhk1MvsHIHT','pi_3S2c1p3RqEMUJuhk1MvsHIHT','pi_3S2c1p3RqEMUJuhk1MvsHIHT','2025-09-02 00:00:28','2025-09-01 18:00:22','2025-09-01 18:00:28',NULL,NULL,NULL),
+(14,2,5,20.00,'USD','paid','paid',NULL,'pi_3SJEux3RqEMUJuhk1i1diQNG','pi_3SJEux3RqEMUJuhk1i1diQNG','2025-10-17 14:46:07','2025-09-07 06:23:12','2025-10-17 14:46:11',NULL,NULL,NULL),
+(15,2,5,20.00,'USD','paid','paid',NULL,NULL,'pi_3S4eDn3RqEMUJuhk1FVDR5mP','2025-09-07 14:45:16','2025-09-07 06:23:12','2025-09-07 08:45:16',NULL,NULL,NULL),
+(16,13,7,20.00,'USD','paid','paid',NULL,'pi_3S6oOp3RqEMUJuhk12LrB6G7','pi_3S6oOp3RqEMUJuhk12LrB6G7','2025-09-13 08:01:35','2025-09-13 07:59:32','2025-09-13 08:01:43',NULL,NULL,NULL),
+(17,13,7,20.00,'USD','pending','pending',NULL,NULL,NULL,NULL,'2025-09-13 10:55:57','2025-09-13 10:55:57',NULL,NULL,NULL),
+(18,6,6,600.00,'USD','pending','pending',NULL,NULL,NULL,NULL,'2025-09-16 01:02:06','2025-09-16 01:02:06',NULL,NULL,NULL),
+(19,3,7,20.00,'USD','pending','pending',NULL,NULL,NULL,NULL,'2025-09-25 06:43:05','2025-09-25 06:43:05',NULL,NULL,NULL),
+(20,3,8,900.00,'USD','pending','pending',NULL,NULL,NULL,NULL,'2025-09-25 07:25:24','2025-09-25 07:25:24',NULL,NULL,NULL),
+(21,2,8,900.00,'USD','paid','paid',NULL,'pi_3SEZvF3RqEMUJuhk1ybruVF9','pi_3SEZvF3RqEMUJuhk1ybruVF9','2025-10-04 18:11:09','2025-09-25 10:20:37','2025-10-04 18:11:23',NULL,NULL,NULL),
+(22,4,8,900.00,'USD','pending','pending',NULL,NULL,NULL,NULL,'2025-09-25 10:31:56','2025-09-25 10:31:56',NULL,NULL,NULL),
+(23,4,2,20.00,'USD','pending','pending',NULL,NULL,NULL,NULL,'2025-09-25 10:33:19','2025-09-25 10:33:19',NULL,NULL,NULL),
+(24,6,9,300.00,'USD','paid','paid',NULL,'pi_3SEu0S3RqEMUJuhk1bckn2cg','pi_3SEu0S3RqEMUJuhk1bckn2cg','2025-10-05 15:37:52','2025-09-26 01:24:21','2025-10-05 15:39:19',NULL,NULL,NULL),
+(25,4,9,300.00,'USD','paid','paid',NULL,'pi_3SEmTC3RqEMUJuhk01dJy2Mg','pi_3SEmTC3RqEMUJuhk01dJy2Mg','2025-10-05 07:35:02','2025-09-27 11:24:44','2025-10-05 07:35:08',NULL,NULL,NULL),
+(26,16,6,0.00,'USD','paid','paid',NULL,NULL,NULL,'2025-09-28 15:29:43','2025-09-28 15:29:29','2025-09-28 15:29:43',NULL,NULL,NULL),
+(27,16,6,0.00,'USD','paid','paid',NULL,NULL,NULL,'2025-09-28 17:12:35','2025-09-28 17:12:25','2025-09-28 17:12:35',NULL,NULL,NULL),
+(28,16,6,0.00,'USD','paid','paid',NULL,NULL,NULL,'2025-09-28 17:37:56','2025-09-28 17:37:40','2025-09-28 17:37:56',NULL,NULL,NULL),
+(29,16,6,0.00,'USD','paid','paid',NULL,NULL,NULL,'2025-09-28 17:44:36','2025-09-28 17:44:26','2025-09-28 17:44:36',NULL,NULL,NULL),
+(30,16,10,500.00,'USD','pending','pending',NULL,NULL,NULL,NULL,'2025-09-28 18:33:40','2025-09-28 18:33:40',NULL,NULL,NULL),
+(31,17,9,300.00,'USD','paid','paid',NULL,'pi_3SCR6X3RqEMUJuhk1KTgLnP5','pi_3SCR6X3RqEMUJuhk1KTgLnP5','2025-09-28 20:21:57','2025-09-28 20:20:57','2025-09-28 20:22:03',NULL,NULL,NULL),
+(32,6,10,500.00,'USD','pending','pending',NULL,NULL,NULL,NULL,'2025-10-05 15:34:50','2025-10-05 15:34:50',NULL,NULL,NULL),
+(33,3,10,500.00,'USD','paid','paid',NULL,'pi_3SJDYU3RqEMUJuhk1F5SWyzH','pi_3SJDYU3RqEMUJuhk1F5SWyzH','2025-10-17 13:18:50','2025-10-09 15:19:45','2025-10-17 13:19:06',NULL,NULL,NULL),
+(34,18,6,600.00,'USD','paid','paid',NULL,'pi_3SHTn23RqEMUJuhk0WonHzzX','pi_3SHTn23RqEMUJuhk0WonHzzX','2025-10-12 18:14:40','2025-10-12 18:12:50','2025-10-12 18:14:46',NULL,NULL,NULL),
+(35,18,6,600.00,'USD','paid','paid',NULL,'pi_3SHTzF3RqEMUJuhk1Ke7MtJZ','pi_3SHTzF3RqEMUJuhk1Ke7MtJZ','2025-10-12 18:27:17','2025-10-12 18:24:35','2025-10-12 18:27:23',NULL,NULL,NULL),
+(36,17,6,600.00,'USD','paid','paid',NULL,'pi_3SHU2o3RqEMUJuhk1Wq6c7gw','pi_3SHU2o3RqEMUJuhk1Wq6c7gw','2025-10-12 18:30:58','2025-10-12 18:24:43','2025-10-12 18:31:04',NULL,NULL,NULL),
+(37,17,12,1000.00,'USD','pending','pending',NULL,NULL,NULL,NULL,'2025-10-12 18:29:38','2025-10-12 18:29:38',NULL,NULL,NULL),
+(38,3,4,15.00,'USD','pending','pending',NULL,NULL,NULL,NULL,'2025-10-14 04:31:11','2025-10-14 04:31:11',NULL,NULL,NULL),
+(39,3,4,15.00,'USD','pending','pending',NULL,NULL,NULL,NULL,'2025-10-14 04:31:11','2025-10-14 04:31:11',NULL,NULL,NULL),
+(40,18,6,600.00,'USD','paid','paid',NULL,'pi_3SJ07X3RqEMUJuhk0UuJwGwR','pi_3SJ07X3RqEMUJuhk0UuJwGwR','2025-10-16 22:58:07','2025-10-16 22:55:15','2025-10-16 22:58:13',NULL,NULL,NULL),
+(41,2,5,20.00,'USD','paid','paid',NULL,'pi_3SJGXj3RqEMUJuhk1xnVcoAP','pi_3SJGXj3RqEMUJuhk1xnVcoAP','2025-10-17 16:30:15','2025-10-17 16:29:14','2025-10-17 16:30:24',NULL,NULL,NULL),
+(42,17,13,600.00,'USD','paid','paid',NULL,'pi_3SK0Xz3RqEMUJuhk0OHMyGbb','pi_3SK0Xz3RqEMUJuhk0OHMyGbb','2025-10-19 17:37:35','2025-10-19 17:36:57','2025-10-19 17:37:38',NULL,NULL,NULL),
+(43,17,13,600.00,'USD','paid','paid',NULL,'pi_3SKdHr3RqEMUJuhk1kimrScE','pi_3SKdHr3RqEMUJuhk1kimrScE','2025-10-21 10:59:31','2025-10-20 00:32:06','2025-10-21 10:59:37',NULL,NULL,NULL),
+(44,17,13,900.00,'USD','pending','pending',NULL,NULL,NULL,NULL,'2025-10-21 11:03:47','2025-10-21 11:03:47',NULL,NULL,NULL),
+(45,18,13,900.00,'USD','paid','paid',NULL,'pi_3SLTUB3RqEMUJuhk0zGEIjTt','pi_3SLTUB3RqEMUJuhk0zGEIjTt','2025-10-23 18:43:43','2025-10-23 18:41:43','2025-10-23 18:43:48',NULL,NULL,NULL),
+(46,3,22,200.00,'USD','paid','paid',NULL,'pi_3SlBmW3RqEMUJuhk1FHaHM6B','pi_3SlBmW3RqEMUJuhk1FHaHM6B','2026-01-02 17:04:57','2025-10-24 09:21:41','2026-01-02 17:04:57',NULL,NULL,NULL),
+(47,3,22,200.00,'USD','pending','pending',NULL,NULL,NULL,NULL,'2025-10-24 09:21:41','2025-10-24 09:21:41',NULL,NULL,NULL),
+(48,2,20,1599.00,'USD','paid','paid',NULL,NULL,NULL,'2025-10-26 18:00:54','2025-10-25 16:50:50','2025-10-26 18:00:54',NULL,NULL,NULL),
+(49,2,20,1599.00,'USD','paid','paid',NULL,NULL,NULL,'2025-10-26 00:27:12','2025-10-25 16:50:50','2025-10-25 18:27:12',NULL,NULL,NULL),
+(50,6,23,100.00,'USD','pending','pending',NULL,NULL,NULL,NULL,'2025-10-26 14:28:36','2025-10-26 14:28:36',NULL,NULL,NULL),
+(51,17,23,100.00,'USD','paid','paid',NULL,NULL,NULL,'2025-10-26 14:53:52','2025-10-26 14:53:17','2025-10-26 14:53:52',NULL,NULL,NULL),
+(52,17,20,1599.00,'USD','paid','paid',NULL,'pi_3SPBBY3RqEMUJuhk1iQjO17e','pi_3SPBBY3RqEMUJuhk1iQjO17e','2025-11-02 23:59:49','2025-10-26 14:58:13','2025-11-02 23:59:49',NULL,NULL,NULL),
+(53,17,23,100.00,'USD','paid','paid',NULL,NULL,NULL,'2025-10-26 17:08:22','2025-10-26 17:08:09','2025-10-26 17:08:22',NULL,NULL,NULL),
+(54,2,20,1599.00,'USD','paid','paid',NULL,NULL,NULL,'2025-10-26 18:07:16','2025-10-26 18:07:07','2025-10-26 18:07:16',NULL,NULL,NULL),
+(55,2,20,1599.00,'USD','paid','paid',NULL,NULL,NULL,'2025-10-26 18:18:15','2025-10-26 18:18:05','2025-10-26 18:18:15',NULL,NULL,NULL),
+(56,2,19,400.00,'USD','paid','paid',NULL,'pi_3SMj7q3RqEMUJuhk1WQFuYC8','pi_3SMj7q3RqEMUJuhk1WQFuYC8','2025-10-27 05:37:51','2025-10-26 18:20:15','2025-10-27 05:37:51',NULL,NULL,NULL),
+(57,17,24,500.00,'USD','pending','pending',NULL,NULL,NULL,NULL,'2025-10-26 19:31:56','2025-10-26 19:31:56',NULL,NULL,NULL),
+(58,17,9,300.00,'USD','paid','paid',NULL,NULL,NULL,'2025-10-26 20:42:35','2025-10-26 20:42:30','2025-10-26 20:42:35',NULL,NULL,NULL),
+(59,17,10,399.00,'USD','paid','paid',NULL,NULL,NULL,'2025-10-26 20:44:21','2025-10-26 20:44:14','2025-10-26 20:44:21',NULL,NULL,NULL),
+(60,18,13,900.00,'USD','paid','paid',NULL,NULL,NULL,'2025-10-26 21:13:58','2025-10-26 21:13:47','2025-10-26 21:13:58',NULL,NULL,NULL),
+(61,18,13,900.00,'USD','paid','paid',NULL,NULL,NULL,'2025-10-26 21:20:24','2025-10-26 21:20:18','2025-10-26 21:20:24',NULL,NULL,NULL),
+(62,18,20,1599.00,'USD','paid','paid',NULL,NULL,NULL,'2025-10-26 21:22:23','2025-10-26 21:22:17','2025-10-26 21:22:23',NULL,NULL,NULL),
+(63,2,13,900.00,'USD','paid','paid',NULL,NULL,NULL,'2025-10-27 05:42:02','2025-10-27 05:41:35','2025-10-27 05:42:02',NULL,NULL,NULL),
+(64,2,22,200.00,'USD','paid','paid',NULL,'pi_3SPJtB3RqEMUJuhk1dr24vV3','pi_3SPJtB3RqEMUJuhk1dr24vV3','2025-11-03 09:17:26','2025-11-03 09:17:22','2025-11-03 09:17:26',NULL,NULL,NULL),
+(65,17,9,300.00,'USD','paid','paid',NULL,'pi_3SSdJg3RqEMUJuhk0M93uEiD','pi_3SSdJg3RqEMUJuhk0M93uEiD','2025-11-12 12:38:29','2025-11-12 12:38:24','2025-11-12 12:38:29',NULL,NULL,NULL),
+(66,6,26,499.00,'USD','pending','pending',NULL,NULL,NULL,NULL,'2025-12-14 17:35:17','2025-12-14 17:35:17',NULL,NULL,NULL),
+(67,6,9,10.00,'USD','pending','pending',NULL,NULL,NULL,NULL,'2025-12-14 17:36:44','2025-12-14 17:36:44',NULL,NULL,NULL),
+(70,3,26,499.00,'USD','paid','paid','cs_test_a1plLEQu9uaKKvnCbmcdAnJ9vvcleTolhkesCMRjdXFuWHyNwK6slDXeBx','pi_3SkJAS3RqEMUJuhk0xgN5cVO','pi_3SkJAS3RqEMUJuhk0xgN5cVO','2025-12-31 12:45:59','2025-12-28 03:05:31','2025-12-31 06:45:59',NULL,NULL,NULL),
+(71,2,26,499.00,'USD','pending','pending',NULL,NULL,NULL,NULL,'2025-12-28 16:23:41','2025-12-28 16:23:41',NULL,NULL,NULL),
+(72,2,20,1599.00,'USD','pending','pending',NULL,NULL,NULL,NULL,'2025-12-28 16:58:52','2025-12-28 16:58:52',NULL,NULL,NULL),
+(73,2,13,900.00,'USD','pending','pending',NULL,NULL,NULL,NULL,'2025-12-30 14:33:36','2025-12-30 14:33:36',NULL,NULL,NULL),
+(74,2,20,1599.00,'USD','pending','pending',NULL,NULL,NULL,NULL,'2025-12-30 14:56:32','2025-12-30 14:56:32',NULL,NULL,NULL),
+(75,2,20,1599.00,'USD','pending','pending',NULL,NULL,NULL,NULL,'2025-12-30 15:07:01','2025-12-30 15:07:01',NULL,NULL,NULL),
+(76,2,26,499.00,'USD','pending','pending',NULL,'pi_3Sk4nG3RqEMUJuhk0PuICXni','pi_3Sk4nG3RqEMUJuhk0PuICXni',NULL,'2025-12-30 15:24:43','2025-12-30 15:25:08',NULL,NULL,NULL),
+(77,2,26,499.00,'USD','pending','pending',NULL,'pi_3Sk4w93RqEMUJuhk1aPR3vG1','pi_3Sk4w93RqEMUJuhk1aPR3vG1',NULL,'2025-12-30 15:33:54','2025-12-30 15:34:19',NULL,'cs_test_a1HDDlqVXoa73rYDXntmlHsPZV8XyoZPrymdCc7SliTpT7sVbUUbedz0Z8',NULL),
+(78,2,20,1599.00,'USD','paid','paid',NULL,'pi_3Sk5913RqEMUJuhk1vOv9USa','pi_3Sk5913RqEMUJuhk1vOv9USa','2025-12-30 15:47:37','2025-12-30 15:47:15','2025-12-30 15:47:37',NULL,'cs_test_a1n6uZGTT3BjY1j4yEXQajp6Xqg2tEgjvqJLgD2sRbLx3RMHoqv0kUgZ2e',NULL),
+(79,2,8,900.00,'USD','pending','pending',NULL,NULL,NULL,NULL,'2025-12-31 14:35:03','2025-12-31 14:35:03',NULL,'cs_test_a1ubhDG5qpeJQAIXuPSPzmscnzLxlXNTjMEcKEGLyJ5KLCzZCqFfNMV3oF',NULL),
+(80,2,8,900.00,'USD','pending','pending',NULL,NULL,NULL,NULL,'2025-12-31 16:26:08','2025-12-31 16:26:09',NULL,'cs_test_a16MJFFqmPAEs8l72zkWsaYkiX0fM3yRPTSWYqqOuZIijRTuVOMigY5aUR',NULL),
+(81,2,8,900.00,'USD','pending','pending',NULL,NULL,NULL,NULL,'2025-12-31 16:38:18','2025-12-31 16:38:19',NULL,'cs_test_a16e0d1GQQjGfW4oXgOqiesrgFSmvyscpHMjPv2unr7JKAsHn9qHthjbsv',NULL),
+(82,2,8,900.00,'USD','paid','paid',NULL,'pi_3SkShA3RqEMUJuhk1xelIixW','pi_3SkShA3RqEMUJuhk1xelIixW','2025-12-31 16:56:26','2025-12-31 16:55:58','2025-12-31 16:56:26',NULL,'cs_test_a1A1zI7npgzD6cqPWl7148LHPQ6nxKM0zUWtmnJm7qJDVb8Gsteu9SJ2F7',NULL),
+(83,27,8,900.00,'USD','paid','paid',NULL,'pi_3Skelf3RqEMUJuhk1HsAOUJv','pi_3Skelf3RqEMUJuhk1HsAOUJv','2026-01-01 05:49:53','2026-01-01 05:49:27','2026-01-01 05:49:53',NULL,'cs_test_a13YoqZIApPNO3vD5dmeSWuRvFDydFuXzNoELIPb5Q7afR0UQd7TmIg951',NULL),
+(86,3,8,900.00,'USD','pending','pending',NULL,NULL,NULL,NULL,'2026-01-02 17:28:02','2026-01-02 17:28:02',NULL,'cs_test_a1azOUY2pD2wJpG1phQbonpzNWXawxE6jTDmDwjaczs3Ewr0uYMnckvUe4',NULL),
+(87,30,8,900.00,'USD','paid','paid',NULL,'pi_3SlCDH3RqEMUJuhk0bQ13PcS','pi_3SlCDH3RqEMUJuhk0bQ13PcS','2026-01-02 17:33:03','2026-01-02 17:31:52','2026-01-02 17:33:03',NULL,'cs_test_a1ROsADn3NaQQtnLoMczSWlcg6XoH0lOZ97KZ8I8519DP0B6cAFWFYrjk2',NULL),
+(88,3,26,499.00,'USD','pending','pending',NULL,NULL,NULL,NULL,'2026-01-02 17:38:27','2026-01-02 17:38:27',NULL,NULL,NULL),
+(89,3,26,499.00,'USD','pending','pending',NULL,NULL,NULL,NULL,'2026-01-02 17:38:27','2026-01-02 17:38:27',NULL,NULL,NULL),
+(92,35,8,900.00,'USD','paid','paid',NULL,'pi_3SlSdV3RqEMUJuhk1eqIltGM','pi_3SlSdV3RqEMUJuhk1eqIltGM','2026-01-03 11:04:47','2026-01-03 11:04:26','2026-01-03 11:04:47',NULL,'cs_test_a1q7Wy5goSXNiXCzPYVRk5tzBOCxMcfoma7cVygNK5Jpdih6Arsg1WapIg',NULL);
+/*!40000 ALTER TABLE `coaching_orders` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `coaching_program_slots`
+--
+
+DROP TABLE IF EXISTS `coaching_program_slots`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `coaching_program_slots` (
+  `id` int(11) NOT NULL,
+  `template_id` int(11) NOT NULL,
+  `expert_id` int(11) DEFAULT NULL,
+  `start_time` datetime NOT NULL,
+  `end_time` datetime NOT NULL,
+  `capacity` int(11) NOT NULL DEFAULT 1,
+  `seats_taken` int(11) NOT NULL DEFAULT 0,
+  `status` enum('open','hidden','cancelled') NOT NULL DEFAULT 'open',
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `coaching_program_slots`
+--
+
+LOCK TABLES `coaching_program_slots` WRITE;
+/*!40000 ALTER TABLE `coaching_program_slots` DISABLE KEYS */;
+/*!40000 ALTER TABLE `coaching_program_slots` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `coaching_program_steps`
+--
+
+DROP TABLE IF EXISTS `coaching_program_steps`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `coaching_program_steps` (
+  `id` int(11) NOT NULL,
+  `template_id` int(11) NOT NULL,
+  `seq` int(11) NOT NULL,
+  `step_type` enum('live','self_paced') NOT NULL,
+  `title` varchar(200) NOT NULL,
+  `description` text DEFAULT NULL,
+  `due_offset_days` int(11) DEFAULT NULL,
+  `required_submission` tinyint(1) DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `coaching_program_steps`
+--
+
+LOCK TABLES `coaching_program_steps` WRITE;
+/*!40000 ALTER TABLE `coaching_program_steps` DISABLE KEYS */;
+INSERT INTO `coaching_program_steps` VALUES
+(1,1,1,'self_paced','Intake & Goals','Define goals & baseline',2,1),
+(2,1,2,'live','Session 1: Kickoff','Review goals',NULL,NULL),
+(3,1,3,'self_paced','Self-paced','',2,1),
+(4,1,4,'live','Session 2','',NULL,NULL);
+/*!40000 ALTER TABLE `coaching_program_steps` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `coaching_program_templates`
+--
+
+DROP TABLE IF EXISTS `coaching_program_templates`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `coaching_program_templates` (
+  `id` int(11) NOT NULL,
+  `coach_id` int(11) NOT NULL,
+  `title` varchar(255) DEFAULT NULL,
+  `price` decimal(10,2) NOT NULL,
+  `duration_months` tinyint(3) unsigned NOT NULL,
+  `cadence_weeks` tinyint(4) NOT NULL DEFAULT 2,
+  `total_live_sessions` tinyint(4) NOT NULL,
+  `summary` varchar(255) DEFAULT NULL,
+  `is_active` tinyint(1) DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `slug` varchar(190) DEFAULT NULL,
+  `images_json` longtext DEFAULT NULL CHECK (json_valid(`images_json`)),
+  `description` mediumtext DEFAULT NULL,
+  `currency` varchar(10) NOT NULL DEFAULT 'USD',
+  `cover_image` varchar(512) DEFAULT NULL,
+  `image` varchar(512) DEFAULT NULL,
+  `created_by` bigint(20) unsigned DEFAULT NULL,
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `deleted_at` datetime DEFAULT NULL,
+  `fb_pixel_id` varchar(50) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `coaching_program_templates`
+--
+
+LOCK TABLES `coaching_program_templates` WRITE;
+/*!40000 ALTER TABLE `coaching_program_templates` DISABLE KEYS */;
+INSERT INTO `coaching_program_templates` VALUES
+(1,2,'Career Acceleration',499.00,3,2,12,'Bi-weekly live sessions with self-paced work.',1,'2025-08-22 15:45:30',NULL,NULL,NULL,'USD',NULL,NULL,NULL,'2025-09-09 01:31:54',NULL,NULL),
+(5,3,'Increasing Social Media Followers',20.00,12,2,4,'Increasing Social Media Followers for all social media platform',1,'2025-09-07 06:19:57','increasing-social-media-followers','[]','<h2><strong><u>Increasing Social Media Followers for all social media platform</u></strong></h2><p><br></p><p>Make sure your server is running the updated controller (restart if needed).</p><p>Confirm the request is hitting this route (watch the new console log line).</p><p>Ensure you’re logged in as the assignment’s coach (or admin). Non-coach experts will get 403 and no update.</p><p>Confirm you’re connected to the intended database (no shadow env).</p>','USD','/uploads/coaching/1757225997093_2025-08-04_181757.png','/uploads/coaching/1757225997093_2025-08-04_181757.png',3,'2025-12-13 23:53:51','2025-12-13 23:53:51','12356456758888'),
+(8,3,'NextGen Apps – Build the Future, One App at a Time',900.00,3,12,30,'Build the Future, One App at a Time',1,'2025-09-25 07:24:45','nextgen-apps-build-the-future-one-app-at-a-time','[]','<p>Develop innovative apps for Android and iOS. Learn coding, apply best practices, and deploy apps that delight users worldwide.Develop innovative apps for Android and iOS. Learn coding, apply best practices, and deploy apps that delight users worldwide.Develop innovative apps for Android and iOS. Learn coding, apply best practices, and deploy apps that delight users worldwide.Develop innovative apps for Android and iOS. Learn coding, apply best practices, and deploy apps that delight users worldwide.Develop innovative apps for Android and iOS. Learn coding, apply best practices, and deploy apps that delight users worldwide.Develop innovative apps for Android and iOS. Learn coding, apply best practices, and deploy apps that delight users worldwide.Develop innovative apps for Android and iOS. Learn coding, apply best practices, and deploy apps that delight users worldwide.Develop innovative apps for Android and iOS. Learn coding, apply best practices, and deploy apps that delight users worldwide.Develop innovative apps for Android and iOS. Learn coding, apply best practices, and deploy apps that delight users worldwide.Develop innovative apps for Android and iOS. Learn coding, apply best practices, and deploy apps that delight users worldwide.Develop innovative apps for Android and iOS. Learn coding, apply best practices, and deploy apps that delight users worldwide.Develop innovative apps for Android and iOS. Learn coding, apply best practices, and deploy apps that delight users worldwide.Develop innovative apps for Android and iOS. Learn coding, apply best practices, and deploy apps that delight users worldwide.Develop innovative apps for Android and iOS. Learn coding, apply best practices, and deploy apps that delight users worldwide.Develop innovative apps for Android and iOS. Learn coding, apply best practices, and deploy apps that delight users worldwide.Develop innovative apps for Android and iOS. Learn coding, apply best practices, and deploy apps that delight users worldwide.</p><p><br></p><p><br></p><p>Develop innovative apps for Android and iOS. Learn coding, apply best practices, and deploy apps that delight users worldwide.Develop innovative apps for Android and iOS. Learn coding, apply best practices, and deploy apps that delight users worldwide.Develop innovative apps for Android and iOS. Learn coding, apply best practices, and deploy apps that delight users worldwide.Develop innovative apps for Android and iOS. Learn coding, apply best practices, and deploy apps that delight users worldwide.Develop innovative apps for Android and iOS. Learn coding, apply best practices, and deploy apps that delight users worldwide.Develop innovative apps for Android and iOS. Learn coding, apply best practices, and deploy apps that delight users worldwide.</p><p><br></p><p><br></p><p>Develop innovative apps for Android and iOS. Learn coding, apply best practices, and deploy apps that delight users worldwide.Develop innovative apps for Android and iOS. Learn coding, apply best practices, and deploy apps that delight users worldwide.Develop innovative apps for Android and iOS. Learn coding, apply best practices, and deploy apps that delight users worldwide.Develop innovative apps for Android and iOS. Learn coding, apply best practices, and deploy apps that delight users worldwide.</p>','USD','/uploads/coaching/1758785085227_Next-Gen-Android-App-Development-for-Smarter-Businesses-scaled.jpg','/uploads/coaching/1758785085227_Next-Gen-Android-App-Development-for-Smarter-Businesses-scaled.jpg',3,'2025-12-31 05:57:55',NULL,NULL),
+(9,6,'AI For Beginners: Public Service Professionals',10.00,3,2,4,'Personalized for Your own Career Growth. Stay Ahead. Stay Employable. Stay Relevant in a Fast Changing orld',1,'2025-09-25 16:37:12','ai-for-beginners-public-service-professionals','[]','<h3>The AI For Beginners: Public Service Professionals is a practical, and personalized coaching program for public service professionals who want to safely master AI for their own growth and career competitiveness, even if their department isn’t ready yet.</h3><p><br></p><h3><strong>Why This Matters:</strong></h3><ul><li><strong>Future-Proof Your Skills</strong> → Don’t wait for the government to decide. Build AI confidence now so your career stays relevant.</li><li><strong>Practical, Step-by-Step Guidance</strong> → From risk basics to choosing tools to using AI in real workflows — everything explained in plain language, one-on-one.</li><li><strong>Career Growth &amp; Security</strong> → Gain an edge in promotions, job mobility, and employability across federal, provincial, and municipal roles.</li></ul><p><br></p><p><br></p><h3><strong>Program Promise:</strong></h3><p>In just 5 steps, you’ll move from <em>AI beginner</em> to <em>confident user with a personal playbook</em> you can rely on every day:</p><ol><li><strong>Start AI</strong> → Understand risks, privacy, and where AI is safe to use, and more importantly, how to use it.</li><li><strong>Choose My Tools</strong> → Demystify AI prompting, and Find the right AI tools for your role or your passion projects.</li><li><strong>Get First Wins</strong> → See time savings in your daily briefs, notes, and emails.</li><li><strong>Own My Playbook</strong> → Build your personal, FOI-ready AI workflow.</li><li><strong>Build &amp; Lead My Team</strong> → Build unique AI teams that help you achieve various aspects of the work you enjoy doing through a collaborative approach with your team of AI experts and armies working collaboratively with you.</li></ol><p><br></p><h3><br></h3><p><strong>Your department might not be ready. But you can be.</strong></p><p>👉 <em>Book your one-on-one coaching spot today and start building your AI advantage.</em></p>','USD','/uploads/coaching/1760061012898_AI_For_Public_Servants_-_and_Public_Service_Professionals_Coaching_Sessions_and_Coaching_Programs-Prosfata-Norman_Musengimana.png','/uploads/coaching/1760061012898_AI_For_Public_Servants_-_and_Public_Service_Professionals_Coaching_Sessions_and_Coaching_Programs-Prosfata-Norman_Musengimana.png',6,'2025-12-14 17:29:03',NULL,NULL),
+(10,6,'Lecturer or Teacher? Future-Proof Your Pedagogy: AI-Integrated Teaching Mastery',399.00,3,2,4,'Coaching for Next-Generation Lecturing & Teaching, Education for the Future',0,'2025-09-28 18:06:35','anthony','[]','<h2><strong>A Practical Coaching Program Designed and Customized for You: We Meet You Where You Are</strong></h2><p><br></p><p>The transformation of education is not a distant horizon; it is happening in classrooms right now. Every educator, whether you teach kindergarten or lead graduate seminars, faces a defining professional imperative: mastering AI integration is no longer optional; it is essential career currency. Suppose you find yourself anxious about students knowing more than you do about emerging tools, uncertain about ethical boundaries, or exhausted by the thought of yet another technology to learn. In that case, this program is your personalized pathway forward.</p><p><br></p><p>I know you care about your students, and I know that you want them to excel. <strong>I know this because the last person who had my back, who was invested in my success, was all the teachers that I met over the course of my educational background.</strong> So, allow me the opportunity to pay back to you in my own way, because I am who I am because of these wonderful teachers and lecturers I was lucky to meet.</p><p><br></p><p>This is not a generic professional development course. This is a bespoke, high-impact coaching experience designed to convert your AI uncertainty into immediate pedagogical advantage. We move decisively beyond abstract theory to deliver direct, actionable integration strategies that transform how you teach, assess, and engage. You will learn to leverage AI to reclaim dozens of hours by automating administrative burdens, dramatically amplify the efficiency and depth of your curriculum development, and create genuinely personalized learning environments that meet every student where they are, preparing them and yourself for an AI-saturated future.</p><p><br></p><h3><strong>Here Are the Three Main Takeaways:</strong></h3><ol><li>Master ai integration with confidence, step by step</li><li>Lead in an AI-driven educational landscape – don\'t be a follower</li><li>Become the architect of high-quality learning in the AI era</li></ol><p><br></p><h3><strong>What Makes This Program Different:</strong></h3><p>Every element is customized to you. Before each live coaching session, you submit your context, your experiments, your challenges, and your wins. I prepare specifically for your teaching environment, your student demographics, your institutional constraints, and your personal learning style. This is not one-size-fits-all professional development; this is your dedicated transformation partner over 90 days.</p><p><br></p><p>The program architecture balances strategic guidance with practical application. You will experience:</p><ol><li><strong>4 live coaching sessions</strong>: Real-time problem-solving and strategy refinement tailored to your classroom. Each session tackles your specific challenges, ensures measurable progress, and integrates the latest AI teaching trends.</li><li><strong>4 self-paced application labs</strong>: Apply AI tools directly in your teaching environment using <strong>custom frameworks and resources</strong>. Every lab produces <strong>tangible classroom improvements</strong> you can track and replicate.</li></ol><h2><br></h2><h2><strong>Program Outcomes: What You Will Achieve</strong></h2><h3><br></h3><h3><strong>Immediate Practical Skills</strong></h3><ul><li>Reclaim 5-10+ hours weekly through AI-assisted administrative automation</li><li>Design and deliver engaging AI-integrated learning experiences confidently</li><li>Implement ethical, transparent AI practices in your classroom</li><li>Develop personalized learning pathways at scale using AI insights</li></ul><h3><br></h3><h3><strong>Pedagogical Transformation</strong></h3><ul><li>Shift from information deliverer to learning experience facilitator</li><li>Master differentiation strategies that meet every student\'s needs</li><li>Build critical AI literacy in your students while leveraging AI\'s power</li><li>Design curriculum that prepares students for an AI-saturated future</li></ul><h3><br></h3><h3><strong>Professional Development</strong></h3><ul><li>Position yourself as an educational technology leader in your institution</li><li>Build confidence navigating rapid technological change</li><li>Develop adaptable skills that transfer across emerging tools</li><li>Create a sustainable AI integration practice that prevents burnout</li><li>Establish yourself as a resource for colleagues exploring AI</li></ul><h3><br></h3><h3><strong>Career Insurance</strong></h3><ul><li>Future-proof your teaching practice with in-demand skills</li><li>Demonstrate measurable innovation to administrators and stakeholders</li><li>Build a portfolio of AI-integrated learning experiences</li><li>Gain competitive advantage in education\'s evolving landscape</li><li>Ensure continued relevance and professional fulfillment</li></ul><h3><br></h3><h3><strong>Tangible Deliverables</strong></h3><ul><li>Your personalized AI Integration Playbook</li><li>Library of tested prompts and workflows for your subject area</li><li>Collection of AI-integrated lesson plans and assessments</li><li>Framework for evaluating new AI tools for educational appropriateness</li><li>We plan to build a community and network of fellow educators experimenting with AI integration</li></ul><h2><br></h2><h2><strong>Your Investment:</strong></h2><p><strong>Duration:</strong> 3 months (12 weeks)</p><p><strong>Value of the Program:</strong> 2,500 USD.</p><p><strong>Time Commitment:</strong></p><ul><li>4 live coaching sessions (60 minutes each)</li><li>4 self-paced experiences (1-5 hours each)</li><li>Weekly experimentation and implementation</li></ul><p><br></p><p><strong>What\'s Included:</strong></p><ul><li>4 personalized 1 on 1 live coaching sessions</li><li>Custom resources and tool recommendations for your context</li><li>Guided implementation frameworks and templates</li><li>Direct feedback on all your experiments and submissions</li><li>Access to curated AI tools and prompt secrets, and building your own prompt engineering system</li></ul><p><br></p><p><br></p><p>Whether your school fully supports AI or is still cautious, this program prepares you to thrive in either environment. You will learn how to integrate AI in ways that fit your institution’s policies while building your own professional growth path. Instead of losing hours on repetitive tasks, you’ll free up time to focus on powerful teaching, stronger student relationships, and becoming a trusted leader in your educational community.</p>','USD','/uploads/coaching/1760060799484_AI_For_Educators_Professors_Teachers_Coaching_Program.png','/uploads/coaching/1760060799484_AI_For_Educators_Professors_Teachers_Coaching_Program.png',6,'2025-12-09 02:26:23',NULL,NULL),
+(13,6,'The 12-Week Startup Creation and Go To Market Acceleration Program',900.00,3,2,3,'One Question: Is Your Startup Ready for What\'s Next? Let Me Help You',0,'2025-10-19 17:13:12','the-12-week-startup-creation-and-go-to-market-acceleration-program','[]','<h1><br></h1><h1><strong>If you\'re a founder asking yourself:</strong></h1><ul><li>Is my idea actually solving a real problem?</li><li>How do I know if customers will pay for this?</li><li>What do investors really want to see?</li><li>How do I go from prototype to paying customers?</li><li>Why is fundraising so damn hard?</li></ul><p><strong>This program transforms uncertainty into action, ideas into revenue, and founders into CEOs.</strong></p><p><br></p><h2><strong>The hard truth about startups</strong></h2><ul><li><strong>90% of startups fail</strong> - not because of bad ideas, but poor execution</li><li><strong>74% of founders regret</strong> not validating with customers earlier</li><li><strong>82% run out of cash</strong> before finding product-market fit</li><li><strong>Only 1% get funded</strong> without a clear go-to-market strategy</li></ul><h3>You Don\'t Need Another Course. You Need an Expert Who Has Seen It All.</h3><p><br></p><h2><strong>This program is for you if you are currently experiencing one of the following:</strong></h2><ul><li>Scattered ideas without validation</li><li>Building features nobody wants</li><li>Pitching without a compelling story</li><li>Guessing at your business model</li><li>Hoping someone will fund you</li></ul><h2><strong>Some of what we can achieve working together in 90 days</strong></h2><ul><li>Customer-validated product roadmap</li><li>Proven demand with real user feedback</li><li>Investment-ready pitch deck that converts</li><li>Clear path to first $10K in revenue</li><li>Fundable business with traction</li></ul><p><br></p><h2><strong>Total estimated value: $15,000+)</strong></h2><h3><br></h3><h3><strong>Core Program Components:</strong></h3><p><strong>3 Strategic Live One-On-One Coaching Sessions at Your Convenience</strong> (Value: $1,800)</p><ul><li>60-minute deep dives</li><li>each of them clearly targeted based and performance informed.</li></ul><p><br></p><p><strong>3 Structured Specific Tasks and Resources Sprints</strong> (Value: $6,000)</p><ul><li>Step-by-step implementation guides</li><li>Templates and frameworks</li><li>Clear accountability built-in the program</li></ul><p><br></p><p><strong>The Founder\'s Toolkit</strong> (Value: $10,000)</p><ul><li>Customer interview scripts and templates</li><li>90 days revenue projection model template</li><li>Pitch deck template</li><li>Funding strategy</li><li>90-day planning framework</li><li>Legal document templates</li></ul><p><br></p><p><strong>Exclusive Founder Benefits</strong> (Value: $5,000)</p><ul><li>Access to Norman\'s network of investors and advisors</li><li>20% discount on future programs if you refer new clients to this program</li><li>Lifetime access to program materials and updates</li></ul><p><br></p><p><br></p><h2><strong>One final question:</strong></h2><p><strong>Where will your startup be in 12 weeks without this program? If the answer concerns you, let\'s talk.</strong></p><p><br></p><p><strong>Norman Musengimana</strong></p><p><strong>LinkedIn: </strong><a href=\"https://www.linkedin.com/in/norman-musengimana/\" rel=\"noopener noreferrer\" target=\"_blank\">https://www.linkedin.com/in/norman-musengimana/</a></p>','USD','/uploads/coaching/1761001009955_1760903194031_One_on_One_coachign_for_startup_founders_and_new_ventures_coachign_and_mentorship_program.png','/uploads/coaching/1761001009955_1760903194031_One_on_One_coachign_for_startup_founders_and_new_ventures_coachign_and_mentorship_program.png',6,'2025-12-09 02:26:21',NULL,NULL),
+(14,20,'Master the Art of Job Offer Negotiation',300.00,3,12,16,'Confidently secure the salary, perks, and position you truly deserve.',1,'2025-10-20 06:55:57','master-the-art-of-job-offer-negotiation','[]','<p>Navigating a job offer can feel overwhelming — from salary discussions to contract terms and benefits. Our <strong>Job Offer Negotiation &amp; Acceptance Coaching</strong> helps you communicate with clarity and confidence, ensuring you make the best career decision for your future.</p><p><br></p><p>Through personalized 1:1 guidance, you’ll learn how to evaluate offers, counter with professionalism, and accept terms that align with your goals and values. Whether you’re switching industries or stepping into a leadership role, this coaching session empowers you to negotiate like a pro — without the stress or guesswork.</p>','USD','/uploads/coaching/1760943347247_JobOffer.png','/uploads/coaching/1760943347247_JobOffer.png',20,'2025-10-20 06:55:57',NULL,NULL),
+(15,21,'Empower Your Future — Mentorship & Career Pathways Coaching',350.00,3,12,18,'Guiding professionals and students to build purpose-driven careers through personalized mentorship, strategic planning, and confident career growth.',1,'2025-10-20 13:06:46','empower-your-future-mentorship-career-pathways-coaching','[]','<p>Unlock your full potential with <strong>Mentorship &amp; Career Pathways Coaching</strong> — a transformative journey designed to align your passion with purpose.</p><p> As a <strong>Career Pathways Strategist</strong>, I help individuals identify their unique strengths, set achievable goals, and navigate challenges with clarity and confidence.</p><p>Through personalized mentorship sessions, you’ll learn how to:</p><ul><li>Build a strong personal brand and professional presence</li><li>Develop actionable career growth strategies</li><li>Make informed decisions for long-term success</li><li>Overcome self-doubt and boost confidence</li></ul><p>Whether you’re a student preparing for your next step or a professional seeking direction, our mentorship program provides tools, frameworks, and support to help you move forward — with purpose and impact.</p><p>🚀 <strong>Your career journey starts here. Let’s turn ambition into achievement.</strong></p>','USD','/uploads/coaching/1760965594675_empower.png','/uploads/coaching/1760965594675_empower.png',21,'2025-10-20 13:06:46',NULL,NULL),
+(16,22,'People-Centered Growth & Transformation Leader',300.00,3,12,20,'Empowering individuals and organizations to achieve meaningful growth through people-first leadership, emotional intelligence, and transformative change strategies.',1,'2025-10-20 17:10:52','people-centered-growth-transformation-leader','[]','<p>This coaching program focuses on unlocking human potential and driving organizational transformation with a people-centered approach. As a People-Centered Growth &amp; Transformation Leader, you’ll learn how to lead with empathy, foster collaboration, and build cultures of innovation. The course combines leadership psychology, strategic transformation planning, and practical coaching tools to help you inspire teams, manage change effectively, and sustain growth in dynamic environments.</p>','USD','/uploads/coaching/1760980206062_TransformationLeader.jpg','/uploads/coaching/1760980206062_TransformationLeader.jpg',22,'2025-10-20 17:10:52',NULL,NULL),
+(17,23,'Technology & People Leadership Coaching — Driving Sustainable Innovation',400.00,3,12,18,'Empowering leaders to balance technology, people, and purpose to create innovative, future-ready organizations.',1,'2025-10-20 17:36:40','technology-people-leadership-coaching-driving-sustainable-innovation','[]','<p>In a rapidly changing digital world, true leadership means more than technical expertise — it’s about connecting people, technology, and sustainable progress.</p><p><br></p><p>The Technology &amp; People Leadership Coaching program is designed for professionals and executives who want to lead innovation while nurturing strong, people-centered cultures. Through personalized mentorship, strategic planning, and real-world insights, you’ll learn how to:</p><p><br></p><p>Lead teams through digital transformation with empathy and agility.</p><p><br></p><p>Build innovation strategies rooted in sustainability and human values.</p><p><br></p><p>Align technology initiatives with business goals and social impact.</p><p><br></p><p>Strengthen collaboration between technical and non-technical teams.</p><p><br></p><p>Develop your leadership presence for the future of work.</p><p><br></p><p>This coaching experience empowers you to become a visionary leader who drives technological excellence and human-centered success.</p>','USD','/uploads/coaching/1760981733028_InnovationLeader.jpg','/uploads/coaching/1760981733028_InnovationLeader.jpg',23,'2025-10-20 17:36:40',NULL,NULL),
+(18,24,'Senior IT Strategist & Enterprise Architecture Consultant',350.00,3,12,40,'Empowering IT professionals to master enterprise architecture, digital transformation, and strategic leadership excellence.',1,'2025-10-20 18:11:13','senior-it-strategist-enterprise-architecture-consultant','[]','<p>This coaching program is designed for IT leaders and professionals seeking to elevate their strategic and architectural impact within organizations.</p><p> As a <strong>Senior IT Strategist &amp; Enterprise Architecture Consultant</strong>, I guide you in developing the mindset, tools, and frameworks needed to design scalable enterprise systems, align business and technology goals, and lead complex transformation initiatives with confidence.</p><p>Through personalized sessions, we’ll explore:</p><ul><li>Advanced enterprise architecture principles and governance models</li><li>Strategic IT planning and digital roadmap development</li><li>Leadership and communication skills for enterprise success</li><li>Building alignment between business objectives and IT delivery</li></ul><p>Whether you’re preparing for a leadership role or optimizing your organization’s architecture strategy, this coaching helps you build clarity, capability, and confidence to drive measurable results.</p>','USD','/uploads/coaching/1760983860200_ITStrategist.jpg','/uploads/coaching/1760983860200_ITStrategist.jpg',24,'2025-10-20 18:11:13',NULL,NULL),
+(19,25,'Human Resources Strategist | Talent Acquisition & Employee Development Coach',400.00,3,12,20,'Empowering Organizations to Attract, Retain, and Develop Top Talent',1,'2025-10-20 18:27:17','human-resources-strategist-talent-acquisition-employee-development-coach','[]','<p>I partner with organizations to build high-performing teams and a thriving workplace culture. With a strategic approach to HR, talent acquisition, and employee development, I help companies attract the right talent, nurture their growth, and optimize organizational performance.</p><p><strong>Key Services Include:</strong></p><ul><li>Talent Acquisition Strategy &amp; Recruitment Planning</li><li>Employee Onboarding &amp; Retention Programs</li><li>Leadership &amp; Career Coaching</li><li>Performance Management &amp; Employee Development</li><li>HR Policy Design &amp; Organizational Culture Enhancement</li></ul><p>Through tailored strategies and hands-on coaching, I help businesses unlock their workforce potential and drive sustainable growth.</p>','USD','/uploads/coaching/1760984834215_human.jpg','/uploads/coaching/1760984834215_human.jpg',25,'2025-10-20 18:27:17',NULL,NULL),
+(20,6,'🚀🚀🚀 Zero to Revenue: From No Idea to First Sales in 6 Months',1599.00,6,2,9,'This is an 18 Performance Touchpoints Program: You don’t need another course. You need a system that forces progress.',0,'2025-10-20 23:00:35','startup-founder-coaching-program-from-zero-idea-to-a-company','[]','<h1><strong>Zero to Revenue: From No Idea to First Sales (6 Months)</strong></h1><p><br></p><p><strong>Format of this Coaching Program:</strong> 18 performance-based touchpoints: <strong>9 Task Sprints</strong> + <strong>9 Live 1:1 Sessions</strong>. No submission, no live. Every live ends with the next sprint’s assignment.</p><p><strong>Rule:</strong> Each <strong>Live Session (60 mins)</strong> unlocks only after the prior <strong>Task Sprint</strong> artifact(s) are submitted <strong>≥24h</strong> beforehand.</p><p><br></p><p><strong>Live Session structure (every time):</strong></p><ul><li>15 min — Review submitted artifacts</li><li>15 min — What the results mean for the business</li><li>15 min — Assign and confirm the next sprint tasks</li><li>15 min — Q&amp;A for clarity (document action items)</li></ul><p><br></p><p><br></p><h1><strong>Coaching Program Value</strong></h1><p>This program costs 6,000 USD. If you are willing to pay 6,000 USD, I don\'t take any equity in your business. If you are ready to pay 1,599 USD. the balance is paid in sweat equity.</p><h1><br></h1><h1><strong>This Is <em>Not</em> For You if (Read Before Enrolling):</strong></h1><ol><li><strong>Spectators &amp; Excuse-Makers</strong>: If you won’t hit weekly activity targets (outreach, calls, demos) and submit artifacts on deadline to unlock live sessions, this will frustrate you.</li><li><strong>Course Collectors &amp; “Done-For-You” Seekers</strong>: If you want inspiration, slides, or someone else to do the work—no. This program demands measurable pipeline, pilots, and revenue attempts every two weeks.</li><li><strong>Stealth/Perfectionist Builders</strong>: If you avoid customer conversations, price tests, and pilot offers until it’s “perfect,” you’ll hate this. We validate in public, fast, and adjust based on data.</li></ol><p><strong>If none of the above describe you, you’re exactly who this was built for—enroll and let’s get you to first sales.</strong></p><p><br></p><h1><br></h1><h1><strong>What you’ll have at the finish line (tangible, not theoretical)</strong></h1><ul><li><strong>A validated niche + ICP</strong> that replies and takes meetings.</li><li><strong>A working MVP or service SOP</strong> customers actually used.</li><li><strong>A sellable offer</strong> (page + deck + script + objections) that you’ve tested.</li><li><strong>Pilot customers</strong> (free and paid) and <strong>first revenue or signed contracts</strong>.</li><li><strong>A simple CRM + weekly routine</strong> that predictably creates meetings and converts them.</li><li><strong>A Proof Pack</strong> (testimonials, case blurbs, ROI line, logos) that makes the next sale easier.</li></ul><p><br></p><h2><br></h2><h2><strong>Why this is a must-get (for serious early-stage founders)</strong></h2><ul><li><strong>It forces execution:</strong> You can’t attend a live unless you built the thing that matters.</li><li><strong>It compresses time:</strong> Every two weeks you produce evidence—interviews, reply rates, meetings, pilots, dollars.</li><li><strong>It builds a repeatable engine:</strong> You leave with triggers and habits that keep generating sales after the program.</li><li><strong>It is frugal by design:</strong> No fancy tooling; just the shortest path to <strong>real conversations and real revenue</strong>.</li></ul><p><br></p><h2><br></h2><h2><strong>How I hold you accountable:</strong></h2><ul><li><strong>Gatekeeping:</strong> Each live session is unlocked only by submitting specific artifacts (check listed).</li><li><strong>Two-week loop:</strong> Task Sprint (create artifacts) → Submit ≥24h before → Live 1:1 (teardown, decisions) → Next Sprint.</li><li><strong>Scoreboard:</strong> if you are not satisfied, we don\'t move forward.</li></ul><p><br></p><h2><br></h2><h2><strong>Month 1: Problem Clarity &amp; First Prototype (Weeks 1–4)</strong></h2><p><strong>Milestone Goal:</strong> Stop guessing. Prove there’s a painful problem and that you can credibly solve it.</p><p><strong>Required Results by Day 30</strong></p><ul><li><strong>10–15 problem interviews</strong> with your suspected niche.</li><li><strong>Ranked pain map</strong> (severity × frequency) and <strong>Jobs To Be Done summary</strong>.</li><li><strong>Prototype v0</strong> (clickable demo or tight service SOP) customers can react to.</li><li><strong>“Why Us / Why Now”</strong> one-pager (your edge + constraints).</li></ul><p><strong>Artifacts to unlock Lives</strong></p><ol><li>Interview notes + pain ranking.</li><li>Prototype link/video + insights summary.</li></ol><p><strong>If you miss:</strong> We run a 1-week micro-sprint to top up interviews or cut the prototype to a single killer job before moving on.</p><p><br></p><h2><br></h2><h2><strong>Month 2: Niche &amp; ICP Validation (Weeks 5–8)</strong></h2><p><strong>Milestone Goal:</strong> Choose a <strong>wedge market</strong> and prove they’ll talk to you.</p><p><strong>Required Results by Day 60</strong></p><ul><li><strong>ICP sheet</strong> (role, firmographics, triggers, channels).</li><li><strong>100 targeted outreaches</strong> (cold + warm), tracking reply rates.</li><li><strong>Engagement proof:</strong></li><li><strong>≥8–12% reply rate</strong> <em>or</em></li><li><strong>6+ qualified calls</strong> <em>or</em></li><li><strong>≥1 signed LOI</strong> (Letter of Intent) for a pilot.</li></ul><p><strong>Artifacts to unlock Lives</strong></p><ul><li>100-contact list (CSV), two tested scripts, outreach stats, call notes, LOI template/signed LOI.</li></ul><p><strong>If you miss:</strong> Narrow the ICP and rerun a 50-contact micro-test with revised messaging before Month 3.</p><p><br></p><h2><br></h2><h2><strong>Month 3: MVP &amp; Usability Validation (Weeks 9–12)</strong></h2><p><strong>Milestone Goal:</strong> Turn interest into <strong>usability proof</strong>.</p><p><strong>Required Results by Day 90</strong></p><ul><li><strong>MVP v1</strong> (no-code app, concierge workflow, or service SOP).</li><li><strong>5–10 usability runs</strong> or shadow tests with your ICP.</li><li><strong>Value signal:</strong></li><li><strong>≥70% complete the core flow</strong>, and</li><li><strong>≥3 say “I would pay for this.”</strong></li><li><strong>Activation checklist</strong> (“aha” moment defined and measured).</li></ul><p><strong>Artifacts to unlock Lives</strong></p><ul><li>MVP link/SOP, usability notes &amp; short clips, activation checklist + “aha” definition.</li></ul><p><strong>If you miss:</strong> We cut scope (remove features), ship MVP v1.1, and rerun 3–5 tests in a focused 2-week hotfix sprint.</p><p><br></p><h2><br></h2><h2><strong>Month 4: Go-to-Market &amp; Offer Packaging (Weeks 13–16)</strong></h2><p><strong>Milestone Goal:</strong> Package a <strong>sellable offer</strong> and run a founder-led channel.</p><p><strong>Required Results by Day 120</strong></p><ul><li><strong>Offer v1</strong> (page or 1-pager) with problem → outcome → proof → price/terms → clear CTA.</li><li><strong>Sales assets:</strong> 10-slide mini-deck, demo script, objection handlers.</li><li><strong>Channel plan:</strong> 1–2 channels (e.g., outbound + partner intros) with weekly volume targets.</li><li><strong>Top-of-funnel throughput:</strong></li><li><strong>≥3 meetings/week</strong> (or ≥10/month) and a baseline meeting→ pilot conversion ≥20%.</li></ul><p><strong>Artifacts to unlock Lives</strong></p><ul><li>Offer page URL/PDF, mini-deck + demo script, CRM screenshot (stages + active pipeline), activity log.</li></ul><p><strong>If you miss:</strong> We fix the two biggest funnel leaks (message and list quality) and add one partner channel.</p><p><br></p><h2><br></h2><h2><strong>Month 5: Pilots Running (Free &amp; Paid) (Weeks 17–20)</strong></h2><p><strong>Milestone Goal:</strong> Turn meetings into <strong>pilots</strong>, both free (tight scope) and paid (narrow ROI).</p><p><strong>Required Results by Day 150</strong></p><ul><li><strong>Pilot menu:</strong></li><li>Free pilot (2–3 weeks, tiny scope, success criteria).</li><li><strong>Paid pilot</strong> ($500–$2,000 B2B or equivalent B2C plan) with the same clarity.</li><li><strong>Closures:</strong> <strong>2–3 pilots live</strong>, including <strong>≥1 paid</strong> (B2B) or <strong>10–25 paid users</strong> (B2C cohort).</li><li><strong>Onboarding:</strong> Timeboxed setup; first-value milestone achieved by <strong>≥60%</strong> of pilot users.</li></ul><p><strong>Artifacts to unlock Lives</strong></p><ul><li>Signed pilot scopes + success criteria doc, onboarding checklist, weekly pilot report, 2 short testimonials/case blurbs.</li></ul><p><strong>If you miss:</strong> Tighten scope or price, speed up follow-ups (24-hour proposals), and add a decision deadline or limited seats to create urgency.</p><p><br></p><h2><br></h2><h2><strong>Month 6: Offer v2 &amp; Repeatable Sales Triggers (Weeks 21–24)</strong></h2><p><strong>Milestone Goal:</strong> Lock the <strong>offer that sells</strong> and the repeatable actions that generate and close deals.</p><p><strong>Required Results by Day 180</strong></p><ul><li><strong>Offer v2</strong> (price + terms adjusted from pilot learning).</li><li><strong>Trigger playbook:</strong></li><li>3 reliable meeting triggers (e.g., 50 targeted emails/week, 2 founder posts/week, 1 partner webinar/month).</li><li>2 reliable close actions (live demo flow + 24-hour tailored proposal).</li><li><strong>Revenue:</strong> <strong>$1k–$5k collected</strong> <em>or</em> signed contracts covering the next 60–90 days.</li><li><strong>Proof Pack:</strong> 2 micro-case blurbs, 2 testimonials, simple ROI line, and a small logo strip.</li></ul><p><strong>Artifacts (final handover)</strong></p><ul><li>Offer v2 + pricing rationale, activity calendar, revenue screenshots/contracts, proof assets folder.</li></ul><p><strong>If you miss:</strong> We cut to the highest-response ICP, drop weak channels, and stack intensity on the one that creates meetings, then rerun a 2-week close sprint.</p><p><br></p><h1><br></h1><h1><strong>The 9 Live Sessions (what happens in the room)</strong></h1><ol><li><strong>Diagnosis &amp; Commitment</strong>: pick the wedge and commit to metrics.</li><li><strong>Prototype Critique</strong>: tighten the problem and the v0 demo/SOP.</li><li><strong>ICP &amp; Messaging Review</strong>: keep or narrow; assign next 50 sends.</li><li><strong>Prototype→ MVP Scope</strong>: price anchor set; features to drop decided.</li><li><strong>MVP Readiness &amp; “Aha”</strong>: confirm activation metric; plan pilots.</li><li><strong>Channel &amp; Funnel Targets</strong>: pipeline hygiene, meeting KPIs.</li><li><strong>Pipeline &amp; Objections</strong>: script upgrades; partner motion added if needed.</li><li><strong>Proposal &amp; Close Plan</strong>: pilot scopes, fast-follow sequencing.</li><li><strong>Graduation: Offer v2 &amp; Triggers</strong>: lock sales motion; next 90-day plan.</li></ol>','USD','/uploads/coaching/1761001233768_1760903194031_One_on_One_coachign_for_startup_founders_and_new_ventures_coachign_and_mentorship_12-months-program.png','/uploads/coaching/1761001233768_1760903194031_One_on_One_coachign_for_startup_founders_and_new_ventures_coachign_and_mentorship_12-months-program.png',6,'2025-12-09 02:26:18',NULL,NULL),
+(22,3,'Test Coaching🙃',200.00,3,3,1,'Test Coaching',1,'2025-10-24 08:41:59','test-coaching','[]','<p>Test Coaching Test CoachingTest CoachingTest CoachingTest CoachingTest CoachingTest CoachingTest CoachingTest CoachingTest CoachingTest Coaching</p><p><br></p><p><strong>Test Coaching</strong></p>','USD','/uploads/coaching/1761443613521_2025-10-18_182550.png','/uploads/coaching/1761443613521_2025-10-18_182550.png',3,'2025-12-13 23:53:56','2025-12-13 23:53:56',NULL),
+(26,6,'Start From Zero to Launch in 12 Weeks - Designed for Side Hustle and First Time Founders',499.00,3,1,7,'A 12-Week Coaching Program for first time founders and side hustle entrepreneurs. Choose the right idea. Validate it as a business opportunity. Build an MVP. Test it. Get ready for real revenue.',1,'2025-12-09 01:31:56','start-from-zero-to-launch-for-tech-entrepreneurs-in-12-weeks','[]','<h1><strong>If You Are Not Ready to Play Your Role As a Founder - Don\'t Apply</strong></h1><p><br></p><p>In 12 weeks, you will go from many ideas to one strong startup idea, validate the problem with real users, design the right MVP, test it through real customer conversations, and create a plan to reach your first paying client.</p><p><br></p><p>You will use simple tools, low-code builders, and practical sprint steps that help you move fast without getting stuck.</p><p><br></p><h3><strong>Note: </strong></h3><h3><strong>In this program, you progress based on results, not time. It is a 2 weeks program for people who are busy and dont have the time to accomoplish all the assigned and guided tasks to them before the set duration. </strong></h3><h3><br></h3><h3><strong>If you finish the work early or achieve a milestone/assignment early, and you can always book the follwoing live session, which is the gateway to the next milestone.</strong></h3><h3><br></h3><h3><strong>Complete all milestones, and the program can be finished sooner without skipping any live session with me or any tasks assigned to you in the roadmap.</strong></h3><h3><br></h3><h3><strong>You are 100% in control of the program duration, because we are workign together to help brign your business to life.</strong></h3><h3><br></h3><p><br></p><p><br></p><h1><strong>Program Requirements (Before Week 1)</strong></h1><p>Every founder must submit:</p><p><strong>1. All startup ideas they have</strong></p><p><strong>2. One Lean Canvas for each idea</strong></p><p><strong>3. A short note for each idea answering the question: “Why I am willing to fight for this idea more than the others.”</strong></p><p>This gives clarity, motivation, and a strong base to choose the right opportunity.</p><p><br></p><h1><strong>Live Session Structure (Every Time)</strong></h1><p>Each live session is <strong>1 hour</strong>, broken into four focused segments:</p><p><strong>15 minutes — Review submitted artifacts</strong></p><p><strong>15 minutes — Explain what the results mean for the business</strong></p><p><strong>15 minutes — Assign + confirm the next sprint tasks</strong></p><p><strong>15 minutes — Q&amp;A for clarity + record action items</strong></p><p><br></p><p>Total coaching across the full program = <strong>7 hours. </strong>This allows <strong>some weeks with no live session</strong> when founders need more time to conduct customer interviews, prototype testing, and validation work.</p><p><br></p><h1><strong>Click on the Roadmap to Review the Full 12-Week Program Outline</strong></h1><p><br></p><p>You will see which weeks have live sessions and which do not.</p>','USD','/uploads/coaching/1765249086481_One_on_One_coachign_for_startup_founders_and_new_ventures.jpg','/uploads/coaching/1765249086481_One_on_One_coachign_for_startup_founders_and_new_ventures.jpg',6,'2025-12-14 15:24:13',NULL,NULL);
+/*!40000 ALTER TABLE `coaching_program_templates` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `coaching_reminder_logs`
+--
+
+DROP TABLE IF EXISTS `coaching_reminder_logs`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `coaching_reminder_logs` (
+  `id` int(11) NOT NULL,
+  `reminder_type` varchar(40) NOT NULL,
+  `ref_id` varchar(100) NOT NULL,
+  `recipient_email` varchar(190) NOT NULL,
+  `sent_at` datetime NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `coaching_reminder_logs`
+--
+
+LOCK TABLES `coaching_reminder_logs` WRITE;
+/*!40000 ALTER TABLE `coaching_reminder_logs` DISABLE KEYS */;
+INSERT INTO `coaching_reminder_logs` VALUES
+(1,'DIGEST_48H','COACH','imranhossen1119999@gmail.com','2025-09-13 07:15:05'),
+(2,'DIGEST_48H','COACH','norman@prosfata.com','2025-09-29 07:15:06');
+/*!40000 ALTER TABLE `coaching_reminder_logs` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `coaching_reviews`
+--
+
+DROP TABLE IF EXISTS `coaching_reviews`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `coaching_reviews` (
+  `id` int(11) NOT NULL,
+  `expert_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `enrollment_id` int(11) NOT NULL,
+  `rating` tinyint(3) unsigned NOT NULL,
+  `title` varchar(160) DEFAULT NULL,
+  `comment` text DEFAULT NULL,
+  `status` enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+  `is_public` tinyint(1) NOT NULL DEFAULT 1,
+  `reply` text DEFAULT NULL,
+  `replied_by` int(11) DEFAULT NULL,
+  `replied_at` datetime DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `deleted_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `coaching_reviews`
+--
+
+LOCK TABLES `coaching_reviews` WRITE;
+/*!40000 ALTER TABLE `coaching_reviews` DISABLE KEYS */;
+INSERT INTO `coaching_reviews` VALUES
+(1,3,2,6,5,NULL,'Excelent Coaching Program','approved',1,NULL,NULL,NULL,'2025-09-12 21:27:29','2025-09-12 21:42:08',NULL),
+(2,3,2,5,5,NULL,'Hi','approved',1,NULL,NULL,NULL,'2025-09-12 21:28:30','2025-09-12 21:42:13',NULL);
+/*!40000 ALTER TABLE `coaching_reviews` ENABLE KEYS */;
+UNLOCK TABLES;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_general_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'NO_AUTO_VALUE_ON_ZERO' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `bi_coaching_reviews` BEFORE INSERT ON `coaching_reviews` FOR EACH ROW BEGIN
+  IF NEW.rating < 1 OR NEW.rating > 5 THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'rating must be between 1 and 5';
+  END IF;
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_general_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'NO_AUTO_VALUE_ON_ZERO' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `bu_coaching_reviews` BEFORE UPDATE ON `coaching_reviews` FOR EACH ROW BEGIN
+  IF NEW.rating < 1 OR NEW.rating > 5 THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'rating must be between 1 and 5';
+  END IF;
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+
+--
+-- Table structure for table `coaching_sessions`
+--
+
+DROP TABLE IF EXISTS `coaching_sessions`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `coaching_sessions` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `enrollment_id` bigint(20) unsigned NOT NULL,
+  `seq` int(11) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `kind` enum('assignment','session') NOT NULL DEFAULT 'session',
+  `duration_minutes` int(11) DEFAULT NULL,
+  `meeting_required` tinyint(1) NOT NULL DEFAULT 1,
+  `scheduled_start` datetime DEFAULT NULL,
+  `scheduled_end` datetime DEFAULT NULL,
+  `meeting_id` varchar(64) DEFAULT NULL,
+  `status` enum('unscheduled','scheduled','completed','cancelled','missed') NOT NULL DEFAULT 'unscheduled',
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=55 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `coaching_sessions`
+--
+
+LOCK TABLES `coaching_sessions` WRITE;
+/*!40000 ALTER TABLE `coaching_sessions` DISABLE KEYS */;
+INSERT INTO `coaching_sessions` VALUES
+(2,4,2,'Live Session','session',NULL,1,'2025-09-03 11:00:00','2025-09-03 12:00:00','11','scheduled','2025-09-02 20:59:54','2025-09-03 03:29:23'),
+(3,5,2,'Live Session','session',NULL,1,'2025-09-08 09:00:00','2025-09-08 10:00:00','12','scheduled','2025-09-06 23:46:18','2025-09-06 23:46:18'),
+(4,6,2,'We will Talk Next Step For You','session',NULL,1,'2025-09-26 12:00:00','2025-09-26 13:00:00','13','scheduled','2025-09-07 15:13:15','2025-09-25 10:23:09'),
+(7,6,4,'We will real life business plan','session',NULL,1,'2025-09-26 11:00:00','2025-09-26 12:00:00','16','scheduled','2025-09-07 15:36:13','2025-09-25 10:22:38'),
+(8,12,2,'Live Session 1: Start AI','session',NULL,1,'2025-09-28 22:00:00','2025-09-28 23:00:00','26','scheduled','2025-09-28 20:24:25','2025-09-28 20:24:25'),
+(9,17,2,'Live Session 1 (Week 4): Diagnosis & Priorities','session',NULL,1,'2025-10-12 19:00:00','2025-10-12 20:00:00','28','scheduled','2025-10-12 18:33:01','2025-10-12 18:33:01'),
+(10,18,6,'Live Session 3 (Week 11–12): Investor & Roadmap Readiness','session',NULL,1,'2025-10-25 15:00:00','2025-10-25 16:00:00','29','scheduled','2025-10-12 18:33:33','2025-10-12 18:34:38'),
+(11,18,4,'Live Session 2 (Week 7): Go-to-Market & Funding Prep','session',NULL,1,'2025-10-26 10:00:00','2025-10-26 11:00:00','30','scheduled','2025-10-12 18:33:42','2025-10-12 18:34:34'),
+(12,18,2,'Live Session 1 (Week 4): Diagnosis & Priorities','session',NULL,1,'2025-10-19 16:00:00','2025-10-19 17:00:00','31','scheduled','2025-10-12 18:33:49','2025-10-18 14:55:48'),
+(13,17,4,'Live Session 2 (Week 7): Go-to-Market & Funding Prep','session',NULL,1,'2025-10-19 10:00:00','2025-10-19 11:00:00','32','scheduled','2025-10-12 18:34:06','2025-10-12 18:34:06'),
+(14,17,6,'Live Session 3 (Week 11–12): Investor & Roadmap Readiness','session',NULL,1,'2025-10-26 14:00:00','2025-10-26 15:00:00','33','scheduled','2025-10-12 18:34:10','2025-10-12 18:34:10'),
+(15,19,2,'Live Session 1 (Week 4): Diagnosis & Priorities','session',NULL,1,'2025-10-17 01:00:00','2025-10-17 02:00:00','34','scheduled','2025-10-16 22:58:34','2025-10-16 22:58:34'),
+(16,19,4,'Live Session 2 (Week 7): Go-to-Market & Funding Prep','session',NULL,1,'2025-10-19 15:00:00','2025-10-19 16:00:00','35','scheduled','2025-10-16 22:58:40','2025-10-16 22:58:40'),
+(17,19,6,'Live Session 3 (Week 11–12): Investor & Roadmap Readiness','session',NULL,1,'2025-10-19 14:00:00','2025-10-19 15:00:00','36','scheduled','2025-10-16 22:58:43','2025-10-16 22:58:43'),
+(18,22,2,'We will Talk Next Step For You','session',NULL,1,'2025-10-20 09:00:00','2025-10-20 10:00:00','37','scheduled','2025-10-17 16:38:04','2025-10-17 16:38:04'),
+(19,22,4,'We will real life business plan','session',NULL,1,'2025-10-24 11:00:00','2025-10-24 12:00:00','38','scheduled','2025-10-17 16:38:15','2025-10-17 16:38:15'),
+(20,24,2,'Live One-on-One Session 1: Diagnosis & Strategic Priorities (Week 4) What We\'ll Cover','session',NULL,1,'2025-10-19 18:00:00','2025-10-19 19:00:00','39','scheduled','2025-10-19 17:38:21','2025-10-19 17:38:21'),
+(21,24,4,'Live One-on-One Session 2: Go-to-Market & Funding Strategy (Week 7)','session',NULL,1,'2025-10-19 19:00:00','2025-10-19 21:00:00','40','scheduled','2025-10-19 17:38:26','2025-10-19 17:38:26'),
+(22,24,6,'Live One-on-One Session 3: Reaffirm Your Next 90 Days Roadmap & Milestones','session',NULL,1,'2025-10-20 16:00:00','2025-10-20 17:00:00','41','scheduled','2025-10-19 17:38:32','2025-10-20 15:20:34'),
+(23,23,2,'Live Session','session',NULL,1,'2025-10-24 09:00:00','2025-10-24 10:00:00','42','scheduled','2025-10-20 16:34:19','2025-10-20 16:34:19'),
+(24,12,4,'Live Session 2: Maximizing AI Tools and Building Your Own AI Playbook','session',NULL,1,'2025-10-20 22:00:00','2025-10-20 23:00:00','43','scheduled','2025-10-20 21:53:32','2025-10-20 21:53:32'),
+(25,12,6,'Live Session 3: Build and Lead My GPTs Team of AI Experts','session',NULL,1,'2025-10-21 00:00:00','2025-10-21 01:00:00','44','scheduled','2025-10-20 21:53:52','2025-10-20 21:53:52'),
+(26,12,7,'Final Live Session: Final Live Session: Reflect and Grow Together','session',NULL,1,'2025-10-21 01:00:00','2025-10-21 02:00:00','45','scheduled','2025-10-20 21:53:58','2025-10-20 21:53:58'),
+(27,25,2,'Live One-on-One Session 1: Diagnosis & Strategic Priorities (Week 4) What We\'ll Cover','session',NULL,1,'2025-10-21 19:00:00','2025-10-21 20:00:00','46','scheduled','2025-10-21 11:02:48','2025-10-21 11:02:48'),
+(28,25,4,'Live One-on-One Session 2: Go-to-Market & Funding Strategy (Week 7)','session',NULL,1,'2025-10-26 15:00:00','2025-10-26 16:00:00','47','scheduled','2025-10-26 14:55:47','2025-10-26 14:55:47'),
+(29,25,6,'Live One-on-One Session 3: Reaffirm Your Next 90 Days Roadmap & Milestones','session',NULL,1,'2025-10-26 17:00:00','2025-10-26 18:00:00','48','scheduled','2025-10-26 15:02:36','2025-10-26 15:02:36'),
+(30,18,1,'Live session #1','session',NULL,1,'2025-10-29 19:00:00','2025-10-29 20:00:00','49','scheduled','2025-10-26 15:03:34','2025-10-26 15:04:21'),
+(31,29,2,'Vision Alignment & AI Foundations (Live Coaching Session 1 - Week 3)','session',NULL,1,'2025-10-27 21:00:00','2025-10-27 22:00:00','50','scheduled','2025-10-26 20:46:11','2025-10-26 20:48:44'),
+(32,32,2,'Live One-on-One Session 1: Diagnosis & Strategic Priorities (Week 4) What We\'ll Cover','session',NULL,1,'2025-10-28 21:00:00','2025-10-28 22:00:00','52','scheduled','2025-10-27 06:15:18','2025-10-27 06:15:18'),
+(33,32,4,'Live One-on-One Session 2: Go-to-Market & Funding Strategy (Week 7)','session',NULL,1,'2025-10-30 19:00:00','2025-10-30 20:00:00','53','scheduled','2025-10-27 06:15:29','2025-10-27 06:15:29'),
+(34,32,6,'Live One-on-One Session 3: Reaffirm Your Next 90 Days Roadmap & Milestones','session',NULL,1,'2025-10-31 20:00:00','2025-10-31 21:00:00','54','scheduled','2025-10-27 06:15:35','2025-10-27 06:15:35'),
+(35,28,16,'Live Session #8 (end of Week 16): Pilot Health & Conversion Plan','session',NULL,1,'2025-10-29 20:00:00','2025-10-29 21:00:00','55','scheduled','2025-10-27 07:00:37','2025-10-27 07:00:37'),
+(36,26,2,'Live One-on-One Session 1: Diagnosis & Strategic Priorities (Week 4) What We\'ll Cover','session',NULL,1,'2025-11-02 22:00:00','2025-11-02 23:00:00','56','scheduled','2025-11-02 21:44:30','2025-11-02 21:44:30'),
+(37,34,2,'Live Session','session',NULL,1,'2025-11-03 10:00:00','2025-11-03 11:00:00','57','scheduled','2025-11-03 09:17:55','2025-11-03 09:17:55'),
+(38,33,2,'Live One-on-One Session 1: (end of Week 2): Pick the Wedge','session',NULL,1,'2025-11-05 14:00:00','2025-11-05 15:00:00','60','scheduled','2025-11-05 12:23:00','2025-11-05 12:23:00'),
+(39,33,4,'Live Session #2 (end of Week 4): Problem Statement & Proto Critique','session',NULL,1,'2025-11-05 15:00:00','2025-11-05 16:00:00','61','scheduled','2025-11-05 14:20:40','2025-11-05 14:23:14'),
+(40,33,6,'Live Session #3 (end of Week 7): ICP & Message Review','session',NULL,1,'2025-11-05 20:00:00','2025-11-05 21:00:00','62','scheduled','2025-11-05 14:26:34','2025-11-05 14:26:34'),
+(41,33,8,'Live Session #4 (end of Week 8): Proto→ MVP Scope & Price Anchor','session',NULL,1,'2025-11-06 01:00:00','2025-11-06 02:00:00','63','scheduled','2025-11-06 00:53:35','2025-11-06 00:53:35'),
+(42,33,10,'Live Session #5 (end of Week 10): MVP Readiness & Pilot Design','session',NULL,1,'2025-11-06 13:00:00','2025-11-06 14:00:00','64','scheduled','2025-11-06 12:18:16','2025-11-06 12:19:13'),
+(43,33,12,'Live Session #6 (end of Week 12): Channel Plan & KPIs','session',NULL,1,'2025-11-06 14:00:00','2025-11-06 15:00:00','65','scheduled','2025-11-06 12:20:25','2025-11-06 12:20:25'),
+(44,33,14,'Live Session #7 (end of Week 14): Pipeline Review & Objection Handling','session',NULL,1,'2025-11-06 22:00:00','2025-11-06 23:00:00','66','scheduled','2025-11-06 21:50:04','2025-11-06 21:50:05'),
+(45,33,16,'Live Session #8 (end of Week 16): Pilot Health & Conversion Plan','session',NULL,1,'2025-11-07 16:30:00','2025-11-07 17:00:00','67','scheduled','2025-11-07 16:05:26','2025-11-07 16:05:26'),
+(46,33,18,'Live Session #9 (end of Week 18): Graduation — Offer v2 & Sales Triggers','session',NULL,1,'2025-11-09 13:00:00','2025-11-09 14:00:00','68','scheduled','2025-11-08 20:32:45','2025-11-08 20:32:45'),
+(47,29,4,'Refinement & Pedagogical Integration (Live Coaching Session 2 - Week 6)','session',NULL,1,'2025-11-09 23:45:00','2025-11-10 01:00:00','69','scheduled','2025-11-09 23:13:40','2025-11-09 23:13:40'),
+(48,29,6,'Facilitation Mastery & Advanced Strategies (Live Coaching Session 3 - Week 9)','session',NULL,1,'2025-11-10 21:00:00','2025-11-10 22:00:00','70','scheduled','2025-11-10 20:10:24','2025-11-10 20:10:24'),
+(49,35,2,'Live Session 1: Start AI','session',NULL,1,'2025-11-12 12:45:00','2025-11-12 13:05:00','72','scheduled','2025-11-12 12:38:43','2025-11-12 12:38:43'),
+(50,35,4,'Live Session 2: Maximizing AI Tools and Building Your Own AI Playbook','session',NULL,1,'2025-11-12 16:50:00','2025-11-12 17:00:00','74','scheduled','2025-11-12 16:38:41','2025-11-12 16:38:41'),
+(51,35,6,'Live Session 3: Build and Lead My GPTs Team of AI Experts','session',NULL,1,'2025-11-13 03:30:00','2025-11-13 04:00:00','75','scheduled','2025-11-13 03:20:33','2025-11-13 03:20:33'),
+(52,35,7,'Final Live Session: Final Live Session: Reflect and Grow Together','session',NULL,1,'2025-11-13 22:00:00','2025-11-13 22:35:00','76','scheduled','2025-11-13 21:44:17','2025-11-13 21:44:17'),
+(53,25,7,'Checking','session',NULL,1,'2025-11-22 23:15:00','2025-11-23 00:00:00','79','scheduled','2025-11-22 23:00:53','2025-11-22 23:00:53'),
+(54,46,1,'Live session #1','session',NULL,1,'2026-01-05 11:00:00','2026-01-05 12:00:00','82','scheduled','2026-01-03 11:12:50','2026-01-03 11:12:50');
+/*!40000 ALTER TABLE `coaching_sessions` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `coaching_slot_holds`
+--
+
+DROP TABLE IF EXISTS `coaching_slot_holds`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `coaching_slot_holds` (
+  `id` bigint(20) unsigned NOT NULL,
+  `template_id` bigint(20) unsigned NOT NULL,
+  `expert_id` bigint(20) unsigned NOT NULL,
+  `user_id` bigint(20) unsigned NOT NULL,
+  `start_time` datetime NOT NULL,
+  `end_time` datetime NOT NULL,
+  `expires_at` datetime NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `coaching_slot_holds`
+--
+
+LOCK TABLES `coaching_slot_holds` WRITE;
+/*!40000 ALTER TABLE `coaching_slot_holds` DISABLE KEYS */;
+/*!40000 ALTER TABLE `coaching_slot_holds` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `coaching_step_progress`
+--
+
+DROP TABLE IF EXISTS `coaching_step_progress`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `coaching_step_progress` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `step_id` int(11) NOT NULL,
+  `completed_at` datetime DEFAULT NULL,
+  `status` enum('pending','completed') DEFAULT 'pending'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `coaching_step_progress`
+--
+
+LOCK TABLES `coaching_step_progress` WRITE;
+/*!40000 ALTER TABLE `coaching_step_progress` DISABLE KEYS */;
+INSERT INTO `coaching_step_progress` VALUES
+(20,17,246,'2025-10-26 20:47:39','completed'),
+(38,17,252,'2025-11-01 16:14:09','completed'),
+(41,17,579,'2025-11-03 01:07:44','completed'),
+(42,17,581,'2025-11-03 01:07:49','completed'),
+(43,17,250,'2025-11-10 20:17:17','completed'),
+(44,17,585,'2025-11-14 20:17:04','completed'),
+(45,17,583,'2025-11-17 12:12:06','completed');
+/*!40000 ALTER TABLE `coaching_step_progress` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `coaching_submissions`
+--
+
+DROP TABLE IF EXISTS `coaching_submissions`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `coaching_submissions` (
+  `id` int(11) NOT NULL,
+  `assignment_id` bigint(20) unsigned NOT NULL,
+  `client_id` int(11) NOT NULL,
+  `submitted_at` datetime NOT NULL,
+  `files_json` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`files_json`)),
+  `notes` text DEFAULT NULL,
+  `status` enum('submitted','needs_changes','approved') DEFAULT 'submitted',
+  `reviewed_by` int(11) DEFAULT NULL,
+  `reviewed_at` datetime DEFAULT NULL,
+  `feedback` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `coaching_submissions`
+--
+
+LOCK TABLES `coaching_submissions` WRITE;
+/*!40000 ALTER TABLE `coaching_submissions` DISABLE KEYS */;
+INSERT INTO `coaching_submissions` VALUES
+(1,1,5,'2025-08-22 21:49:04','[]','hello','approved',3,'2025-08-22 21:49:44','Looks good.');
+/*!40000 ALTER TABLE `coaching_submissions` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `coaching_template_categories`
+--
+
+DROP TABLE IF EXISTS `coaching_template_categories`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `coaching_template_categories` (
+  `id` int(11) NOT NULL,
+  `template_id` int(11) NOT NULL,
+  `category_id` int(11) NOT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `coaching_template_categories`
+--
+
+LOCK TABLES `coaching_template_categories` WRITE;
+/*!40000 ALTER TABLE `coaching_template_categories` DISABLE KEYS */;
+INSERT INTO `coaching_template_categories` VALUES
+(25,5,5,'2025-09-08 17:33:27'),
+(26,5,11,'2025-09-08 17:33:27'),
+(33,8,3,'2025-09-25 07:24:45'),
+(34,8,2,'2025-09-25 07:24:45'),
+(35,8,8,'2025-09-25 07:24:45'),
+(36,8,7,'2025-09-25 07:24:45'),
+(37,8,4,'2025-09-25 07:24:45'),
+(38,8,14,'2025-09-25 07:24:45'),
+(39,8,5,'2025-09-25 07:24:45'),
+(51,9,14,'2025-10-10 01:50:13'),
+(52,10,5,'2025-10-10 01:50:56'),
+(53,10,14,'2025-10-10 01:50:56'),
+(69,14,11,'2025-10-20 06:55:57'),
+(70,14,14,'2025-10-20 06:55:57'),
+(71,14,6,'2025-10-20 06:55:57'),
+(72,14,15,'2025-10-20 06:55:57'),
+(73,14,10,'2025-10-20 06:55:57'),
+(74,14,12,'2025-10-20 06:55:57'),
+(75,14,1,'2025-10-20 06:55:57'),
+(76,14,4,'2025-10-20 06:55:57'),
+(77,14,5,'2025-10-20 06:55:57'),
+(78,15,5,'2025-10-20 13:06:46'),
+(79,15,11,'2025-10-20 13:06:46'),
+(80,15,14,'2025-10-20 13:06:46'),
+(81,15,13,'2025-10-20 13:06:46'),
+(82,15,12,'2025-10-20 13:06:46'),
+(83,15,15,'2025-10-20 13:06:46'),
+(84,16,5,'2025-10-20 17:10:52'),
+(85,16,14,'2025-10-20 17:10:52'),
+(86,16,11,'2025-10-20 17:10:52'),
+(87,16,12,'2025-10-20 17:10:52'),
+(88,16,15,'2025-10-20 17:10:52'),
+(89,17,5,'2025-10-20 17:36:40'),
+(90,17,11,'2025-10-20 17:36:40'),
+(91,17,14,'2025-10-20 17:36:40'),
+(92,17,4,'2025-10-20 17:36:40'),
+(93,17,15,'2025-10-20 17:36:40'),
+(94,17,8,'2025-10-20 17:36:40'),
+(95,18,5,'2025-10-20 18:11:13'),
+(96,18,11,'2025-10-20 18:11:13'),
+(97,18,14,'2025-10-20 18:11:13'),
+(98,18,4,'2025-10-20 18:11:13'),
+(99,18,9,'2025-10-20 18:11:13'),
+(100,18,3,'2025-10-20 18:11:13'),
+(101,18,15,'2025-10-20 18:11:13'),
+(102,18,10,'2025-10-20 18:11:13'),
+(103,18,8,'2025-10-20 18:11:13'),
+(104,18,2,'2025-10-20 18:11:13'),
+(105,19,11,'2025-10-20 18:27:17'),
+(106,19,7,'2025-10-20 18:27:17'),
+(107,19,1,'2025-10-20 18:27:17'),
+(108,19,15,'2025-10-20 18:27:17'),
+(109,19,10,'2025-10-20 18:27:17'),
+(145,22,5,'2025-10-26 01:53:33'),
+(146,22,11,'2025-10-26 01:53:33'),
+(154,20,11,'2025-11-03 01:06:43'),
+(156,13,11,'2025-11-22 22:59:26'),
+(162,26,11,'2025-12-09 03:48:31');
+/*!40000 ALTER TABLE `coaching_template_categories` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `coaching_template_images`
+--
+
+DROP TABLE IF EXISTS `coaching_template_images`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `coaching_template_images` (
+  `id` int(11) NOT NULL,
+  `template_id` int(11) NOT NULL,
+  `image_url` varchar(1024) NOT NULL,
+  `sort_order` int(11) DEFAULT 1,
+  `is_cover` tinyint(1) DEFAULT 0,
+  `created_at` timestamp NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `coaching_template_images`
+--
+
+LOCK TABLES `coaching_template_images` WRITE;
+/*!40000 ALTER TABLE `coaching_template_images` DISABLE KEYS */;
+/*!40000 ALTER TABLE `coaching_template_images` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `coaching_template_steps`
+--
+
+DROP TABLE IF EXISTS `coaching_template_steps`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `coaching_template_steps` (
+  `id` bigint(20) unsigned NOT NULL,
+  `template_id` int(11) NOT NULL,
+  `seq` int(11) NOT NULL DEFAULT 0,
+  `title` varchar(255) NOT NULL,
+  `description` mediumtext DEFAULT NULL,
+  `video_url` text DEFAULT NULL,
+  `video_file` varchar(255) DEFAULT NULL,
+  `doc_file` varchar(255) DEFAULT NULL,
+  `doc_name` varchar(255) DEFAULT NULL,
+  `doc_mime` varchar(100) DEFAULT NULL,
+  `doc_size` int(11) DEFAULT NULL,
+  `kind` enum('assignment','session','video_url','powerpoint') NOT NULL DEFAULT 'assignment',
+  `duration_weeks` int(11) DEFAULT NULL,
+  `meeting_required` tinyint(1) NOT NULL DEFAULT 0,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `coaching_template_steps`
+--
+
+LOCK TABLES `coaching_template_steps` WRITE;
+/*!40000 ALTER TABLE `coaching_template_steps` DISABLE KEYS */;
+INSERT INTO `coaching_template_steps` VALUES
+(246,10,1,'Foundation & Context Mapping (Self-Paced Assignment - Week 1)','<p><strong>Duration:</strong> 1 week</p><p><strong>Type:</strong> Assignment</p><p><strong>Meeting Required:</strong> No</p><p><br></p><p><strong>What You\'ll Submit:</strong></p><ul><li>Your comprehensive teaching profile (subject area, grade level, years of experience, institutional context)</li><li>Detailed learner profile (student demographics, learning needs, class sizes, delivery format)</li><li>Current AI experience level (tools you\'ve tried, comfort level, previous training)</li><li>Teaching philosophy and pedagogical approach</li><li>Specific challenges you face in your current teaching environment</li><li>Your personal goals and expected outcomes from this coaching program</li><li>Share your institution’s AI Policy and ethical guidelines</li><li>Any institutional policies or constraints regarding AI use</li></ul><p><br></p><p><strong>Purpose:</strong> This foundational step allows me to design a completely personalized coaching experience. I analyze your context to prepare custom resources, examples, and strategies that directly address your teaching reality.</p>',NULL,NULL,NULL,NULL,NULL,NULL,'assignment',1,0,'2025-10-10 01:50:56','2025-10-10 01:50:56'),
+(247,10,2,'Vision Alignment & AI Foundations (Live Coaching Session 1 - Week 3)','<p><strong>Duration:</strong> 60-minute live session</p><p><strong>Type:</strong> Live 1 on 1 Coaching</p><p><strong>Meeting Required:</strong> Yes - you must book a convenient meeting time in my calendar.</p><p><br></p><p><strong>﻿What We\'ll Cover:</strong></p><ul><li>Deep dive into your teaching context and aspirations</li><li>Clarifying your program goals and defining success metrics</li><li>Demystifying AI: What it can and cannot do in education</li><li>The changing role of the educator: From information deliverer to learning architect</li><li>Ethical considerations and responsible AI use in your specific context</li><li>Introduction to the AI integration framework customized for your teaching level</li><li>Personalized tool recommendations based on your institutional permissions</li><li>Setting up your AI experimentation environment</li></ul><p><br></p><p><strong>Outcomes:</strong> You leave with clarity on your transformation journey, a customized AI toolkit, and confidence in the ethical framework guiding your experiments.</p>',NULL,NULL,NULL,NULL,NULL,NULL,'session',3,1,'2025-10-10 01:50:56','2025-10-10 01:50:56'),
+(248,10,3,'Experimentation Lab - Administrative Efficiency (Self-Paced Experience - Weeks 3-5)','<p><strong>Duration:</strong> 2 weeks</p><p><strong>Type:</strong> Assignment</p><p><strong>Meeting Required:</strong> No</p><p><br></p><p><strong>What You\'ll Do Based on Our First Meeting:</strong></p><ul><li>Implement AI tools for at least 3 administrative tasks (email management, lesson planning, resource curation, or meeting summaries)</li><li>Experiment with AI-assisted curriculum design for an upcoming unit or module</li><li>Create a time-tracking log documenting hours saved</li><li>Develop initial templates and prompts (targeted prompting relevant to your goals) that work for your specific needs</li><li>Document challenges, breakthroughs, and questions</li></ul><p><br></p><p><strong>What You\'ll Submit:</strong></p><ul><li>Selected AI tools used and why those tools were chosen</li><li>Detailed experience report with specific examples of AI applications</li><li>Before/after comparisons of time spent on administrative tasks</li><li>Sample AI-generated outputs you created (lesson plans, communication templates, etc.)</li><li>Reflections on what worked, what didn\'t, and what surprised you</li><li>Questions and challenges for refinement in the next live session</li></ul><p><br></p><p><strong>Purpose:</strong> Build confidence through hands-on experimentation in low-stakes applications while reclaiming valuable time.</p>',NULL,NULL,NULL,NULL,NULL,NULL,'assignment',5,0,'2025-10-10 01:50:56','2025-10-10 01:50:56'),
+(249,10,4,'Refinement & Pedagogical Integration (Live Coaching Session 2 - Week 6)','<p><strong>Duration:</strong> 60-minute live session</p><p><strong>Type:</strong> Live 1 on 1 Coaching</p><p><strong>Meeting Required:</strong> Yes - you must book a convenient meeting time in my calendar.</p><p><br></p><p><strong>﻿What We\'ll Cover:</strong></p><ul><li>Detailed debrief of your administrative AI experiments</li><li>Troubleshooting challenges and optimizing your workflows</li><li>Moving beyond efficiency: AI as a pedagogical partner</li><li>Designing AI-enhanced learning experiences for your students</li><li>Differentiation strategies: Using AI to personalize instruction at scale</li><li>Assessments that measure deeper learning if the majority are using AI</li><li>Student engagement techniques in an AI-transparent classroom</li><li>Planning your classroom AI integration pilot</li></ul><p><br></p><p><strong>Outcomes:</strong> You transition from using AI for yourself to integrating it into your teaching practice, with a concrete plan for a classroom pilot.</p>',NULL,NULL,NULL,NULL,NULL,NULL,'session',6,1,'2025-10-10 01:50:56','2025-10-10 01:50:56'),
+(250,10,5,'Classroom Integration Pilot (Self-Paced Experience - Weeks 6-8)','<p><strong>Duration:</strong> 2 weeks</p><p><strong>Type:</strong> Assignment</p><p><strong>Meeting Required:</strong> No</p><p><br></p><p><strong>What You\'ll Do:</strong></p><ul><li>Implement at least one AI-integrated learning experience with your students</li><li>Design and deploy an AI-assisted assessment or feedback mechanism</li><li>Experiment with personalization strategies using AI insights</li><li>Facilitate a classroom discussion about AI ethics and responsible use (age-appropriate)</li><li>Gather student feedback on their learning experience</li><li>Document the complete cycle: planning, implementation, student response, and outcomes</li></ul><p><br></p><p><strong>What You\'ll Submit:</strong></p><ul><li>Comprehensive case study of your classroom pilot including lesson design, student work samples (anonymized), and outcome data</li><li>Student feedback summary and analysis</li><li>Personal reflections on what you learned about facilitation in an AI-integrated environment</li><li>Challenges encountered and creative solutions you developed</li><li>Questions about scaling or refining your approach</li></ul><p><br></p><p><strong>Purpose:</strong> Transform from AI experimenter to AI-integrated educator through real classroom application and student-centered learning.</p>',NULL,NULL,NULL,NULL,NULL,NULL,'assignment',6,0,'2025-10-10 01:50:56','2025-10-10 01:50:56'),
+(251,10,6,'Facilitation Mastery & Advanced Strategies (Live Coaching Session 3 - Week 9)','<p><strong>Duration:</strong> 60-minute live session</p><p><strong>Type:</strong> Live 1 on 1 Coaching</p><p><strong>Meeting Required:</strong> Yes - you must book a convenient meeting time in my calendar.</p><p><br></p><p><strong>What We\'ll Cover:</strong></p><ul><li>In-depth analysis of your classroom pilot results</li><li>Celebrating successes and extracting transferable insights</li><li>Advanced facilitation techniques for AI-augmented learning environments</li><li>Addressing student over-reliance and building critical AI literacy</li><li>Redesigning assessments for the AI era: Moving beyond detection to authentic evaluation</li><li>Creating sustainable AI integration systems that don\'t burn you out</li><li>Strategic planning for full curriculum integration (depends on the educator being coached; it may or may not be part of the program)</li></ul><p><br></p><p><strong>Outcomes:</strong> You gain advanced facilitation skills, sustainable implementation strategies, and a roadmap for expanding AI integration in areas of your life and career that you choose.</p>',NULL,NULL,NULL,NULL,NULL,NULL,'session',9,1,'2025-10-10 01:50:56','2025-10-10 01:50:56'),
+(252,10,7,'Full Implementation & Mastery Demonstration (Self-Paced Experience - Weeks 9-10)','<p><strong>Duration:</strong> 2 weeks</p><p><strong>Type:</strong> Assignment</p><p><strong>Meeting Required:</strong> No</p><p><br></p><p><strong>What You\'ll Do:</strong></p><ul><li>Implement AI integration across selected areas of your life or career where you want to collaborate with AI</li><li>Experiment with one cutting-edge approach we discussed (AI tutors, collaborative AI projects, adaptive learning paths, etc.)</li><li>Mentor or share your new proposed approach with a colleague (if comfortable)</li><li>Create your personal AI integration playbook documenting your methods, favorite prompts, and best practices</li><li>Reflect on your journey from the program start to now.</li></ul><p><br></p><p><strong>What You\'ll Submit:</strong></p><ul><li>Your complete AI Integration Playbook (customized to your teaching context)</li><li>Evidence of expanded implementation (selected shareable work)</li><li>Documentation of your most advanced AI application experiment</li><li>Reflection on your professional transformation: What\'s changed in how you view AI, how you teach, think, and plan</li><li>Preparation for final debrief: insights you want to discuss, lingering questions, future goals</li></ul><p><br></p><p><strong>Purpose:</strong> Consolidate your learning into a sustainable, scalable practice that demonstrates mastery and positions you as an educational leader.</p>',NULL,NULL,NULL,NULL,NULL,NULL,'assignment',9,0,'2025-10-10 01:50:56','2025-10-10 01:50:56'),
+(253,10,8,'Celebration, Reflection & Future Pathways (Live Coaching Session 4 - Week 12)','<p><strong>Duration:</strong> 60-minute live session</p><p><strong>Type:</strong> Live 1 on 1 Coaching</p><p><strong>Meeting Required:</strong> Yes - you must book a convenient meeting time in my calendar.</p><p><br></p><p><strong>What We\'ll Cover:</strong></p><ul><li>Comprehensive program debrief and celebration of your transformation</li><li>Analysis of your before/after teaching practice and professional confidence</li><li>Reflection on your most significant learnings and breakthrough moments</li><li>Identification of ongoing development areas and future learning goals</li><li>Strategies for staying current as AI tools and educational practices evolve</li><li>Building your professional network and leadership opportunities in AI education</li><li>Creating your personalized 12-month post-program development plan</li><li>Honest feedback: Did this program deliver value? What would have made it better?</li><li>Does your employer sponsor such programs?</li><li>Next steps? I am listening to you.</li></ul><p><br></p><p><strong>Outcomes:</strong> You complete the program with clarity on your continued growth path, recognition of your transformation, and a concrete plan for maintaining momentum and expanding your impact.</p>',NULL,NULL,NULL,NULL,NULL,NULL,'session',12,1,'2025-10-10 01:50:56','2025-10-10 01:50:56'),
+(495,22,1,'Learning before start','<p>Learning before start https://www.youtube.com/watch?v=9a3wWQrfQ08</p>','https://www.youtube.com/watch?v=9a3wWQrfQ08',NULL,NULL,NULL,NULL,NULL,'video_url',NULL,0,'2025-10-26 01:53:34','2025-10-26 01:53:34'),
+(496,22,2,'Live Session','<p>Learning before startLearning before startLearning before startLearning before startLearning before start</p>',NULL,NULL,NULL,NULL,NULL,NULL,'session',1,0,'2025-10-26 01:53:34','2025-10-26 01:53:34'),
+(579,20,1,'Task Sprint 1 (Weeks 1–2): Idea Portfolio + Early Discovery','<h3><strong>What You\'ll Do:</strong></h3><ul><li>Create <a href=\"https://medium.com/lean-stack/what-is-the-right-fill-order-for-a-lean-canvas-f8071d0c6c8c\" rel=\"noopener noreferrer\" target=\"_blank\">Lean Canvas</a> (Ash Maurya) for 2–3 different ideas (one canvas per idea).</li><li>Identify top 3 riskiest assumptions per idea.</li><li>Run 8–10 discovery interviews total across those ideas (problem-focused).</li><li>Rank ideas using a simple RICE or Pain × Frequency × Access scorecard.</li></ul><p><br></p><h3><strong>Submit to Unlock Live #1:</strong></h3><ul><li>2–3 Lean Canvases (PDFs)</li><li>Interview notes (template) + identified pain/problems ranking</li><li>Reasons why some ideas are prepared better than others.</li></ul><p><br></p><p>Success Gate: 8 interviews with a variety of different potential users.</p>','https://www.youtube.com/watch?v=7o8uYdUaFR4&t=80s',NULL,NULL,NULL,NULL,NULL,'video_url',NULL,0,'2025-11-03 01:06:44','2025-11-03 01:06:44'),
+(580,20,2,'Live One-on-One Session 1: (end of Week 2): Pick the Wedge','<h3><strong>Goal: </strong>Validate the idea if only one idea was presented. If more than one ideas were presented, choose the single best idea/wedge to continue to develop going forward.</h3><p><br></p><h3><strong>Decisions: </strong>ICP and high-level prototype hypothesis, top riskiest assumption to test next, 2-week execution plan.</h3><p><br></p><h3><strong>Live Session structure (every time):</strong></h3><ul><li>15 min — Review submitted artifacts</li><li>15 min — What the results mean for the business</li><li>15 min — Assign and confirm the next sprint tasks</li><li>15 min — Q&amp;A for clarity (document action items)</li></ul>',NULL,NULL,NULL,NULL,NULL,NULL,'session',2,1,'2025-11-03 01:06:44','2025-11-03 01:06:44'),
+(581,20,3,'Task Sprint 2 (Weeks 3–4): Discovery Blitz + Prototype V0','<h3><strong>What You\'ll Do:</strong></h3><ul><li>Add <strong>5+ targeted interviews</strong> for the chosen idea (total 13 by month end).</li><li>Top 3 features of the solution and their respective value proposition (Donald Miller One Liner)</li><li>Draft <strong>Prototype v0</strong> (no-code clickthrough, or service SOP + short demo video).</li><li>Define your initial <strong>“Aha” hypothesis</strong> (what outcome proves value).</li></ul><p><br></p><h3><strong>Submit to Unlock Live #2:</strong></h3><ul><li>Prototype link/video/SOP/UIUX etc.</li><li>Updated insights summary (top 3 insights)</li><li>“Aha” hypothesis one-pager</li></ul><p><br></p><p><strong>Success Gate:</strong> Total interviews ≥13; prototype usable for feedback.</p>','https://www.youtube.com/watch?v=HFergI0UOAs&t=258s',NULL,NULL,NULL,NULL,NULL,'video_url',NULL,0,'2025-11-03 01:06:44','2025-11-03 01:06:44'),
+(582,20,4,'Live Session #2 (end of Week 4): Problem Statement & Proto Critique','<h3><strong>Goal: </strong>Tighten problem statement and the prototype; set Month-2 validation tasks (ICP + outreach). Use design thinking principles to help guide the process.</h3><p><br></p><h3><strong>Live Session structure (every time):</strong></h3><ul><li>15 min — Review submitted artifacts</li><li>15 min — What the results mean for the business</li><li>15 min — Assign and confirm the next sprint tasks</li><li>15 min — Q&amp;A for clarity (document action items)</li></ul>',NULL,NULL,NULL,NULL,NULL,NULL,'session',5,1,'2025-11-03 01:06:44','2025-11-03 01:06:44'),
+(583,20,5,'Task Sprint 3 (Weeks 5–6): ICP Sheet + Messaging Test (Wave 1)','<h3><strong>What You\'ll Do:</strong></h3><ul><li>Complete <strong>ICP sheet</strong> (role, firmographics, trigger events, watering holes).</li><li>Build a 10 (B2B) or a 5<strong>0-contact list (B2C)</strong> (CSV) matched to ICP.</li><li>Write <strong>2 outreach scripts</strong> (cold + warm) and send <strong>first 50</strong>.</li></ul><p><br></p><h3><strong>Submit to Unlock Live #3:</strong></h3><ul><li>ICP sheet + 50-contact CSV/10 B2B</li><li>Two scripts (final)</li><li>Outreach stats for first 50 sends</li></ul><p><br></p><p><strong>Success Gate:</strong> Reply rate ≥8% <strong>or</strong> ≥3 qualified calls booked.</p>',NULL,NULL,NULL,NULL,NULL,NULL,'assignment',6,0,'2025-11-03 01:06:44','2025-11-03 01:06:44'),
+(584,20,6,'Live Session #3 (end of Week 7): ICP & Message Review','<h3><strong>Goal:</strong> Keep or narrow ICP; lock primary message; assign next 50 sends/10 B2B + call targets.</h3><p><br></p><h3><strong>Live Session structure (every time):</strong></h3><ul><li>15 min — Review submitted artifacts</li><li>15 min — What the results mean for the business</li><li>15 min — Assign and confirm the next sprint tasks</li><li>15 min — Q&amp;A for clarity (document action items)</li></ul>',NULL,NULL,NULL,NULL,NULL,NULL,'session',7,1,'2025-11-03 01:06:44','2025-11-03 01:06:44'),
+(585,20,7,'ask Sprint 4 (Weeks 7–8): Messaging Test (Wave 2) + LOIs','<h3><strong>What You\'ll Do:</strong></h3><ul><li>Send remaining <strong>25+</strong> messages/10B2B.</li><li>Run <strong>5–8 discovery calls</strong>; negotiate <strong>LOIs</strong> for pilot testing.</li><li>Track outcomes per message variant.</li></ul><p><br></p><h3><strong>Submit to Unlock Live #4:</strong></h3><ul><li>Call notes (template)</li><li>≥1 signed <strong>LOI</strong> <em>or</em> total <strong>≥6 qualified calls</strong></li><li>Variant performance summary</li></ul><p><br></p><p><strong>Success Gate:</strong> Total 100 sends; ≥6 calls <strong>or</strong> ≥1 LOI.</p>',NULL,NULL,NULL,NULL,NULL,NULL,'assignment',8,0,'2025-11-03 01:06:44','2025-11-03 01:06:44'),
+(586,20,8,'Live Session #4 (end of Week 8): Proto→ MVP Scope & Price Anchor','<h3><strong>Goal:</strong> Scope MVP v1 (ruthless focus). Set a pilot price anchor (even if you’ll run a free, tightly scoped pilot too).</h3><p><br></p><h3><strong>Live Session structure (every time):</strong></h3><ul><li>15 min — Review submitted artifacts</li><li>15 min — What the results mean for the business</li><li>15 min — Assign and confirm the next sprint tasks</li><li>15 min — Q&amp;A for clarity (document action items)</li></ul>',NULL,NULL,NULL,NULL,NULL,NULL,'session',8,1,'2025-11-03 01:06:44','2025-11-03 01:06:44'),
+(587,20,9,'Task Sprint 5 (Weeks 9–10): MVP v1 + Usability Runs','<h3><strong>What You\'ll Do:</strong></h3><ul><li>Build <strong>MVP v1</strong> (no-code/concierge/service SOP).</li><li>Run <strong>5–10 usability/shadow tests</strong> with ICP.</li><li>Define <strong>activation checklist</strong> and measure completion.</li></ul><p><br></p><h3><strong>Submit to Unlock Live #5:</strong></h3><ul><li>MVP link/SOP</li><li>Usability notes + short clips</li><li>Activation checklist + “Aha” definition</li></ul><p><br></p><p><strong>Success Gate:</strong> ≥70% complete core flow <strong>and</strong> ≥3 “I would pay” statements.</p>',NULL,NULL,NULL,NULL,NULL,NULL,'assignment',10,0,'2025-11-03 01:06:44','2025-11-03 01:06:44'),
+(588,20,10,'Live Session #5 (end of Week 10): MVP Readiness & Pilot Design','<h3><strong>Goal:</strong> Finalize pilot scope(s) (free tiny scope + paid narrow scope) and success criteria.</h3><p><br></p><h3><strong>Live Session structure (every time):</strong></h3><ul><li>15 min — Review submitted artifacts</li><li>15 min — What the results mean for the business</li><li>15 min — Assign and confirm the next sprint tasks</li><li>15 min — Q&amp;A for clarity (document action items)</li></ul>',NULL,NULL,NULL,NULL,NULL,NULL,'session',10,1,'2025-11-03 01:06:44','2025-11-03 01:06:44'),
+(589,20,11,'Task Sprint 6 (Weeks 11–12): Offer Page + Sales Assets + CRM','<h3><strong>What You\'ll Do:</strong></h3><ul><li>Publish <strong>Offer v1</strong> (page or 1-pager): problem → outcome → proof → price/terms → CTA.</li><li>Create <strong>10-slide mini-deck</strong> + <strong>demo script</strong> + <strong>objection handlers</strong>.</li><li>Set up <strong>CRM</strong> (stages, pipeline) and preload leads.</li></ul><p><br></p><h3><strong>Submit to Unlock Live #6:</strong></h3><ul><li>Offer page URL/PDF</li><li>Deck + script + objections</li><li>CRM screenshot (pipeline + active leads)</li></ul><p><br></p><p><strong>Success Gate:</strong> Ready to sell at start of Month 4.</p>',NULL,NULL,NULL,NULL,NULL,NULL,'assignment',12,0,'2025-11-03 01:06:44','2025-11-03 01:06:44'),
+(590,20,12,'Live Session #6 (end of Week 12): Channel Plan & KPIs','<h3><strong>Goal:</strong> Choose 1–2 channels; set weekly volume targets (e.g., 50 targeted emails, 3 meetings/week).</h3><p><br></p><h3><strong>Live Session structure (every time):</strong></h3><ul><li>15 min — Review submitted artifacts</li><li>15 min — What the results mean for the business</li><li>15 min — Assign and confirm the next sprint tasks</li><li>15 min — Q&amp;A for clarity (document action items)</li></ul>',NULL,NULL,NULL,NULL,NULL,NULL,'session',12,1,'2025-11-03 01:06:44','2025-11-03 01:06:44'),
+(591,20,13,'Task Sprint 7 (Weeks 13–14): Top-of-Funnel Execution: Go-to-Market Execution','<h3><strong>What You\'ll Do:</strong></h3><ul><li>Run outreach cadence; hold demos; log objections and next steps within 24h.</li><li>Maintain CRM hygiene; weekly pipeline review.</li></ul><h3><br></h3><h3><strong>Submit to Unlock Live #7:</strong></h3><ul><li>Activity log (emails/calls/DMs)</li><li>Meetings booked + demo recordings</li><li>Objection/response list</li></ul><p><br></p><p><strong>Success Gate:</strong> <strong>≥6 meetings</strong> in 2 weeks (or ≥10/month pace).</p>',NULL,NULL,NULL,NULL,NULL,NULL,'assignment',14,0,'2025-11-03 01:06:44','2025-11-03 01:06:44'),
+(592,20,14,'Live Session #7 (end of Week 14): Pipeline Review & Objection Handling','<h3><strong>Goal:</strong> Fix top funnel leaks (list quality, message); add partner intro motion if needed.</h3><p><br></p><h3><strong>Live Session structure (every time):</strong></h3><ul><li>15 min — Review submitted artifacts</li><li>15 min — What the results mean for the business</li><li>15 min — Assign and confirm the next sprint tasks</li><li>15 min — Q&amp;A for clarity (document action items)</li></ul>',NULL,NULL,NULL,NULL,NULL,NULL,'session',14,1,'2025-11-03 01:06:44','2025-11-03 01:06:44'),
+(593,20,15,'ask Sprint 8 (Weeks 15–16): Proposals & Fast-Follow Closes','<h3><strong>What You\'ll Do:</strong></h3><ul><li>Send <strong>proposals/pilot scopes within 24h</strong> of demos.</li><li>Run <strong>fast-follow sequence</strong> (Day 2, Day 5, Day 9).</li><li>Track win/loss reasons and time-to-decision.</li></ul><p><br></p><h3><strong>Submit to Unlock Live #8:</strong></h3><ul><li>3 pilot scope templates (free + paid)</li><li>Sent proposals + follow-up timestamps</li><li>Win/loss notes</li></ul><p><br></p><p><strong>Success Gate:</strong> <strong>≥2 pilots verbally committed</strong>.</p>',NULL,NULL,NULL,NULL,NULL,NULL,'assignment',16,0,'2025-11-03 01:06:44','2025-11-03 01:06:44'),
+(594,20,16,'Live Session #8 (end of Week 16): Pilot Health & Conversion Plan','<h3><strong>Goal:</strong> Schedule kick-offs; tighten success criteria; define expansion path and upsell trigger.</h3><p><br></p><h3><strong>Live Session structure (every time):</strong></h3><ul><li>15 min — Review submitted artifacts</li><li>15 min — What the results mean for the business</li><li>15 min — Assign and confirm the next sprint tasks</li><li>15 min — Q&amp;A for clarity (document action items)</li></ul>',NULL,NULL,NULL,NULL,NULL,NULL,'session',16,1,'2025-11-03 01:06:44','2025-11-03 01:06:44'),
+(595,20,17,'Task Sprint 9 (Weeks 17–18): Deliver Pilots + Capture Proof: Pilots Running (Free & Paid)','<h3><strong>What You\'ll Do:</strong></h3><ul><li>Onboard pilot customers; deliver value; measure baseline→ outcome.</li><li>Collect <strong>2 testimonials/case blurbs</strong>; document ROI line(s).</li><li><strong>$1k–$5k collected</strong> <em>or</em> signed contracts covering next 60–90 days</li><li><strong>Proof Pack</strong> complete (2 case blurbs, 2 testimonials, logo strip)</li></ul><p><br></p><h3><strong>Submit to Unlock Live #9:</strong></h3><ul><li>Signed pilot docs + success criteria</li><li>Weekly pilot report (baseline, actions, outcomes)</li><li>2 testimonials/case blurbs</li></ul><p><br></p><p><strong>Success Gate:</strong> ≥1 <strong>paid pilot</strong> live (B2B) <strong>or</strong> ≥10 <strong>paid users</strong> (B2C); <strong>≥60%</strong> reach first-value milestone.</p>',NULL,NULL,NULL,NULL,NULL,NULL,'assignment',18,0,'2025-11-03 01:06:44','2025-11-03 01:06:44'),
+(596,20,18,'Live Session #9 (end of Week 18): Graduation — Offer v2 & Sales Triggers','<h3><strong>Goal:</strong> Lock Offer v2 (price/terms) and define repeatable meeting triggers (3) + close actions (2). Map next 90-day revenue plan.</h3><p><br></p><h3><strong>Live Session structure (every time):</strong></h3><ul><li>15 min — Review submitted artifacts</li><li>15 min — What the results mean for the business</li><li>15 min — Assign and confirm the next sprint tasks</li><li>15 min — Q&amp;A for clarity (document action items)</li></ul>',NULL,NULL,NULL,NULL,NULL,NULL,'session',18,1,'2025-11-03 01:06:44','2025-11-03 01:06:44'),
+(597,13,1,'Task Sprint 1: Startup & Team Reality Check to Set the Stage for a Custom & Targeted Coaching Program (Weeks 1-3)','<h3><strong>What You\'ll Do: A PowerPoint Presentation (PPT)</strong></h3><ul><li>What this instructional video from the founder of Lean Canvas and use the template below to follow the process to complete one complete canvas per top 3 ideas you want to develop into a business opportunity so we work together to choose the most immediate among them.</li><li>Complete the Startup Snapshot Assessment: <a href=\"https://medium.com/lean-stack/what-is-the-right-fill-order-for-a-lean-canvas-f8071d0c6c8c\" rel=\"noopener noreferrer\" target=\"_blank\">Use the Lean Business Model Canvas by Ash Maurya</a> put it on a PowerPoint Presentation to facilitate our discussions.</li><li>Map your current challenges and blockers: include this in the same PPT.</li><li>Identify your #1 growth bottleneck: include this in the same PPT.</li><li>Document your assumptions about customers and market: include this in the same PPT.</li><li><strong>Submit as soon as you feel you have done comprehensive and enough work so we can start our first live one-on-one session.</strong></li></ul><p><br></p><h3><strong>What You\'ll Get:</strong></h3><ul><li>Crystal-clear articulation of where you are, the challenges you have, and what you believe must be done to help you succeed as an early stage startup.</li></ul><p><br></p><h3><strong>Time Investment:</strong> 2-7 hours/week of quality work between you and your team members or by yourself.</h3>','https://www.youtube.com/watch?v=7o8uYdUaFR4&t=1048s',NULL,NULL,NULL,NULL,NULL,'video_url',NULL,0,'2025-11-22 22:59:26','2025-11-22 22:59:26'),
+(598,13,2,'Live One-on-One Session 1: Diagnosis & Strategic Priorities (Week 4) What We\'ll Cover','<h3><strong>What We\'ll Cover:</strong></h3><ul><li>Deep-dive analysis of your startup\'s health based and informed on information (PTT) you will have provided</li><li>Identify the ONE thing holding you back</li><li>Create your 30-day action plan</li><li>Set specific measurable success metrics</li></ul><p><br></p><h3><strong>What You\'ll Walk Away With:</strong></h3><ul><li>Professional startup assessment report</li><li>Clarity on the product/service and value proposition</li><li>Personalized growth roadmap</li><li>Clear next steps (no more guessing)</li><li>Direct access to either one of Norman\'s network connections or resources you can use today.</li><li>The specific task you must do to prepare for our second live session.</li></ul><p><br></p><h3><strong>Session Format:</strong> 60 minutes 1-on-1.</h3>',NULL,NULL,NULL,NULL,NULL,NULL,'session',3,1,'2025-11-22 22:59:26','2025-11-22 22:59:26'),
+(599,13,3,'Task Sprint 2: Customer Discovery Lab (Weeks 4-8)','<h3><strong>What You\'ll Do:</strong></h3><ul><li>Interview 10-15 potential customers (insights from scripts provided) or test your MVP with real users</li><li>Document feedback and iterate</li><li>Validate pain point and willingness to pay</li></ul><h3><br></h3><h3><strong>What You\'ll Get:</strong></h3><ul><li>Early customer feedback</li><li>Proof your idea solves a real problem</li><li>Refined value proposition</li><li>First potential pilot customers to identify the right niche market that could pay for the solution if you launched it next week.</li><li>Templates for GTM and Funding Strategies and Revenue projection Excel doc.</li></ul><p><br></p><h3><strong>Time Investment:</strong> 4-5 hours/week</h3>',NULL,NULL,'/uploads/coaching/steps/docs/1761651144058_Lean_Business_Model_Canvas.pptx','Lean Business Model Canvas.pptx','application/vnd.openxmlformats-officedocument.presentationml.presentation',859694,'powerpoint',NULL,0,'2025-11-22 22:59:26','2025-11-22 22:59:26'),
+(600,13,4,'Live One-on-One Session 2: Go-to-Market & Funding Strategy (Week 7)','<h3><strong>What We\'ll Cover:</strong></h3><ul><li>Analyze your customer research data</li><li>Design your go-to-market playbook</li><li>Build your funding roadmap</li><li>Identify the RIGHT funding strategy</li></ul><h3><br></h3><h3><strong>What You\'ll Walk Away With:</strong></h3><ul><li>GTM strategy with specific channels and tactics</li><li>Customized funding strategy</li><li>Revenue projection model</li><li>Leave with examples of marketing campaigns that could be setup, a Donald Miller informed problem solution statement, a pitch deck template, 90days business plan template, as well as which pitch events and competitions to target.</li></ul><h3><br></h3><h3><strong>Session Format:</strong> 60 minutes 1-on-1.</h3>',NULL,NULL,NULL,NULL,NULL,NULL,'session',7,1,'2025-11-22 22:59:26','2025-11-22 22:59:26'),
+(601,13,5,'Task Sprint 3: Traction Building Strategy (Weeks 8-11)','<h3><strong>What You\'ll Do:</strong></h3><ul><li>Launch your first marketing campaign</li><li>Close your first 3-5 pilot customers</li><li>Build your investor pitch deck</li><li>Create 90-day business plan</li></ul><h3><br></h3><h3><strong>What You\'ll Get:</strong></h3><ul><li>Real traction metrics (users, revenue, or LOIs)</li><li>Professional pitch deck (5-10 slides)</li><li>Executable 90 business plan</li><li>How to generate momentum you can show investors</li></ul><h3><br></h3><h3><strong>Time Investment:</strong> 5-6 hours/week</h3>',NULL,NULL,NULL,NULL,NULL,NULL,'assignment',11,0,'2025-11-22 22:59:26','2025-11-22 22:59:26'),
+(602,13,6,'Live One-on-One Session 3: Reaffirm Your Next 90 Days Roadmap & Milestones','<h3><strong>What We\'ll Cover:</strong></h3><ul><li>Pitch practice with real feedback</li><li>Investor meeting preparation</li><li>Partnership and team building strategy</li><li>Your next 90-day execution roadmap/plan</li></ul><p><br></p><h3><strong>What You\'ll Walk Away With:</strong></h3><ul><li>Polished, practiced pitch</li><li>Funding/Investor outreach templates/strategies</li><li>Identification of 3-5 funding resources/ introduction to 3-5 relevant investors (when appropriate)</li><li>Clarity on what to do next.</li><li>Reflection on your journey and experience</li></ul><p><br></p><h3><strong>Session Format:</strong> 60 minutes 1-on-1.</h3><h3><br></h3><h3><strong>Bonus:</strong> + One more hour follow-up to discuss anything you might want to discuss after the end of this program and in the following 6 weeks.</h3>',NULL,NULL,NULL,NULL,NULL,NULL,'session',12,1,'2025-11-22 22:59:26','2025-11-22 22:59:26'),
+(603,13,7,'Checking','<p>Checking</p>',NULL,NULL,NULL,NULL,NULL,NULL,'session',13,1,'2025-11-22 22:59:26','2025-11-22 22:59:26'),
+(604,13,8,'Checking','<p>Checking</p>',NULL,NULL,NULL,NULL,NULL,NULL,'session',14,1,'2025-11-22 22:59:26','2025-11-22 22:59:26'),
+(605,13,9,'Checking','<p>Checking</p>',NULL,NULL,NULL,NULL,NULL,NULL,'session',15,1,'2025-11-22 22:59:26','2025-11-22 22:59:26'),
+(662,26,1,'Download A Sample of the Lean Business Model Canvas','<h2><strong>Task Instructions:</strong></h2><p><br></p><p><strong>Assignment 1:</strong> Download the Lean Canvas PowerPoint template provided in this task. Use it to develop your business idea into a presentable opportunity. Please ensure you complete every box to the best of your ability (100%). To complete task 1, you will have to move on to Step 2 of this program as described below.</p><p><br></p><p><strong>Assignment 2:</strong> Proceed to <strong>Step 2</strong> of this coaching program. Watch the instructional video located there as many times as necessary to ensure you understand how to complete the Lean Canvas correctly.</p>',NULL,NULL,'/uploads/coaching/steps/docs/1765244781077_Lean-canvas_-_Business_Opporunity_Assessment.ppt','Lean-canvas - Business Opporunity Assessment.ppt','application/vnd.ms-powerpoint',616960,'powerpoint',NULL,0,'2025-12-09 03:48:31','2025-12-09 03:48:31'),
+(663,26,2,'Idea Review + Problem Framing + Business Opportunity Development','<h2><strong>Offline Work (Before session)</strong></h2><p><br></p><ul><li>Complete all Lean Canvases according to the ideas you have</li><li>Answer: “Why I am willing to fight for this idea more than the others.”</li><li>Submit all Lean Canvases</li><li>Submit “Why this idea matters most” notes</li></ul>','https://youtu.be/7o8uYdUaFR4?si=hhIOJlHvaFaWzkQP',NULL,NULL,NULL,NULL,NULL,'video_url',NULL,0,'2025-12-09 03:48:31','2025-12-09 03:48:31'),
+(664,26,3,'Live Session to Review Lean Canvas & Choose Top Business Opportunity','<h2><strong>In the Live Session</strong></h2><p><br></p><ul><li>Review Lean Canvases</li><li>Shortlist top 1 idea</li><li>Define the problem clearly + <a href=\"https://www.trewmarketing.com/blog/b2b-buyer-personas-for-technical-companies\" rel=\"noopener noreferrer\" target=\"_blank\">customer profile development using the user persona</a> + Questions to ask</li><li>Assign customer discovery tasks</li></ul>',NULL,NULL,NULL,NULL,NULL,NULL,'session',2,1,'2025-12-09 03:48:31','2025-12-09 03:48:31'),
+(665,26,4,'Customer Discovery (Deep Work Week)','<h2><strong>Offline Work (2 Weeks)</strong></h2><p><br></p><ul><li>Interview 5–10 potential users</li><li>Collect evidence of problem pain</li><li>Summarize patterns</li><li>Score idea with the Idea Fit Scorecard</li></ul>',NULL,NULL,NULL,NULL,NULL,NULL,'assignment',3,0,'2025-12-09 03:48:31','2025-12-09 03:48:31'),
+(666,26,5,'Problem Validation + Core Insight from Interviews','<h2><strong>In the Live Session</strong></h2><p><br></p><ul><li>Review discovery interviews</li><li>Interpret insights</li><li>Shape problem statement &amp; core offering to go into the MVP</li><li>Assign prototype tasks</li></ul>',NULL,NULL,NULL,NULL,NULL,NULL,'session',4,1,'2025-12-09 03:48:31','2025-12-09 03:48:31'),
+(667,26,6,'Prototype V0 Build (Deep Work 2 Weeks)','<h2><strong>Offline Work</strong></h2><p><br></p><ul><li>Build a simple low-code version MVP (screens, flows)</li><li>Prepare 5 user tests</li><li>Capture feedback</li><li>Identify biggest assumptions</li></ul>',NULL,NULL,NULL,NULL,NULL,NULL,'assignment',4,0,'2025-12-09 03:48:31','2025-12-09 03:48:31'),
+(668,26,7,'Live Session #3 - Prototype Review + MVP Scope','<h2><strong>In the Live Session</strong></h2><p><br></p><ul><li>Review V0 prototype</li><li>Decide MVP scope</li><li>Define activation metric</li><li>Assign MVP sprint tasks</li></ul>',NULL,NULL,NULL,NULL,NULL,NULL,'session',6,1,'2025-12-09 03:48:31','2025-12-09 03:48:31'),
+(669,26,8,'MVP Build Sprint (Deep Work Week)','<h2><strong>Offline Work</strong></h2><p><br></p><ul><li>Build first usable version</li><li>Fix onboarding flow</li><li>Write landing page</li><li>Prepare validation script</li></ul>',NULL,NULL,NULL,NULL,NULL,NULL,'assignment',6,0,'2025-12-09 03:48:31','2025-12-09 03:48:31'),
+(670,26,9,'Live Session #4 - MVP Validation Review','<h2><strong>In the Live Session</strong></h2><p><br></p><ul><li>Review MVP tests</li><li>Validate or pivot key assumptions</li><li>Design your pilot structure</li><li>Assign messaging and outreach tasks</li></ul>',NULL,NULL,NULL,NULL,NULL,NULL,'session',7,1,'2025-12-09 03:48:31','2025-12-09 03:48:31'),
+(671,26,10,'Messaging + Landing Page (Deep Work Week)','<h2><strong>Offline Work</strong></h2><p><br></p><ul><li>Finalize landing page</li><li>Create simple pricing</li><li>Prepare outreach list</li><li>Build email and message scripts</li></ul>',NULL,NULL,NULL,NULL,NULL,NULL,'assignment',8,0,'2025-12-09 03:48:31','2025-12-09 03:48:31'),
+(672,26,11,'Live Session #5 - Pilot Design + Early Outreach','<h2><strong>In the Live Session</strong></h2><p><br></p><ul><li>Review messaging</li><li>Improve offer clarity + decide on which channel to find the right customers</li><li>Set up pilot details</li><li>Assign early outreach tasks</li></ul>',NULL,NULL,NULL,NULL,NULL,NULL,'session',9,0,'2025-12-09 03:48:31','2025-12-09 03:48:31'),
+(673,26,12,'Pilot Recruitment (Deep Work Week)','<h2><strong>Offline Work</strong></h2><p><br></p><ul><li>Reach out to 20–40 leads</li><li>Hold 1–3 pilot conversations</li><li>Collect objections</li><li>Capture early success signals</li></ul>',NULL,NULL,NULL,NULL,NULL,NULL,'assignment',10,0,'2025-12-09 03:48:31','2025-12-09 03:48:31'),
+(674,26,13,'Live Session #6 - Pilot Review + First Revenue Strategy','<h2><strong>In the Live Session</strong></h2><p><br></p><ul><li>Review pilot results</li><li>Identify conversion blockers</li><li>Build offer v1.5</li><li>Why have some users opted in the offer?</li></ul><p><br></p><p><strong>Assignment: Get First Client Plan</strong></p>',NULL,NULL,NULL,NULL,NULL,NULL,'session',11,1,'2025-12-09 03:48:31','2025-12-09 03:48:31'),
+(675,26,14,'Final Live Session #7 - Reflection + Graduation + Growth Plan','<h2><strong>In the Live Session</strong></h2><p><br></p><ul><li>Present full idea → MVP → pilot story</li><li>Review revenue strategy</li><li>Build 30-day sprint plan</li><li>Reflect and close program with clarity on the next steps</li></ul><p><br></p><p><strong>Assignment: Idea → MVP → Revenue Blueprint</strong></p>',NULL,NULL,NULL,NULL,NULL,NULL,'session',12,1,'2025-12-09 03:48:31','2025-12-09 03:48:31'),
+(676,5,1,'Introductions','<p>Please provide your introductions. Let me know your skill and plan for next 1 week.</p>',NULL,NULL,NULL,NULL,NULL,NULL,'assignment',2,0,'2025-12-13 18:15:47','2025-12-13 18:15:47'),
+(677,5,2,'We will Talk Next Step For You','<p>We will make a live sessions</p>',NULL,NULL,NULL,NULL,NULL,NULL,'session',2,1,'2025-12-13 18:15:47','2025-12-13 18:15:47'),
+(678,5,3,'Practical Session #2 With Real Data','<p>Practical Session #2 With Real Data</p>',NULL,NULL,NULL,NULL,NULL,NULL,'assignment',2,0,'2025-12-13 18:15:47','2025-12-13 18:15:47'),
+(679,5,4,'We will real life business plan','<p>We will real life business plan</p>',NULL,NULL,NULL,NULL,NULL,NULL,'session',2,0,'2025-12-13 18:15:47','2025-12-13 18:15:47'),
+(694,9,1,'Assignment 1: Type of Job You Do, Any Passion Projects You Might Have, What Are You Curious About?','<p>Before we begin your coaching program, I need to learn more about you so I can tailor the training to your specific needs. Please prepare a short note that covers three key elements to the best of your ability:</p><ol><li><strong>The type of job you do</strong></li><li>Describe your current role in the public service. Include your main responsibilities and the kind of work you handle on a daily basis.</li><li><strong>Any passion projects you have</strong></li><li>Share personal or professional projects that matter to you. These could be volunteer activities, community work, research interests, or creative projects you enjoy outside your main job.</li><li><strong>What you are curious about</strong></li><li>Tell me what you want to learn or explore. This could be skills you want to develop, topics that interest you, or areas where you think AI could make a difference in your work or life.</li></ol><p><br></p><p>By completing this assignment, you give me the background I need to design a personalized coaching plan that fits your goals and helps you get the most value from the program.</p>',NULL,NULL,NULL,NULL,NULL,NULL,'assignment',1,0,'2025-12-14 17:29:03','2025-12-14 17:29:03'),
+(695,9,2,'Live Session 1: Start AI','<p>In this session, we will focus on helping you begin your journey with AI in a way that is safe, practical, and directly connected to your work or other areas f interests. Together, we will:</p><ol><li><strong>Understand risks and privacy</strong></li><li>Learn what to watch out for when using AI, including privacy rules, accuracy issues, and areas where caution is needed.</li><li><strong>Identify where AI is safe to use</strong></li><li>Explore examples of tasks where AI can save time and add value without creating problems for your role.</li><li><strong>Learn how to use it in practice and AI prompting demystification and application.</strong></li><li>Start the journey of how to apply AI tools step by step in your daily work, based on the needs you shared in your first assignment.</li></ol><p><br></p><p>By the end of this session, you will feel more confident about where to start with AI and how to apply it responsibly in your professional and personal projects.</p>',NULL,NULL,NULL,NULL,NULL,NULL,'session',2,1,'2025-12-14 17:29:03','2025-12-14 17:29:03'),
+(696,9,3,'Assignment 2: Share Your First Wins with AI','<p>After our first live session, you now have the tools and confidence to begin trying AI in your daily work. This assignment is about applying what you learned and sharing your first results.</p><p><br></p><p>Please prepare a short note that includes:</p><ol><li><strong>What you tried, the challenges and opportunities you have identified while playing with AI tools of your choice.</strong></li><li>Describe one or two specific tasks where you used AI. For example, drafting a brief, preparing meeting notes, or writing a customer/friend, relative an email, and how that felt.</li><li><strong>What changed for you</strong></li><li>Explain how AI helped. Did it save you time, make the task easier, or improve the quality of your work? What clicked for you, and what didn\'t click for you?</li><li><strong>What you learned</strong></li><li>Share any lessons or surprises. This could include challenges you faced, ways you adapted, or ideas for future use.</li></ol><p><br></p><p>This step is about celebrating your progress, learning from one another, and building confidence to use AI more often in your daily work. as we prepare for our second live session.</p>',NULL,NULL,NULL,NULL,NULL,NULL,'assignment',4,0,'2025-12-14 17:29:03','2025-12-14 17:29:03'),
+(697,9,4,'Live Session 2: Maximizing AI Tools and Building Your Own AI Playbook','<p>Now that you have experienced your first wins with AI, it is time to take the next step. This session will help you move from experimenting with small tasks to building your own personalized way of working with AI.</p><p><br></p><p>Together, we will:</p><ol><li><strong>Answer your questions</strong></li><li>Explore the new ideas and “what ifs” you discovered after trying AI on your own.</li><li><strong>Discover advanced possibilities</strong></li><li>Learn how to build custom GPTs, set up personal projects, and design workflows that go beyond simple prompts.</li><li><strong>Work with images and documents</strong></li><li>See how to edit images, summarize long reports, and prepare outputs that fit public service needs.</li><li><strong>Build your personal playbook</strong></li><li>Create your own FOI-ready AI workflow so you can use AI confidently and responsibly in your daily work.</li></ol><p><br></p><p>By the end of this session, you will be in the driver’s seat. You will not only know what AI can do for you but also how to set up and guide the tools so they work the way you need them to.</p>',NULL,NULL,NULL,NULL,NULL,NULL,'session',5,1,'2025-12-14 17:29:03','2025-12-14 17:29:03'),
+(698,9,5,'Assignment 3: Build and Lead My GPTs Team of AI Experts','<p>Now that you can use AI confidently on your own, it is time to explore how AI can act as a team of advisors working alongside you. This assignment will guide you to design and test a small group of AI “experts” that help you with different parts of the work you enjoy.</p><p><br></p><p><strong>Objective:</strong></p><p>Learn how to set up a collaborative group of AI tools that can each take on a specific role, so you achieve more without doing everything alone.</p><h4><br></h4><h4><strong>Instructions</strong></h4><ol><li><strong>Choose 2–3 roles you want help with</strong></li><li><strong>Create simple job descriptions</strong></li><li><strong>Develop instructions</strong></li><li><strong>Test your AI advisors one by one</strong></li><li><strong>Bring your team together</strong></li><li><strong>Test your new team of AI experts working collaboratively to help you execute projects</strong></li></ol><h4><br></h4><h4><strong>Output to Bring to the Next Session</strong></h4><ul><li>A short list of your AI advisors, with their job descriptions</li><li>At least one example project where you used two or more advisors together</li><li>Notes on what worked well and what you would change next time</li></ul><p><br></p><p>This assignment helps you see how you can build an “AI army” around you to support your personal and professional projects. You will arrive at the next session ready to share your experience and learn new ways to expand your team.</p>',NULL,NULL,NULL,NULL,NULL,NULL,'assignment',7,0,'2025-12-14 17:29:03','2025-12-14 17:29:03'),
+(699,9,6,'Live Session 3: Build and Lead My GPTs Team of AI Experts','<p><strong>Purpose</strong></p><p>Answer all your questions, refine your personal team of AI advisors, and lock in a simple playbook you can use every day.</p><p><strong>What to bring</strong></p><ul><li>Your list of AI advisor roles and job descriptions from Assignment 3</li><li>One real project you want help with this month</li><li>Your notes on what worked and what did not</li></ul><p><strong>Agenda</strong></p><ol><li><strong>Quick goals check</strong></li><li>Confirm what you want your AI team to help you achieve in the next 30 days.</li><li><strong>Open questions</strong></li><li>Ask anything about tools, prompts, privacy, records, and good practice.</li><li><strong>One on one tuning</strong></li></ol><ul><li>Clarify each advisor role and success criteria</li><li>Improve instructions and add guardrails for tone, data, and sources</li><li>Set handoff steps so advisors can work together on one project</li></ul><ol><li><strong>Live build and test</strong></li></ol><ul><li>Run a short task with two or more advisors on your real project</li><li>Review the output and make fast edits to prompts and steps</li></ul><ol><li><strong>Quality and compliance check</strong></li></ol><ul><li>Add a simple log for prompts and outputs</li><li>Note what is safe to use and what needs review</li></ul><ol><li><strong>Save your playbook</strong></li></ol><ul><li>Finalize your advisor roster</li><li>Save your core prompts, checklists, and logging template</li></ul><ol><li><strong>Thirty day action plan</strong></li></ol><ul><li>Pick weekly routines</li><li>Set two success measures such as time saved and quality of output</li></ul><p><strong>You will leave with</strong></p><ul><li>A refined list of your AI advisors with clear job descriptions</li><li>A tested workflow for your chosen project</li><li>A short playbook that is ready for use and ready for records requests</li><li>A simple log template for privacy and audit</li><li>A thirty day plan with two success measures</li></ul><p><strong>Success measures to track</strong></p><ul><li>Minutes saved per task</li><li>Number of drafts reduced before final</li><li>On time delivery of briefs, notes, or posts</li><li>Clear record of sources and approvals</li></ul><p><strong>Preparation note</strong></p><p>If your department is not yet ready to adopt AI, you can still build personal skill and confidence. We will keep your workflow focused on safe personal use, simple logging, and clear boundaries so you protect your professionalism and stay competitive in the labor market.</p>',NULL,NULL,NULL,NULL,NULL,NULL,'session',8,1,'2025-12-14 17:29:03','2025-12-14 17:29:03'),
+(700,9,7,'Final Live Session: Final Live Session: Reflect and Grow Together','<p><strong>Purpose</strong></p><p>This final session is about coming together to reflect on your journey, share experiences, and build confidence to keep using AI as part of your personal and professional growth.</p><p><br></p><p><strong>What we will do together</strong></p><ol><li><strong>Celebrate progress</strong></li><li>Each participant shares highlights of their journey: first wins, successful workflows, and new skills gained.</li><li><strong>Learn from one another</strong></li><li>Open discussion on what worked well, what did not, and which tools or methods felt confusing, overwhelming, or surprising.</li><li><strong>Explore new discoveries</strong></li><li>Share any new tools, prompts, or approaches you found on your own since the last session, and see how others are experimenting too.</li><li><strong>Acknowledge challenges</strong></li><li>Talk openly about the parts that felt intimidating or “freaked you out,” and work together to identify safe and simple ways forward.</li><li><strong>Plan for the future</strong></li><li>Summarize your key takeaways, create a short personal plan for the next 90 days, and discuss how I can continue supporting you with coaching, resources, or advanced sessions.</li></ol><p><br></p><p><strong>You will leave with</strong></p><ul><li>A clear reflection on your growth from the first session to now</li><li>New ideas and strategies from your peers’ experiences</li><li>A personal 90-day plan to continue practicing and applying AI</li><li>A clear picture of how to keep receiving support and stay on track</li></ul>',NULL,NULL,NULL,NULL,NULL,NULL,'session',11,1,'2025-12-14 17:29:03','2025-12-14 17:29:03');
+/*!40000 ALTER TABLE `coaching_template_steps` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `contact_messages`
+--
+
+DROP TABLE IF EXISTS `contact_messages`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `contact_messages` (
+  `id` bigint(20) unsigned NOT NULL,
+  `full_name` varchar(160) NOT NULL,
+  `email` varchar(190) NOT NULL,
+  `phone` varchar(60) DEFAULT NULL,
+  `topic` varchar(60) NOT NULL DEFAULT 'support',
+  `subject` varchar(190) DEFAULT NULL,
+  `message` text NOT NULL,
+  `consent` tinyint(1) NOT NULL DEFAULT 0,
+  `page` varchar(80) NOT NULL DEFAULT 'contact',
+  `ip_address` varchar(64) DEFAULT NULL,
+  `user_agent` varchar(255) DEFAULT NULL,
+  `status` enum('new','read','archived') NOT NULL DEFAULT 'new',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `contact_messages`
+--
+
+LOCK TABLES `contact_messages` WRITE;
+/*!40000 ALTER TABLE `contact_messages` DISABLE KEYS */;
+/*!40000 ALTER TABLE `contact_messages` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `course_categories`
+--
+
+DROP TABLE IF EXISTS `course_categories`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `course_categories` (
+  `id` int(11) NOT NULL,
+  `course_id` int(11) NOT NULL,
+  `category_id` int(11) NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `course_categories`
+--
+
+LOCK TABLES `course_categories` WRITE;
+/*!40000 ALTER TABLE `course_categories` DISABLE KEYS */;
+INSERT INTO `course_categories` VALUES
+(3,5,14,'2025-08-16 21:45:44');
+/*!40000 ALTER TABLE `course_categories` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `course_category_map`
+--
+
+DROP TABLE IF EXISTS `course_category_map`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `course_category_map` (
+  `course_id` int(11) NOT NULL,
+  `category_id` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `course_category_map`
+--
+
+LOCK TABLES `course_category_map` WRITE;
+/*!40000 ALTER TABLE `course_category_map` DISABLE KEYS */;
+/*!40000 ALTER TABLE `course_category_map` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `course_enrollments`
+--
+
+DROP TABLE IF EXISTS `course_enrollments`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `course_enrollments` (
+  `id` int(11) NOT NULL,
+  `course_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `enrolled_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `completed_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `course_enrollments`
+--
+
+LOCK TABLES `course_enrollments` WRITE;
+/*!40000 ALTER TABLE `course_enrollments` DISABLE KEYS */;
+INSERT INTO `course_enrollments` VALUES
+(2,5,1,'2025-08-16 18:49:42',NULL),
+(3,5,1,'2025-08-16 18:49:46',NULL),
+(4,5,2,'2025-09-07 15:44:51',NULL),
+(6,5,2,'2025-09-07 16:15:23',NULL),
+(7,5,2,'2025-09-07 16:38:35',NULL),
+(8,5,2,'2025-09-07 16:38:50',NULL),
+(9,14,2,'2025-09-07 16:55:19',NULL),
+(10,14,2,'2025-09-07 17:30:18',NULL),
+(11,14,2,'2025-09-07 17:32:17',NULL),
+(12,14,2,'2025-09-07 17:34:15',NULL),
+(13,14,2,'2025-09-07 17:39:59',NULL),
+(14,19,3,'2025-09-25 10:02:45',NULL),
+(15,17,3,'2025-09-27 09:25:44',NULL),
+(16,18,3,'2025-10-05 07:32:29',NULL),
+(17,18,2,'2025-10-27 05:51:16',NULL),
+(18,25,2,'2025-10-27 05:54:38',NULL);
+/*!40000 ALTER TABLE `course_enrollments` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `course_features`
+--
+
+DROP TABLE IF EXISTS `course_features`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `course_features` (
+  `id` int(11) NOT NULL,
+  `course_id` int(11) NOT NULL,
+  `feature_type` enum('text','image','pdf') NOT NULL,
+  `feature_value` text DEFAULT NULL,
+  `content` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `course_features`
+--
+
+LOCK TABLES `course_features` WRITE;
+/*!40000 ALTER TABLE `course_features` DISABLE KEYS */;
+/*!40000 ALTER TABLE `course_features` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `course_files`
+--
+
+DROP TABLE IF EXISTS `course_files`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `course_files` (
+  `id` int(11) NOT NULL,
+  `course_id` int(11) DEFAULT NULL,
+  `file_name` varchar(255) DEFAULT NULL,
+  `file_type` varchar(50) DEFAULT NULL,
+  `file_path` text DEFAULT NULL,
+  `uploaded_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `course_files`
+--
+
+LOCK TABLES `course_files` WRITE;
+/*!40000 ALTER TABLE `course_files` DISABLE KEYS */;
+INSERT INTO `course_files` VALUES
+(1,1,'32-HCL-Technologies-Denmark-Apps_0 (1).pdf','application/pdf','uploads\\course_materials\\1753465705488-32-HCL-Technologies-Denmark-Apps_0 (1).pdf','2025-07-25 17:48:25'),
+(2,1,'32-HCL-Technologies-Denmark-Apps_0 (1).pdf','application/pdf','uploads\\course_materials\\1754504043452-32-HCL-Technologies-Denmark-Apps_0 (1).pdf','2025-08-06 18:14:03'),
+(3,3,'Sales Invoice - 1010.pdf','application/pdf','uploads/course_materials/1755332683112-Sales Invoice - 1010.pdf','2025-08-16 08:24:43'),
+(4,5,'Maysha MalihaÂ Mou ( Borrower).pdf','application/pdf','/uploads/courses/materials/1755347566826-maysha-maliha-mou-borrower.pdf','2025-08-16 12:32:46'),
+(5,5,'Invoice-LMCAZGIW-0001.pdf','application/pdf','/uploads/courses/materials/1755358147449-invoice-lmcazgiw-0001.pdf','2025-08-16 15:29:07'),
+(6,5,'Invoice-LMCAZGIW-0001.pdf','application/pdf','/uploads/courses/materials/1755359167008-invoice-lmcazgiw-0001.pdf','2025-08-16 15:46:07'),
+(7,14,'Invoice-NHR24TMQ-0001 (1).pdf','application/pdf','/uploads/courses/materials/1755443380731-invoice-nhr24tmq-0001-1.pdf','2025-08-17 15:09:40'),
+(8,14,'Receipt-2168-1384.pdf','application/pdf','/uploads/courses/materials/1755443380783-receipt-2168-1384.pdf','2025-08-17 15:09:40'),
+(9,18,'Please note that not all the checklist items will apply to everyone.pdf','application/pdf','/uploads/courses/materials/1757771397069-please-note-that-not-all-the-checklist-items-will-apply-to-everyone.pdf','2025-09-13 13:49:57'),
+(10,19,'top11.png','image/png','/uploads/courses/materials/1757853476602-top11.png','2025-09-14 12:37:56'),
+(11,23,'Keyword Research  for Exceed Solutions .pdf','application/pdf','/uploads/courses/materials/1760982476314-keyword-research-for-exceed-solutions.pdf','2025-10-20 17:47:56'),
+(12,24,'Keyword Research  for Exceed Solutions .pdf','application/pdf','/uploads/courses/materials/1760984111248-keyword-research-for-exceed-solutions.pdf','2025-10-20 18:15:11'),
+(13,25,'Keyword Research  for Exceed Solutions .pdf','application/pdf','/uploads/courses/materials/1760985057611-keyword-research-for-exceed-solutions.pdf','2025-10-20 18:30:57');
+/*!40000 ALTER TABLE `course_files` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `course_lessons`
+--
+
+DROP TABLE IF EXISTS `course_lessons`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `course_lessons` (
+  `id` int(11) NOT NULL,
+  `course_id` int(11) NOT NULL,
+  `title` varchar(200) NOT NULL,
+  `description` text DEFAULT NULL,
+  `video_url` varchar(255) DEFAULT NULL,
+  `is_free` tinyint(1) NOT NULL DEFAULT 0,
+  `order_no` int(11) NOT NULL DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `course_lessons`
+--
+
+LOCK TABLES `course_lessons` WRITE;
+/*!40000 ALTER TABLE `course_lessons` DISABLE KEYS */;
+INSERT INTO `course_lessons` VALUES
+(1,5,'Introduction','Welcome to the course!','',1,1,'2025-08-16 12:13:11','2025-08-16 12:13:11'),
+(2,5,'breaf','Hi\ngfgfdh','https://www.facebook.com',0,2,'2025-08-16 12:13:11','2025-08-16 12:13:11'),
+(3,5,'Introduction','Welcome to the course!','',1,1,'2025-08-16 15:28:57','2025-08-16 15:28:57'),
+(4,5,'breaf','Hi\ngfgfdh','https://www.facebook.com',0,2,'2025-08-16 15:28:57','2025-08-16 15:28:57'),
+(5,5,'Introduction','Welcome to the course!','',1,1,'2025-08-16 15:31:52','2025-08-16 15:31:52'),
+(6,5,'Introduction','Welcome to the course!','',1,2,'2025-08-16 15:31:52','2025-08-16 15:31:52'),
+(7,5,'breaf','Hi\ngfgfdh','https://www.facebook.com',1,3,'2025-08-16 15:31:52','2025-08-16 15:31:52'),
+(8,5,'breaf','Hi\ngfgfdh','https://www.facebook.com',0,4,'2025-08-16 15:31:52','2025-08-16 15:31:52'),
+(9,5,'Introduction','Welcome to the course!','',1,1,'2025-08-16 15:45:55','2025-08-16 15:45:55'),
+(10,5,'Introduction','Welcome to the course!','',1,2,'2025-08-16 15:45:55','2025-08-16 15:45:55'),
+(11,5,'Introduction','Welcome to the course!','',1,3,'2025-08-16 15:45:55','2025-08-16 15:45:55'),
+(12,5,'breaf','Hi\ngfgfdh','https://www.facebook.com',0,4,'2025-08-16 15:45:55','2025-08-16 15:45:55'),
+(13,5,'breaf','Hi\ngfgfdh','https://www.facebook.com',0,5,'2025-08-16 15:45:55','2025-08-16 15:45:55'),
+(14,5,'Introduction','Welcome to the course!','',1,6,'2025-08-16 15:45:55','2025-08-16 15:45:55'),
+(15,5,'breaf','Hi\ngfgfdh','https://www.facebook.com',1,7,'2025-08-16 15:45:55','2025-08-16 15:45:55'),
+(16,5,'breaf','Hi\ngfgfdh','https://www.facebook.com',0,8,'2025-08-16 15:45:55','2025-08-16 15:45:55'),
+(17,14,'Introduction','Welcome to the course!','https://www.youtube.com/watch?v=hZEm3gQ7jwI',1,1,'2025-08-17 15:09:08','2025-08-17 15:09:08'),
+(18,14,'New Lesson 2','This thsi isdfgfdh gjshfk','',0,2,'2025-08-17 15:09:08','2025-08-17 15:09:08'),
+(19,14,'New Lesson','This thsi isdfgfdh gjshfk','',0,3,'2025-08-17 15:09:08','2025-08-17 15:09:08'),
+(20,17,'Introduction','Welcome to the course!','',1,1,'2025-09-13 08:33:59','2025-09-13 08:33:59'),
+(21,18,'A lived experience description of how one finds the right job opportunities for themselves in new countries for newcomers.','A Newcomer\'s Guide to Finding Your First Right Job\nLanding your first job in a new country can feel like searching for a needle in a haystack—but it doesn\'t have to be. This lesson takes you beyond generic job search advice and into the real, lived experience of finding the right career path as a newcomer.\n\nWe\'ll share practical, relatable strategies and insights from those who have successfully navigated this journey. You’ll learn how to overcome common obstacles, leverage your unique background, and build a career that aligns with your goals and values in your new home.\n\n3 Reasons to Take This Lesson Now\nStop Wasting Time on the Wrong Jobs. This lesson isn\'t just about finding any job; it\'s about finding the right job for you. We\'ll help you identify positions that align with your skills, values, and long-term career goals, saving you from the frustration of a job that doesn\'t fit.\n\nLearn from Real-World Experience. Forget the generic advice you can find online. We share a personal, lived experience approach, offering actionable insights and proven strategies from someone who has been in your shoes. This is a chance to learn what really works and what doesn\'t.\n\nBuild a Career, Not Just a Paycheck. Your international experience and unique perspective are valuable assets. This lesson will show you how to effectively showcase your background to employers, helping you secure a role where you can truly thrive and build a meaningful career in your new country.','https://youtu.be/h9-mVcvbGuY',0,1,'2025-09-13 13:34:52','2025-09-13 13:34:52'),
+(22,18,'A lived experience description of how one finds the right job opportunities for themselves in new countries for newcomers.','A Newcomer\'s Guide to Finding Your First Right Job\nLanding your first job in a new country can feel like searching for a needle in a haystack—but it doesn\'t have to be. This lesson takes you beyond generic job search advice and into the real, lived experience of finding the right career path as a newcomer.\n\nWe\'ll share practical, relatable strategies and insights from those who have successfully navigated this journey. You’ll learn how to overcome common obstacles, leverage your unique background, and build a career that aligns with your goals and values in your new home.\n\n3 Reasons to Take This Lesson Now\nStop Wasting Time on the Wrong Jobs. This lesson isn\'t just about finding any job; it\'s about finding the right job for you. We\'ll help you identify positions that align with your skills, values, and long-term career goals, saving you from the frustration of a job that doesn\'t fit.\n\nLearn from Real-World Experience. Forget the generic advice you can find online. We share a personal, lived experience approach, offering actionable insights and proven strategies from someone who has been in your shoes. This is a chance to learn what really works and what doesn\'t.\n\nBuild a Career, Not Just a Paycheck. Your international experience and unique perspective are valuable assets. This lesson will show you how to effectively showcase your background to employers, helping you secure a role where you can truly thrive and build a meaningful career in your new country.','https://youtu.be/h9-mVcvbGuY',0,1,'2025-09-13 14:20:31','2025-09-13 14:20:31'),
+(23,19,'Introduction','Welcome to the course!','https://www.youtube.com/',0,1,'2025-09-14 12:37:40','2025-09-14 12:37:40'),
+(24,20,'Introduction','Welcome to the course!','https://www.youtube.com/',0,1,'2025-10-20 07:02:16','2025-10-20 07:02:16'),
+(25,21,'Introduction','Welcome to the course!','https://www.youtube.com/',0,1,'2025-10-20 13:16:27','2025-10-20 13:16:27'),
+(26,22,'Introduction','Welcome to the course!','https://www.youtube.com/',0,1,'2025-10-20 17:19:32','2025-10-20 17:19:32'),
+(27,23,'Introduction','Welcome to the course!','https://www.youtube.com/',0,1,'2025-10-20 17:41:37','2025-10-20 17:41:37'),
+(28,24,'Introduction','Welcome to the course!','https://www.youtube.com/',0,1,'2025-10-20 18:14:28','2025-10-20 18:14:28'),
+(29,25,'Introduction','Welcome to the course!','https://www.youtube.com/',0,1,'2025-10-20 18:30:16','2025-10-20 18:30:16'),
+(30,19,'Introduction','Welcome to the course!','https://www.youtube.com/',0,1,'2025-12-13 13:37:18','2025-12-13 13:37:18');
+/*!40000 ALTER TABLE `course_lessons` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `course_materials`
+--
+
+DROP TABLE IF EXISTS `course_materials`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `course_materials` (
+  `id` int(11) NOT NULL,
+  `course_id` int(11) NOT NULL,
+  `lesson_id` int(11) DEFAULT NULL,
+  `title` varchar(200) NOT NULL,
+  `file_path` varchar(255) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `course_materials`
+--
+
+LOCK TABLES `course_materials` WRITE;
+/*!40000 ALTER TABLE `course_materials` DISABLE KEYS */;
+/*!40000 ALTER TABLE `course_materials` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `course_orders`
+--
+
+DROP TABLE IF EXISTS `course_orders`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `course_orders` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `course_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `amount` decimal(10,2) NOT NULL,
+  `currency` varchar(10) NOT NULL DEFAULT 'usd',
+  `provider` enum('stripe','paypal') NOT NULL DEFAULT 'stripe',
+  `status` enum('pending','paid','failed','refunded') NOT NULL DEFAULT 'pending',
+  `cancelled_at` datetime DEFAULT NULL,
+  `cancelled_by` int(11) DEFAULT NULL,
+  `cancelled_reason` varchar(255) DEFAULT NULL,
+  `provider_session_id` varchar(191) DEFAULT NULL,
+  `provider_payment_id` varchar(191) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `provider_payment_intent_id` varchar(255) DEFAULT NULL,
+  `provider_charge_id` varchar(255) DEFAULT NULL,
+  `provider_invoice_id` varchar(255) DEFAULT NULL,
+  `payment_method_id` varchar(255) DEFAULT NULL,
+  `receipt_url` text DEFAULT NULL,
+  `hosted_invoice_url` text DEFAULT NULL,
+  `invoice_pdf_url` text DEFAULT NULL,
+  `card_brand` varchar(32) DEFAULT NULL,
+  `card_last4` varchar(8) DEFAULT NULL,
+  `stripe_payment_intent_id` varchar(64) DEFAULT NULL,
+  `paid_at` datetime DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `course_orders`
+--
+
+LOCK TABLES `course_orders` WRITE;
+/*!40000 ALTER TABLE `course_orders` DISABLE KEYS */;
+INSERT INTO `course_orders` VALUES
+(2,14,2,20.00,'usd','stripe','paid',NULL,NULL,NULL,'cs_test_a1nbshAaE6tRzZ53Bn6jCHJ5aMl5UIWBiGvsNEu6A4IYgyjWc3fuwAjyaC','pi_3S4jk63RqEMUJuhk0iroMgQy','2025-09-07 12:30:13','2025-12-31 08:09:39','pi_3S4jk63RqEMUJuhk0iroMgQy','ch_3S4jk63RqEMUJuhk0wtg1rQk',NULL,NULL,'https://pay.stripe.com/receipts/invoices/CAcaFwoVYWNjdF8xUnZ6bW0zUnFFTVVKdWhrKO-G98UGMgZ6CttbkW06LBYYlcoJNYFcpQ15DSzCEUufBdqB_5Nr2ZQdBcCn3GzO6-KYh5TYmVYNqjIL?s=ap','https://invoice.stripe.com/i/acct_1Rvzmm3RqEMUJuhk/test_YWNjdF8xUnZ6bW0zUnFFTVVKdWhrLF9UMGxHeFRpdmRzbGJoMU9CRzlUT2VFOFRsUXhxNGtvLDE0NzgwNzU5OQ0200Mr3hdXrX?s=ap','https://pay.stripe.com/invoice/acct_1Rvzmm3RqEMUJuhk/test_YWNjdF8xUnZ6bW0zUnFFTVVKdWhrLF9UMGxHeFRpdmRzbGJoMU9CRzlUT2VFOFRsUXhxNGtvLDE0NzgwNzU5OQ0200Mr3hdXrX/pdf?s=ap','visa','4242',NULL,NULL,NULL),
+(3,5,2,20.00,'usd','stripe','paid',NULL,NULL,NULL,'cs_test_a1XZmjvTOYWrRCD4r7nUaIiAx5vZmZFxwpAOkYD0f4N1kJcPPxxw1BGvhv','pi_3S4kgP3RqEMUJuhk0Y9th0AI','2025-09-07 13:14:33','2025-12-31 08:09:39','pi_3S4kgP3RqEMUJuhk0Y9th0AI','ch_3S4kgP3RqEMUJuhk08PQBSXe',NULL,NULL,'https://pay.stripe.com/receipts/invoices/CAcaFwoVYWNjdF8xUnZ6bW0zUnFFTVVKdWhrKJrq9sUGMgYWC9YX12g6LBZR3rBLvyGze-ASxnaVBs1GbflH7j9sqe35HHFcrzUtWt-xvqA99IjUFsvI?s=ap','https://invoice.stripe.com/i/acct_1Rvzmm3RqEMUJuhk/test_YWNjdF8xUnZ6bW0zUnFFTVVKdWhrLF9UMG1FSm92QVowTG42VHpPTEZ1aW0ycUNOMGhuWGhnLDE0NzgwMzkzMA0200niTxx5S6?s=ap','https://pay.stripe.com/invoice/acct_1Rvzmm3RqEMUJuhk/test_YWNjdF8xUnZ6bW0zUnFFTVVKdWhrLF9UMG1FSm92QVowTG42VHpPTEZ1aW0ycUNOMGhuWGhnLDE0NzgwMzkzMA0200niTxx5S6/pdf?s=ap','visa','4242',NULL,NULL,NULL),
+(4,5,9,20.00,'usd','stripe','pending',NULL,NULL,NULL,NULL,NULL,'2025-09-13 07:37:33','2025-12-31 08:09:39',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(5,18,3,11.00,'usd','stripe','paid',NULL,NULL,NULL,'cs_test_a1BfeqH0dRK8cm7lnq8BkH3KQfosYHQirQUsZmVH1kEuXvvyKgVSmxHGxL','pi_3SEmOk3RqEMUJuhk1a8OE5hj','2025-09-25 09:56:08','2025-12-31 08:09:39','pi_3SEmOk3RqEMUJuhk1a8OE5hj','ch_3SEmOk3RqEMUJuhk1yTztWUq',NULL,NULL,'https://pay.stripe.com/receipts/invoices/CAcaFwoVYWNjdF8xUnZ6bW0zUnFFTVVKdWhrKIy-iMcGMgZMefawde46LBadqa1fSz73Vixj2tCaMEsGLpzjgafvQ-WiJtvF-VtMO35GNio06U3d6YUn?s=ap','https://invoice.stripe.com/i/acct_1Rvzmm3RqEMUJuhk/test_YWNjdF8xUnZ6bW0zUnFFTVVKdWhrLF9UQjhpd0JsZDVRRTlnWmVmSXltTHI4VGdwNXNqSEpzLDE1MDE5MDM0OQ0200T1wTVGpr?s=ap','https://pay.stripe.com/invoice/acct_1Rvzmm3RqEMUJuhk/test_YWNjdF8xUnZ6bW0zUnFFTVVKdWhrLF9UQjhpd0JsZDVRRTlnWmVmSXltTHI4VGdwNXNqSEpzLDE1MDE5MDM0OQ0200T1wTVGpr/pdf?s=ap',NULL,NULL,NULL,NULL,NULL),
+(6,19,3,0.00,'usd','stripe','paid',NULL,NULL,NULL,NULL,NULL,'2025-09-25 10:02:45','2025-12-31 08:09:39',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(7,17,3,0.00,'usd','stripe','paid',NULL,NULL,NULL,NULL,NULL,'2025-09-27 09:25:44','2025-12-31 08:09:39',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(8,14,6,20.00,'usd','stripe','pending',NULL,NULL,NULL,NULL,NULL,'2025-09-28 18:41:02','2025-12-31 08:09:39',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(9,5,6,20.00,'usd','stripe','pending',NULL,NULL,NULL,NULL,NULL,'2025-09-28 18:44:26','2025-12-31 08:09:39',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(10,14,3,20.00,'usd','stripe','pending',NULL,NULL,NULL,NULL,NULL,'2025-10-09 15:22:39','2025-12-31 08:09:39',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(11,18,17,11.00,'usd','stripe','pending',NULL,NULL,NULL,NULL,NULL,'2025-10-18 16:07:53','2025-12-31 08:09:39',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(12,18,2,11.00,'usd','stripe','paid',NULL,NULL,NULL,NULL,'pi_3SMari3RqEMUJuhk15xU1IF4','2025-10-18 18:44:44','2025-12-31 08:09:39','pi_3SMari3RqEMUJuhk15xU1IF4','ch_3SMari3RqEMUJuhk1JdFJsIk',NULL,NULL,'https://pay.stripe.com/receipts/payment/CAcaFwoVYWNjdF8xUnZ6bW0zUnFFTVVKdWhrKNSQ_McGMgZN7TGpboM6LBbNna4gNusxWqJuo2Fd-eu1c4pmZwPD1A-D2w5hxo5jOs2JgpTyc7Vwcz3s',NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(13,25,2,400.00,'usd','stripe','paid',NULL,NULL,NULL,NULL,'pi_3SMjO53RqEMUJuhk0kyNakxl','2025-10-27 05:54:11','2025-12-31 08:09:39','pi_3SMjO53RqEMUJuhk0kyNakxl',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(14,18,3,11.00,'usd','stripe','paid',NULL,NULL,NULL,NULL,'pi_3SlBkG3RqEMUJuhk0p6UsOIm','2026-01-02 17:02:32','2026-01-02 17:02:37','pi_3SlBkG3RqEMUJuhk0p6UsOIm','ch_3SlBkG3RqEMUJuhk0ZTMlyF6',NULL,NULL,'https://pay.stripe.com/receipts/payment/CAcaFwoVYWNjdF8xUnZ6bW0zUnFFTVVKdWhrKK3038oGMgZ16_H5rFw6LBZsg3XiIjUx6yvYj5eRtRTgAzjZ9RzunAYicaKRSFq9vFMsOURRZNfMTaaQ',NULL,NULL,NULL,NULL,'pi_3SlBkG3RqEMUJuhk0p6UsOIm','2026-01-02 17:02:37',NULL);
+/*!40000 ALTER TABLE `course_orders` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `course_progress`
+--
+
+DROP TABLE IF EXISTS `course_progress`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `course_progress` (
+  `id` int(11) NOT NULL,
+  `course_id` int(11) NOT NULL,
+  `lesson_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `is_completed` tinyint(1) NOT NULL DEFAULT 0,
+  `completed_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `course_progress`
+--
+
+LOCK TABLES `course_progress` WRITE;
+/*!40000 ALTER TABLE `course_progress` DISABLE KEYS */;
+INSERT INTO `course_progress` VALUES
+(1,5,1,1,1,'2025-08-16 20:03:02'),
+(2,5,5,1,1,'2025-08-16 20:03:08'),
+(3,5,9,1,1,'2025-08-16 20:03:11'),
+(4,5,6,1,0,NULL),
+(5,5,10,1,0,NULL),
+(6,5,7,1,0,NULL),
+(7,5,16,1,1,'2025-08-16 20:03:34'),
+(8,5,15,1,1,'2025-08-16 20:03:33'),
+(9,5,14,1,1,'2025-08-16 20:03:31'),
+(10,5,13,1,1,'2025-08-16 20:03:30'),
+(11,5,12,1,1,'2025-08-16 20:03:28'),
+(12,5,8,1,1,'2025-08-16 20:03:26'),
+(13,5,11,1,1,'2025-08-16 20:14:33'),
+(17,5,2,1,1,'2025-08-17 14:54:31'),
+(20,5,3,1,1,'2025-08-16 20:03:06'),
+(55,5,4,1,1,'2025-08-17 14:54:32'),
+(101,5,1,2,1,'2025-09-07 15:45:26'),
+(102,5,3,2,1,'2025-09-07 15:45:30'),
+(103,5,5,2,1,'2025-09-07 15:45:31'),
+(104,5,9,2,1,'2025-09-07 15:45:34'),
+(105,5,2,2,1,'2025-09-07 15:45:37'),
+(106,5,4,2,1,'2025-09-07 15:45:41'),
+(107,14,17,2,1,'2025-10-17 20:30:16');
+/*!40000 ALTER TABLE `course_progress` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `course_reviews`
+--
+
+DROP TABLE IF EXISTS `course_reviews`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `course_reviews` (
+  `id` int(11) NOT NULL,
+  `course_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `rating` tinyint(3) unsigned NOT NULL,
+  `comment` text DEFAULT NULL,
+  `review` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `course_reviews`
+--
+
+LOCK TABLES `course_reviews` WRITE;
+/*!40000 ALTER TABLE `course_reviews` DISABLE KEYS */;
+INSERT INTO `course_reviews` VALUES
+(1,5,1,5,'good',NULL,'2025-08-16 19:43:24'),
+(2,18,3,5,'Great Norman!',NULL,'2025-10-05 07:33:08');
+/*!40000 ALTER TABLE `course_reviews` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `courses`
+--
+
+DROP TABLE IF EXISTS `courses`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `courses` (
+  `id` int(11) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `slug` varchar(191) NOT NULL,
+  `description` text DEFAULT NULL,
+  `start_date` date DEFAULT NULL,
+  `end_date` date DEFAULT NULL,
+  `duration` varchar(100) DEFAULT NULL,
+  `meet_link` varchar(255) DEFAULT NULL,
+  `price` decimal(10,2) DEFAULT 0.00,
+  `status` enum('upcoming','ongoing','completed') NOT NULL DEFAULT 'upcoming',
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `course_image` varchar(255) DEFAULT NULL,
+  `image_url` text DEFAULT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `creator_role` int(11) DEFAULT 2,
+  `expert_id` int(11) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT NULL,
+  `updated_by` int(11) DEFAULT NULL,
+  `subtitle` varchar(255) DEFAULT NULL,
+  `level` enum('beginner','intermediate','advanced') DEFAULT 'beginner',
+  `language` varchar(64) DEFAULT 'English',
+  `currency` varchar(16) DEFAULT 'usd',
+  `estimated_hours` varchar(32) DEFAULT NULL,
+  `visibility` enum('public','unlisted','private') DEFAULT 'public',
+  `trailer_url` varchar(255) DEFAULT NULL,
+  `publish_state` enum('draft','published','archived') DEFAULT 'draft',
+  `fb_pixel_id` varchar(50) DEFAULT NULL,
+  `is_deleted` tinyint(1) DEFAULT 0,
+  `deleted_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `courses`
+--
+
+LOCK TABLES `courses` WRITE;
+/*!40000 ALTER TABLE `courses` DISABLE KEYS */;
+INSERT INTO `courses` VALUES
+(5,'Hello 2','hello','<p>Hi</p><p>Hellow</p>','1899-11-27','1899-11-27','','',20.00,'upcoming',0,'/uploads/courses/thumbnails/1755346349217-2025-08-15_193438.png',NULL,3,2,3,'2025-08-16 12:12:29','2025-08-16 21:46:12',NULL,'hiii','beginner','English','usd','9','public','www/youtube.com','archived',NULL,1,'2025-12-13 23:54:28'),
+(14,'Hellow','hellow','<p>Hi</p>','0000-00-00','0000-00-00','','',20.00,'upcoming',1,'/uploads/courses/thumbnails/1755443226730-bg.jpg',NULL,1,2,1,'2025-08-17 15:07:06','2025-08-17 21:09:47',NULL,'fd','beginner','English','usd','8','public','','published',NULL,0,NULL),
+(15,'Digital Marketing Masterclass','digital-marketing-masterclass','<p>In this course, you will learn how to build and optimize websites, run digital marketing campaigns, and apply real-world strategies to grow your business.</p>','2025-08-20','2025-08-21','60','https://prosfata.com/experts',90.00,'upcoming',0,'/uploads/courses/thumbnails/1755703407189-191113-happyyoungemployee-stock.jpg',NULL,3,2,3,'2025-08-20 15:23:27',NULL,NULL,'Digital Marketing','beginner','Spanish','usd','2 hours','public','https://prosfata.com/experts','archived',NULL,1,'2025-12-13 23:54:26'),
+(16,'Web Development Beginner to Advanced','web-development-beginner-to-advanced','<p>In this course, you will learn how to build and optimize websites, run digital marketing campaigns, and apply real-world strategies to grow your business.</p>','2025-08-20','2025-08-21','60 mins','https://prosfata.com/experts',0.00,'upcoming',0,'/uploads/courses/thumbnails/1755703858969-online-courses.jpg',NULL,3,2,3,'2025-08-20 15:30:58',NULL,NULL,'Beginner to Advanced','beginner','English','usd','1 hour','public','https://prosfata.com/experts','archived',NULL,1,'2025-12-13 23:54:23'),
+(17,'Full-Stack Armey','full-stack-armey','','2025-10-10','2026-02-05','800','',0.00,'upcoming',1,NULL,NULL,10,2,10,'2025-09-13 08:33:55','2025-09-13 08:34:03',NULL,'This course for beginner friendly for every learner','intermediate','English','usd','72','public','','published',NULL,0,NULL),
+(18,'First Steps in Finding Job Opportunities in a New Country - The Canada Newcomer Case Study ','first-steps-in-finding-job-opportunities-in-a-new-country-the-canada-newcomer-case-study','<p>Are you a newcomer to a new country, feeling overwhelmed by the job search process? Do you have skills and experience, but don\'t know how to translate them for the Canadian market? You\'re not alone. The Canadian job landscape has its own unique rules, and navigating them can be a significant challenge. This course is your first step to turning that challenge into a successful career.</p><p>In this comprehensive and practical course, we will walk you through the essential strategies and tools specifically designed for newcomers to new countries. Using a case study approach, you\'ll gain a deep understanding of the Canadian job market and learn how to position yourself as a strong candidate. We\'ll go beyond generic advice to give you actionable insights that get results.</p><p><br></p><p><strong>What You\'ll Learn &amp; What You\'ll Achieve:</strong></p><ul><li><strong>Master the Canadian Resume &amp; Cover Letter:</strong> Learn how to create documents that get past Applicant Tracking Systems (ATS) and impress Canadian recruiters. We\'ll show you how to highlight your international experience and skills in a way that resonates with local employers.</li><li><strong>Build Your Professional Network:</strong> Discover the power of networking in new countries. We\'ll teach you proven strategies for making meaningful connections, conducting informational interviews, and accessing the hidden job market where most positions are filled.</li><li><strong>Navigate the Interview Process:</strong> Gain confidence for your job interviews. We\'ll cover common Canadian interview questions, proper etiquette, and how to effectively tell your professional story to showcase your value.</li><li><strong>Leverage Your Digital Presence:</strong> Optimize your LinkedIn profile and other online tools to attract recruiters and build your professional brand in new countries.</li></ul><p><br></p><p><strong>This course is for you if you are:</strong></p><ul><li>A recent immigrant or permanent resident in a new country.</li><li>An internationally-trained professional or skilled worker.</li><li>Feeling stuck or unsure about your job search strategy.</li><li>Ready to invest in your future and take control of your career path.</li></ul><p><br></p><p><strong>Don\'t let your dream job in new countries remain just a dream. The right strategy can make all the difference. Get started on your path to a successful career today.</strong></p><p><br></p>','2025-09-14','2025-09-29','60 minutes','',11.00,'upcoming',1,'/uploads/courses/thumbnails/1757770299749-ai-generated-1757770248685.jpg',NULL,6,2,6,'2025-09-13 13:31:39','2025-09-13 14:20:38',NULL,'Newcomer job hunting strategies to help them find the first right job opportunities. ','beginner','English','usd','1 Hour','public','https://youtu.be/d6Y0sc77p9s?si=yrSm7Y6KnUV84FT_ ','published',NULL,0,NULL),
+(19,'Complete Web Development Bootcamp: Beginner to Pro','complete-web-development-bootcamp-beginner-to-pro','<p>This course is designed to take you from a complete beginner to a confident web developer. You will start with the foundations of web technologies and gradually move toward building full-stack applications. Throughout the journey, you’ll learn how to design responsive websites using HTML, CSS, and JavaScript, and then level up your skills with modern frameworks like React. On the server side, you’ll work with Node.js and Express to handle backend logic, while databases such as MongoDB and MySQL will help you manage data efficiently.</p><p>The course is entirely project-based, ensuring that you gain real-world experience by building practical applications. By the end of the program, you will have your own portfolio of projects, giving you the confidence and credibility to apply for web development jobs or start freelancing as a professional developer.This course is designed to take you from a complete beginner to a confident web developer. You will start with the foundations of web technologies and gradually move toward building full-stack applications. Throughout the journey, you’ll learn how to design responsive websites using HTML, CSS, and JavaScript, and then level up your skills with modern frameworks like React. On the server side, you’ll work with Node.js and Express to handle backend logic, while databases such as MongoDB and MySQL will help you manage data efficiently.</p><p>The course is entirely project-based, ensuring that you gain real-world experience by building practical applications. By the end of the program, you will have your own portfolio of projects, giving you the confidence and credibility to apply for web development jobs or start freelancing as a professional developer.This course is designed to take you from a complete beginner to a confident web developer. You will start with the foundations of web technologies and gradually move toward building full-stack applications. Throughout the journey, you’ll learn how to design responsive websites using HTML, CSS, and JavaScript, and then level up your skills with modern frameworks like React. On the server side, you’ll work with Node.js and Express to handle backend logic, while databases such as MongoDB and MySQL will help you manage data efficiently.</p><p>The course is entirely project-based, ensuring that you gain real-world experience by building practical applications. By the end of the program, you will have your own portfolio of projects, giving you the confidence and credibility to apply for web development jobs or start freelancing as a professional developer.This course is designed to take you from a complete beginner to a confident web developer. You will start with the foundations of web technologies and gradually move toward building full-stack applications. Throughout the journey, you’ll learn how to design responsive websites using HTML, CSS, and JavaScript, and then level up your skills with modern frameworks like React. On the server side, you’ll work with Node.js and Express to handle backend logic, while databases such as MongoDB and MySQL will help you manage data efficiently.</p><p>The course is entirely project-based, ensuring that you gain real-world experience by building practical applications. By the end of the program, you will have your own portfolio of projects, giving you the confidence and credibility to apply for web development jobs or start freelancing as a professional developer.</p>','2025-09-16','2025-09-24','120','',0.00,'upcoming',1,'/uploads/courses/thumbnails/1757853439010-top11.png',NULL,3,2,3,'2025-09-14 12:37:19','2026-01-02 13:53:10',NULL,'Beginner to Pro 2','intermediate','English','usd','3','public','','draft','445645757457',0,NULL),
+(20,'Discover Your Path with Career Direction & Labor Market Insights','discover-your-path-with-career-direction-labor-market-insights','<p>In today’s ever-changing job landscape, understanding the direction of your career and the trends shaping the labor market is essential for success. Our <strong>Career Direction &amp; Labor Market Insights</strong> coaching helps you align your strengths, passions, and professional goals with the realities of the modern workforce.</p><p><br></p><p>Through expert guidance, we analyze your career options, explore high-demand industries, and uncover emerging roles that match your skills. You’ll gain valuable insight into salary expectations, growth potential, and future opportunities — empowering you to make informed, strategic career moves.</p><p><br></p><p>Whether you’re a recent graduate planning your first step or an experienced professional seeking a new challenge, our sessions provide clarity, confidence, and direction. It’s not just about finding a job — it’s about building a career that evolves with you.</p>','2025-10-21','2025-12-24','120','',250.00,'upcoming',0,'/uploads/courses/thumbnails/1760943708141-career.png',NULL,20,2,20,'2025-10-20 07:01:57',NULL,NULL,'Gain clarity on where your skills meet opportunity — and where your future is headed.','advanced','English','usd','2','public','https://www.youtube.com/','draft',NULL,0,NULL),
+(21,'Certified Mentorship & Career Pathways Strategist','certified-mentorship-career-pathways-strategist','<p>Become a trusted architect of professional growth. This course helps you master the art and science of mentoring, career mapping, and strategic development. Learn how to create scalable mentorship programs, analyze career trends, and design customized pathways that empower individuals and teams to reach their goals.</p><p>You’ll discover how to:</p><ul><li>Build structured mentorship programs that inspire results</li><li>Design career pathways aligned with organizational strategy</li><li>Coach mentees with clarity, empathy, and measurable goals</li><li>Apply proven frameworks to accelerate workforce development</li></ul><p>Perfect for HR leaders, coaches, educators, and team managers ready to transform potential into performance.</p>','2025-10-20','2025-12-17','120','',350.00,'upcoming',0,'/uploads/courses/thumbnails/1760966169274-empower.png',NULL,21,2,21,'2025-10-20 13:16:21',NULL,NULL,'Design, Develop, and Drive Career Growth with Impactful Mentorship Frameworks','intermediate','English','usd','30','public','https://www.youtube.com/','draft',NULL,0,NULL),
+(22,'People-Centered Growth & Transformation Leader','people-centered-growth-transformation-leader','<p>The <em>People-Centered Growth &amp; Transformation Leader</em> course is designed for professionals, managers, and aspiring leaders who want to build impactful organizations rooted in empathy, collaboration, and purpose.</p><p>In today’s evolving world, true leadership goes beyond authority — it’s about understanding people, empowering teams, and guiding transformation with heart and strategy.</p><p>Through this course, you will learn to:</p><ul><li>Develop a people-first leadership mindset.</li><li>Build trust and foster team engagement.</li><li>Navigate organizational change with confidence and compassion.</li><li>Create sustainable growth strategies that align business goals with human values.</li><li>Apply practical frameworks for emotional intelligence, communication, and transformation leadership.</li></ul><p>By the end of this program, you’ll have the skills to lead transformation that not only drives results but also uplifts the people behind the success.</p>','2025-10-22','2026-01-14','120','',300.00,'upcoming',0,'/uploads/courses/thumbnails/1760980749086-growth-bussiness.jpg',NULL,22,2,22,'2025-10-20 17:19:16',NULL,NULL,'Lead with empathy, drive innovation, and create lasting transformation through people-first leadership strategies.','advanced','English','usd','40','public','https://www.youtube.com/','draft',NULL,0,NULL),
+(23,'Technology & People Leader — Driving Sustainable Innovation','technology-people-leader-driving-sustainable-innovation','<p>The future of leadership lies at the intersection of <strong>technology, people, and purpose</strong>.</p><p> This course, <em>Technology &amp; People Leader — Driving Sustainable Innovation</em>, is designed for professionals and executives who want to lead digital transformation while building people-centered, sustainable organizations.</p><p>In this program, you’ll learn how to:</p><ul><li>Develop leadership strategies that balance innovation and human impact.</li><li>Guide teams through change with empathy, clarity, and resilience.</li><li>Implement sustainable technologies that drive long-term organizational success.</li><li>Build cultures that foster creativity, collaboration, and continuous learning.</li><li>Align business goals with social and environmental responsibility.</li></ul><p>Through expert frameworks, case studies, and interactive exercises, you’ll gain the tools to become a <strong>visionary leader</strong> — one who understands that innovation isn’t just about technology, but about the people who make it possible.</p>','2025-10-21','2026-01-29','120','',400.00,'upcoming',1,'/uploads/courses/thumbnails/1760982061895-innovationleader.jpg',NULL,23,2,23,'2025-10-20 17:41:25','2025-10-20 17:47:59',NULL,'Master the art of leading innovation through technology','intermediate','English','usd','40','public','https://www.youtube.com/','published',NULL,0,NULL),
+(24,'Senior IT Strategist & Enterprise Architecture Consultant','senior-it-strategist-enterprise-architecture-consultant','<p>This comprehensive course empowers aspiring IT leaders, architects, and consultants to design and implement enterprise-level solutions that align with organizational strategy.</p><p> Learn how to transform business challenges into structured, scalable technology roadmaps that fuel innovation and efficiency.</p><p>Throughout this program, you will:</p><ul><li>Understand the fundamentals and frameworks of <strong>Enterprise Architecture (EA)</strong></li><li>Learn to create <strong>strategic IT roadmaps</strong> aligned with business goals</li><li>Explore <strong>governance models, digital transformation principles,</strong> and best practices</li><li>Develop the mindset of a <strong>strategic technology leader</strong> who drives measurable outcomes</li><li>Gain hands-on insights from real-world case studies and architectural models</li></ul><p>By the end of this course, you’ll have the skills to act as a bridge between business vision and technology execution — capable of leading transformation initiatives and shaping the future of IT within your organization.</p>','2025-10-23','2025-12-24','120','',350.00,'upcoming',1,'/uploads/courses/thumbnails/1760984057150-itcourse.jpg',NULL,24,2,24,'2025-10-20 18:14:22','2025-10-20 18:15:14',NULL,'Master the art of aligning business strategy with enterprise technology to drive digital transformation and sustainable growth.','advanced','English','usd','40','public','https://www.youtube.com/','published',NULL,0,NULL),
+(25,'Mastering Human Resources Strategy: Talent Acquisition & Employee Development','mastering-human-resources-strategy-talent-acquisition-employee-development','<p>This course is designed for HR professionals, managers, and business leaders who want to strategically attract, develop, and retain top talent. Learn how to align HR practices with business goals, enhance employee engagement, and create a culture of continuous growth.</p><p><strong>What You Will Learn:</strong></p><ul><li>Strategic Talent Acquisition: Attracting the Right Candidates</li><li>Employee Onboarding &amp; Retention Best Practices</li><li>Leadership &amp; Career Development Coaching</li><li>Performance Management &amp; Skill Enhancement</li><li>Building a Positive and Productive Organizational Culture</li></ul><p>By the end of this course, you will have the tools and insights to drive effective HR strategies, maximize workforce potential, and elevate your organization’s overall performance.</p>','2025-10-24','2026-01-23','120','',400.00,'upcoming',1,'/uploads/courses/thumbnails/1760985002044-human-course.jpg',NULL,25,2,25,'2025-10-20 18:30:10','2025-10-20 18:31:00',NULL,'Build High-Performing Teams and Foster Organizational Growth','advanced','English','usd','40','public','https://www.youtube.com/','published',NULL,0,NULL);
+/*!40000 ALTER TABLE `courses` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `expert_education`
+--
+
+DROP TABLE IF EXISTS `expert_education`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `expert_education` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `degree` varchar(255) DEFAULT NULL,
+  `institution` varchar(255) DEFAULT NULL,
+  `graduation_year` year(4) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `expert_education`
+--
+
+LOCK TABLES `expert_education` WRITE;
+/*!40000 ALTER TABLE `expert_education` DISABLE KEYS */;
+INSERT INTO `expert_education` VALUES
+(1,3,'MBA','XYZ University',2018),
+(2,6,'Bachelor of Commerce (BCom)','School of Business - Catholic University of Eastern Africa',2100),
+(3,6,'MA Leading Innovation and Change (MALIC)','York St John University & Robert Kennedy College',2015),
+(4,6,'Master of Management Innovation & Entrepreneurship (MMIE)','Smith School of Business - Queen\'s University',2018);
+/*!40000 ALTER TABLE `expert_education` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `expert_experiences`
+--
+
+DROP TABLE IF EXISTS `expert_experiences`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `expert_experiences` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `job_title` varchar(255) DEFAULT NULL,
+  `company` varchar(255) DEFAULT NULL,
+  `start_date` date DEFAULT NULL,
+  `end_date` date DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `expert_experiences`
+--
+
+LOCK TABLES `expert_experiences` WRITE;
+/*!40000 ALTER TABLE `expert_experiences` DISABLE KEYS */;
+INSERT INTO `expert_experiences` VALUES
+(1,3,'Coach','ABC','2020-01-01','2022-12-31','2025-08-05 17:05:27'),
+(2,6,'National Program Director – Business Development Centers','Private Sector Federation (PSF)','2005-11-01','2010-11-30','2025-10-11 19:38:05'),
+(3,6,'Rwanda Chapter Manager','Enablis EAC','2011-01-10','2011-06-30','2025-10-11 19:39:19'),
+(4,6,'Interim CEO - Confederation of  Danish Industries (DI) Contract','South Sudan Chamber of Commerce, Industry and Agriculture','2012-08-01','2014-05-31','2025-10-11 19:40:41'),
+(5,6,'Co - Founder and Managing Associate in Charge of Entrepreneurship and Business Development','Indigo Int. Ltd','2010-05-02','2018-01-31','2025-10-11 19:41:58'),
+(6,6,'Student Advisor','Smith School of Business at Queen\'s University · Contract','2020-07-07','2021-09-30','2025-10-11 19:43:54'),
+(7,6,'Jim Leech Mastercard Foundation Fellowship Project Coordinator','Dunin-Deshpande Queen\'s Innovation Centre · Contract Full-time','2020-09-16','2022-01-31','2025-10-11 19:45:03'),
+(8,6,'Adjunct Professor Entrepreneurship & Business Strategy','St. Lawrence College · Contract Full-time','2020-09-10','2022-04-26','2025-10-11 19:46:06'),
+(9,6,'Board Member','Small Business Centres Ontario','2022-08-11','2025-08-30','2025-10-11 19:47:10'),
+(10,6,'Member Board of Directors','Black Entrepreneur Ecosystem - South Eastern Ontario','2021-01-19',NULL,'2025-10-11 19:48:01'),
+(11,6,'Founder','BizSkills For Good Inc.  BizSkills For Good Inc.','2021-01-31',NULL,'2025-10-11 19:48:44'),
+(12,6,'Business Development Manager - Start-ups and Entrepreneurship','Kingston Economic Development Corporation · Permanent Full-time','2020-02-28',NULL,'2025-10-11 19:49:38'),
+(13,6,'Chief Executive Officer','Prosfata Inc.','2023-08-30',NULL,'2025-10-11 19:50:46');
+/*!40000 ALTER TABLE `expert_experiences` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `expert_languages`
+--
+
+DROP TABLE IF EXISTS `expert_languages`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `expert_languages` (
+  `id` int(11) NOT NULL,
+  `expert_id` int(11) NOT NULL,
+  `language` varchar(100) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `expert_languages`
+--
+
+LOCK TABLES `expert_languages` WRITE;
+/*!40000 ALTER TABLE `expert_languages` DISABLE KEYS */;
+INSERT INTO `expert_languages` VALUES
+(16,5,'EnglishHindi'),
+(22,1,'English'),
+(29,3,'English'),
+(30,3,'French'),
+(32,20,'English'),
+(33,21,'English'),
+(34,22,'English'),
+(35,23,'English'),
+(36,24,'English'),
+(37,25,'English');
+/*!40000 ALTER TABLE `expert_languages` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `expert_profile_slug_backup`
+--
+
+DROP TABLE IF EXISTS `expert_profile_slug_backup`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `expert_profile_slug_backup` (
+  `user_id` int(11) NOT NULL,
+  `old_slug` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `old_url` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci DEFAULT NULL,
+  `backed_up_at` datetime NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `expert_profile_slug_backup`
+--
+
+LOCK TABLES `expert_profile_slug_backup` WRITE;
+/*!40000 ALTER TABLE `expert_profile_slug_backup` DISABLE KEYS */;
+INSERT INTO `expert_profile_slug_backup` VALUES
+(3,'expert-3','https://prosfata.space/expert/imran-hossen','2025-10-08 16:55:33'),
+(5,'expert-5','https://prosfata.space/expert/mr-alex-joe','2025-10-08 16:55:33'),
+(4,'expert-4',NULL,'2025-10-08 16:55:33'),
+(1,'expert-1','https://prosfata.space/expert/mohammad-abu-taleb','2025-10-08 16:55:33'),
+(6,'norman-musengimana','https://prosfata.space/expert/expert/norman-musengimana','2025-10-08 16:55:33'),
+(2,'expert-2',NULL,'2025-10-08 16:55:33'),
+(7,'khadiza-khatun','https://prosfata.space/expert/expert/khadiza-khatun','2025-10-08 16:55:33'),
+(10,'md-razu-ahamad','https://prosfata.space/expert/expert/md-razu-ahamad','2025-10-08 16:55:33'),
+(15,'nashiru-muniru','https://prosfata.space/expert/expert/nashiru-muniru','2025-10-08 16:55:33'),
+(16,'anthony-ighomuaye','https://prosfata.space/expert/expert/anthony-ighomuaye','2025-10-08 16:55:33');
+/*!40000 ALTER TABLE `expert_profile_slug_backup` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `expert_profiles`
+--
+
+DROP TABLE IF EXISTS `expert_profiles`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `expert_profiles` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `headline` text DEFAULT NULL,
+  `bio` text DEFAULT NULL,
+  `languages` varchar(255) DEFAULT NULL,
+  `graduated` tinyint(1) DEFAULT 0,
+  `stripe_account_id` varchar(255) DEFAULT NULL,
+  `public_url_slug` varchar(255) NOT NULL,
+  `public_profile_url` varchar(255) DEFAULT NULL,
+  `total_sessions_completed` int(11) DEFAULT 0,
+  `is_verified` tinyint(1) DEFAULT 0,
+  `rating_avg` decimal(3,2) NOT NULL DEFAULT 0.00,
+  `rating_count` int(11) NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `expert_profiles`
+--
+
+LOCK TABLES `expert_profiles` WRITE;
+/*!40000 ALTER TABLE `expert_profiles` DISABLE KEYS */;
+INSERT INTO `expert_profiles` VALUES
+(1,3,'Full-Stack Developer','<p>Uploads <strong>photo first</strong>, then PUTs the JSON payload.</p><p>Keeps <strong>location</strong> in its own textarea so it’s easy to view/edit.</p><p>Prevents accidental nulls by falling back to the GET snapshot for any unset field.</p>','English',0,NULL,'imran-hossen','https://prosfata.space/view/experts/imran-hossen',0,1,0.00,0),
+(6,5,'Senior Web Developer','<p>You don’t need to touch your APIs. If you want the “Course” count to be precise, return total_services_offered (or a similar field) in /experts; the card already reads several possible names.</p>',NULL,0,NULL,'mr-alex-joe','https://prosfata.space/view/experts/mr-alex-joe',0,1,0.00,0),
+(7,4,NULL,NULL,NULL,0,NULL,'mohammad-abu-taleb-2','https://prosfata.space/view/experts/mohammad-abu-taleb-2',0,0,0.00,0),
+(42,6,'Expert in Change Strategy | Social Innovation + Entrepreneurship | Innovation Systems |  Economic Development','<h1><strong>Professional Disclosure Statement:</strong></h1><p><strong>Important Notice:</strong> I am a full-time employee of <a href=\"https://www.investkingston.ca/\" rel=\"noopener noreferrer\" target=\"_blank\">Kingston Economic Development Corporation</a>. If you live or operate a business in the greater Kingston, Ontario, you are entitled to receive my services at NO COST through Kingston Economic Development\'s programs.</p><h3>Please contact Kingston Economic Development directly at <a href=\"tel:(613) 544-2725\" rel=\"noopener noreferrer\" target=\"_blank\">(613) 544-2725</a> to access these free services. The consulting services offered through Prosfata Inc. (My Side Hustle) are exclusively for people and businesses that live outside the Greater Kingston area, thank you.</h3><p><br></p><p>			|||																	|||																	|||</p><h3><br></h3><h3>Norman Musengimana helps people start right and grow well. A global expert in career and professional development, Change Strategy, social innovation and entrepreneurship, Innovation Systems, and economic development, he designs performance-based programs that turn intention into jobs, ventures, and organizations into industry leaders.</h3><p><br></p><h3>At Kingston Economic Development, Norman advises early-stage founders and internationally trained professionals, pilots new programs, and supports innovation across Ontario’s network—serving on the inaugural Small Business Centres Ontario Board of Directors. He also advises the Southwestern Ontario Black Entrepreneurship Network (SWOBEN). Previously, he led private-sector and entrepreneurship initiatives with the Private Sector Federation of Rwanda and Enablis East Africa, collaborating with partners such as JICA, KOICA, Dansk Industri, etc. to support MSMEs and women-led enterprises in Rwanda and South Sudan.</h3><p><br></p><h3>His Start-Right Framework <strong>(Clarify → Validate → Execute → Scale)</strong> delivers accountable outcomes: He has helped over 700 founders launch and scale their ventures, coached over 100 job seekers, developed more than 20 leadership programs, and delivered over 30 on-the-job training programs for organizations, among many more services.</h3><h3><br></h3><h3>Known for calm, human-first coaching and practical systems design, Norman connects talent, capital, multiculturalism, and institutions so clients can develop targeted strategies and collaborate to develop the right implementation plans as well as follow-up programs.</h3><p><br></p><p>Do you want to become an industry leader? Collaborate with Norman today.</p><p><br></p><p>See you soon!</p><h3><br></h3>',NULL,0,NULL,'norman-musengimana','https://prosfata.space/view/experts/norman-musengimana',0,1,0.00,0),
+(51,2,'','',NULL,0,NULL,'mustafizur-rahman','https://prosfata.space/view/experts/mustafizur-rahman',0,1,0.00,0),
+(53,7,NULL,NULL,NULL,0,NULL,'khadiza-khatun','https://prosfata.space/view/experts/khadiza-khatun',0,0,0.00,0),
+(54,10,'','',NULL,0,NULL,'md-razu-ahamad','https://prosfata.space/view/experts/md-razu-ahamad',0,0,0.00,0),
+(66,15,NULL,NULL,NULL,0,NULL,'nashiru-muniru','https://prosfata.space/view/experts/nashiru-muniru',0,1,0.00,0),
+(67,16,NULL,NULL,NULL,0,NULL,'anthony-ighomuaye','https://prosfata.space/view/experts/anthony-ighomuaye',0,1,0.00,0),
+(68,18,'','',NULL,0,NULL,'joshua-wanyonyi','https://prosfata.space/expert/view/experts/joshua-wanyonyi',0,0,0.00,0),
+(86,19,NULL,NULL,NULL,0,NULL,'marlene-adelson','https://prosfata.space/expert/view/experts/marlene-adelson',0,0,0.00,0),
+(87,20,'Professional Career Coach Who Optimizes Client Outcomes through Industry Experience and Employer Perspective','<p>Results-oriented and insightful coach who adds insider employer perspective/industry expertise to the job search experience. As a Career Management Consultant, I coach job seekers and career changers through the full cycle of developing an effective search strategy, communicating with a magnet resume/effective cover letter/LinkedIn profile - to preparing for successful interviews, offer negotiations and onboarding :-). Passionate about seeing people land their dream job, I have been well-recognized for mentoring, coaching coaches and providing wise counsel. A career changer myself, my professional background includes HR Leadership, Technology pre and post sales support across Government, Retail, Technology, Healthcare, and Professional Services. As a volunteer, I facilitate English Language workshops to help newcomers practice their speaking skills. Expertise in: Executive Coaching | Career Transition | Personal Branding | Networking &amp; Marketing | Job Search Strategy | Hidden Job Market Access | Interview Preparation | Negotiating Strategy | Entrepreneurial Success | Plan B</p>',NULL,0,NULL,'marlene-adelson-2','https://prosfata.space/expert/view/experts/marlene-adelson-2',0,0,0.00,0),
+(94,21,'Mentorship & Career Pathways Strategist','<p>Hello! My name is Thandi. My career journey spans over 15 years, commencing with initiation into the realm of quality assurance and the mining industry in Zambia and India before moving to Canada. Throughout my professional evolution from the mining industry, healthcare, not for profit to Higher Education, I have embraced diverse roles such as Process Associate, Data Processor, Implementation Advisor, Quality Improvement Consultant, Mentorship Program Coordinator, Career development Instructor and Student &amp; Industry Engagement Specialist. Each of these roles has contributed to my wealth of skills and understanding of the Canadian and global workforce. I am an enthusiastic role model, coach and mentor who is passionate about identifying and bridging gaps related to access to education, employment, career and professional development resources.</p>',NULL,0,NULL,'thandi-nkole','https://prosfata.space/expert/view/experts/thandi-nkole',0,0,0.00,0),
+(97,22,'People-Centered Growth & Transformation Leader','<p>Throughout my career, what truly inspires me is being part of the growth and transformation journeys of businesses and leaders. I see every day as a new opportunity for personal development and growth, always striving to be better than the day before. I’d describe myself as someone who: &gt; Loves to explore possibilities: I’m constantly asking ‘what if’ and ‘so what’ to see things from fresh perspectives. &gt; Fueled by curiosity and passion: My biggest motivator is creating a ‘no regrets’ learning culture where growth and learning are always at the heart of what we do. &gt; Energized by perseverance: I take pride in building strong, meaningful relationships, leading projects with care and precision, and delivering impactful solutions. &gt; Grounded in collaboration: My motto is ‘people first.’ I’m passionate about building high-performing teams, fostering a culture of inclusiveness and respect, and leading with empathy and authenticity every step of the way. This is what drives me! I would love to connect and learn more about your journey.</p>',NULL,0,NULL,'kanika-passi','https://prosfata.space/expert/view/experts/kanika-passi',0,0,0.00,0),
+(100,23,'Technology & People Leader | Driving Sustainable Innovation','<p>Experienced Senior Technology Leader with 18+ years of Industrial Experience in a variety of Leadership Roles in Corporate &amp; Business R&amp;D, focused on People, Technology &amp; Sustainable Innovation, delivering Value &amp; Growth to the Company. Led the efforts of numerous Scientists, Engineers &amp; Technologists across a broad range of Businesses &amp; Applications. Has co-authored over 50 peer reviewed conference and journal publications, has 15 issued US patents, and has been invited to serve on multiple advisory boards and innovation councils.</p>',NULL,0,NULL,'george-jacob','https://prosfata.space/expert/view/experts/george-jacob',0,0,0.00,0),
+(103,24,'Senior IT Strategist & Enterprise Architecture Consultant','<p>Over 30 Years of IT experience in program and project management, architecture strategy and execution, application development, team &amp; people management, and systems management. 10 years of experience in physical and chemical engineering in process environment. Fields of expertise: * IT strategy and Enterprise IT architecture * Strategic and bid assessments, benefit &amp; cost/ROI analysis, and implementation planning * Various IS solution delivery (ITSM, Analytics, ERP, Portals, eCommerce) * People management, career coaching and mentoring * Program and project management * Systems management and ITIL * Management consulting on IT strategy, and roadmap development * Internet Marketing and Web Development Specialties: Application &amp; Product Strategy, Service Management Solution Delivery in complex IT architectures, Operational Business Intelligence, People Management, Certification in Internet Marketing &amp; Strategy (CIMBS)</p>',NULL,0,NULL,'jan-mascini','https://prosfata.space/expert/view/experts/jan-mascini',0,0,0.00,0),
+(106,25,'Human Resources Strategist | Talent Acquisition & Employee Development','<p>With a decade of experience, Lisa\'s HR career has included roles in recruitment life cycle management, strategic planning, employee development and benefit administration. Her experience spans both entrepreneurial start-ups and established global players, in diverse industries such as eye care, IT, market research, satellite radio, food retail and supportive housing.</p>',NULL,0,NULL,'lisa-macdonald','https://prosfata.space/expert/view/experts/lisa-macdonald',0,0,0.00,0),
+(109,26,NULL,NULL,NULL,0,NULL,'jean-paul','https://prosfata.space/expert/view/experts/jean-paul',0,0,0.00,0);
+/*!40000 ALTER TABLE `expert_profiles` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `expert_reviews`
+--
+
+DROP TABLE IF EXISTS `expert_reviews`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `expert_reviews` (
+  `id` int(11) NOT NULL,
+  `service_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `rating` decimal(2,1) NOT NULL CHECK (`rating` between 1 and 5),
+  `review` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `expert_reviews`
+--
+
+LOCK TABLES `expert_reviews` WRITE;
+/*!40000 ALTER TABLE `expert_reviews` DISABLE KEYS */;
+/*!40000 ALTER TABLE `expert_reviews` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `expert_service_categories`
+--
+
+DROP TABLE IF EXISTS `expert_service_categories`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `expert_service_categories` (
+  `service_id` int(11) NOT NULL,
+  `category_id` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `expert_service_categories`
+--
+
+LOCK TABLES `expert_service_categories` WRITE;
+/*!40000 ALTER TABLE `expert_service_categories` DISABLE KEYS */;
+INSERT INTO `expert_service_categories` VALUES
+(1,1),
+(3,1),
+(4,1),
+(5,1),
+(5,5),
+(5,7),
+(5,13),
+(5,14),
+(6,2),
+(6,3),
+(7,14),
+(9,5),
+(9,11),
+(9,12),
+(9,14),
+(9,15),
+(10,3),
+(10,5),
+(10,9),
+(10,11),
+(10,12),
+(10,14),
+(10,15),
+(11,5),
+(11,6),
+(11,10),
+(11,11),
+(11,12),
+(11,14),
+(11,15),
+(12,4),
+(12,5),
+(12,8),
+(12,10),
+(12,11),
+(12,12),
+(12,13),
+(12,14),
+(12,15),
+(13,2),
+(13,3),
+(13,4),
+(13,5),
+(13,8),
+(13,9),
+(13,10),
+(13,14),
+(14,4),
+(14,5),
+(14,7),
+(14,10),
+(14,11),
+(14,13),
+(14,14),
+(14,15);
+/*!40000 ALTER TABLE `expert_service_categories` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `expert_services`
+--
+
+DROP TABLE IF EXISTS `expert_services`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `expert_services` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `description` text DEFAULT NULL,
+  `price` decimal(10,2) DEFAULT NULL,
+  `image` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `is_consultation` tinyint(1) NOT NULL DEFAULT 0,
+  `fb_pixel_id` varchar(50) DEFAULT NULL,
+  `is_deleted` tinyint(1) DEFAULT 0,
+  `deleted_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `expert_services`
+--
+
+LOCK TABLES `expert_services` WRITE;
+/*!40000 ALTER TABLE `expert_services` DISABLE KEYS */;
+INSERT INTO `expert_services` VALUES
+(1,3,'Resume Coaching','Expert help on resume',19.99,'/uploads/service_images/image-1754423016143-225351101.jpg','2025-08-05 19:21:28','2025-12-13 17:55:07',0,NULL,1,'2025-12-13 23:55:07'),
+(2,3,'Resume Coaching','Expert help on resume',49.99,'/uploads/service_images/image-1754569451107-952051340.jpg','2025-08-07 12:24:11','2025-12-13 17:55:04',0,NULL,1,'2025-12-13 23:55:04'),
+(3,3,'Interview Session Expert','<p class=\"ql-align-justify\">Customer service executives are the backbone of companies, who often communicate with their customers. These specialists help businesses establish and maintain strong relationships with their customers and clients. Knowing more about this domain will help you decide whether you want to pursue this career.</p><p class=\"ql-align-justify\"><br></p><h2>Who is a Customer Service Executive?</h2><p class=\"ql-align-justify\">A customer service executive is a professional who is responsible for communicating the reasons and methods related to service expectations within an organization. These professionals are assigned several duties, including answering phone calls, responding to customer questions, and resolving customer issues. They are typically responsible for front-line responsibilities that have a direct impact on a company\'s customer experience. They may also supervise a team of customer care professionals and train them on how to handle consumer complaints.</p><p class=\"ql-align-justify\">On the other hand, some customer service jobs are suitable for freshers, which range across a broad spectrum of categories, including call centers, technology, hospitality, education, and finance.</p><h2>10 Most Asked Customer Service Interview Questions</h2><ol><li>What is Customer Service?</li><li><a href=\"https://www.simplilearn.com/how-to-introduce-yourself-in-a-job-interview-article\" rel=\"noopener noreferrer\" target=\"_blank\">Tell me about yourself.</a></li><li>How do you prioritize your work?</li><li>How do you handle difficult customers?</li><li>How would previous colleagues describe you?</li><li>What are your greatest strengths?</li><li>How do you cope under pressure?</li><li>What are the top 20 customer service skills?</li><li>&nbsp;What are your career goals?</li><li>How do you keep yourself motivated?</li></ol>',29.00,'/uploads/service_images/image-1755266091630-124515018.png','2025-08-15 13:27:36','2025-12-13 17:55:01',0,NULL,1,'2025-12-13 23:55:01'),
+(4,3,'hh','<p>fdhdfh</p>',30.00,'/uploads/service_images/image-1755344110910-837517836.png','2025-08-16 11:35:10','2025-12-13 18:02:36',0,NULL,1,'2025-12-14 00:02:36'),
+(5,3,'Interview Session','<p>1 to 1 interview preparation</p>',10.00,'/uploads/service_images/image-1755441846854-913300727.jpg','2025-08-17 14:44:06','2025-12-13 14:09:52',0,NULL,1,'2025-12-13 20:09:52'),
+(6,3,'Web Application','<p>Web Application</p>',450.00,'/uploads/service_images/image-1755688325793-725001791.png','2025-08-20 11:12:05','2025-12-14 10:33:36',0,NULL,0,NULL),
+(7,6,'The Newcomer Job Hunting Journey: Strategies to Get Recruiters\' Attention Faster in a New Country','<h2><strong>Why I Can Help You Navigate This Journey</strong></h2><p>I have been a newcomer. Multiple times. In multiple countries. I know the frustration of sending 100+ applications and hearing nothing. I\'ve experienced the confusion of wondering why your impressive international credentials don\'t translate into interviews. I\'ve made the expensive mistakes that cost months of opportunity—mistakes I\'m now going to help you avoid.</p><p>Through my own journey and working with hundreds of newcomers, I\'ve learned what actually works to break into the job market in a new country. This isn\'t generic career advice—this is battle-tested strategy from someone who has walked this path and helped others succeed.</p><h2><br></h2><h2><strong>What I Do (Simple + Practical)</strong></h2><p>I help you turn your international experience into a clear story that local recruiters immediately understand and value. Together we map your skills to the right job titles (NOC/TEER in Canada), build an ATS-friendly resume and LinkedIn profile that gets past automated filters, create a short, focused target-company list, and practice confident, culturally-appropriate interviews—so you can land not just any job, but the right job that advances your career.</p><p>More importantly, I show you the <strong>newcomer mistakes that keep you invisible</strong> and the <strong>specific strategies that get you shortlisted faster</strong>.</p><h2><br></h2><h2><strong>The Mistakes That Cost You Months (That I Made Too)</strong></h2><p><strong>Mistake 1: Using your home country\'s resume format and job titles</strong></p><p> Recruiters scan resumes in 6 seconds. If they don\'t recognize your job titles, see local keywords, or understand your credentials in their context, you\'re invisible—no matter how qualified you are.</p><p><br></p><p><strong>Mistake 2: Applying only through online job boards</strong></p><p> 80% of jobs are filled through the \"hidden market\"—networking and referrals. Most newcomers waste months applying cold online because they don\'t know how to network effectively in a new culture without feeling pushy or inauthentic.</p><p><br></p><p><strong>Mistake 3: Underselling yourself in interviews</strong></p><p> Many cultures value humility. North American interviews reward confident, specific storytelling about your impact. If you can\'t quickly articulate your value in the local interview style, you lose to candidates who can—even if you\'re more qualified.</p><p><strong> </strong></p><p><strong>Mistake 4: Not understanding ATS (Applicant Tracking Systems) 7 the changing nature of the labor market</strong></p><p> Your resume might never reach human eyes if it\'s not formatted correctly or doesn\'t contain the exact keywords the system is scanning for. Beautiful designs often get rejected by robots.</p><p><br></p><p><strong>Mistake 5: Targeting too broadly or applying everywhere</strong></p><p> Desperation leads to scattered applications. This exhausts you, dilutes your personal brand, and makes it impossible to network strategically. Quality and focus beat quantity every time.</p><h2><br></h2><h2><strong>3 Strong Reasons to Book Me Now</strong></h2><h3><strong>Get Seen &amp; Shortlisted Faster</strong></h3><p>I translate your background into the exact local job titles, keywords, and responsibilities that employers search for (using NOC/TEER classification systems) and build an ATS-ready resume that matches those terms precisely.</p><p><strong>Result:</strong> More callbacks in weeks, not months. Less guesswork, more strategy.</p><h3><br></h3><h3><strong>Tap the \"Hidden\" Job Market the Right Way</strong></h3><p>Most roles are filled through networking and warm introductions, but as a newcomer, you might not know where to start or feel comfortable reaching out. I give you ready-to-send messages, a simple outreach tracker, and step-by-step informational interview scripts to reach real decision-makers—without feeling salesy or pushy.</p><p><strong>Result:</strong> Access to opportunities that never get posted online. Real connections that lead to referrals.</p><h3><br></h3><h3><strong>Target the Right Organizations &amp; Interview with Local Confidence</strong></h3><p>We build clear STAR story answers that showcase your impact, practice local interview etiquette and cultural expectations, and plan strong follow-ups—so you show your value quickly and professionally in the style that local employers expect.</p><p><strong>Result:</strong> You walk into interviews feeling prepared, confident, and culturally fluent. You compete on equal footing with local candidates.</p><h2><br></h2><h2><strong>What We\'ll Work On Together</strong></h2><p>✅ <strong>Resume &amp; LinkedIn Transformation</strong></p><ul><li>Convert your international experience into local job titles and language</li><li>Build ATS-friendly formatting that gets past automated filters</li><li>Optimize keywords using NOC/TEER classification</li><li>Create compelling headlines and summaries that get attention</li></ul><p>✅ <strong>Strategic Job Targeting</strong></p><ul><li>Identify your top 10-15 target companies (not 100+)</li><li>Map your skills to realistic, achievable job titles</li><li>Research companies that value international experience</li><li>Stop wasting time on wrong-fit roles</li></ul><p>✅ <strong>Hidden Market Networking</strong></p><ul><li>Ready-to-send outreach templates for LinkedIn and email</li><li>Informational interview scripts that open doors</li><li>Networking tracker to stay organized and follow up</li><li>Cultural do\'s and don\'ts for professional networking in your new country</li></ul><p>✅ <strong>Mindset &amp; Strategy</strong></p><ul><li>Overcoming newcomer impostor syndrome</li><li>Positioning international experience as an asset, not a barrier</li><li>Managing job search stress and staying motivated</li><li>Understanding what employers really mean in job descriptions</li></ul><h2><br></h2><h2><strong>Ready to Start Right?</strong></h2><p><strong>Book your 1:1 Starter Session now</strong> and let\'s:</p><p>✔ Map your top 2–3 target job titles using NOC/TEER</p><p> ✔ Fix your resume headlines and optimize for ATS</p><p> ✔ Identify your first 10 warm networking intros this week</p><p> ✔ Create your personalized job search action plan</p><h1><br></h1><h3><strong>Stop making the mistakes that keep you invisible. Start using the strategies that get you ahead.</strong></h3>',120.00,'/uploads/service_images/image-1760094728920-254774069.jpg','2025-09-13 14:01:30','2025-10-10 11:12:08',0,NULL,0,NULL),
+(9,20,'Strategic Career Growth Planning for a Future-Ready You','<p>Career success doesn’t happen by chance — it’s the result of careful planning, strategic decisions, and continuous growth. Our <strong>Career Growth Strategy Planning</strong> program helps you identify your strengths, set meaningful goals, and build a step-by-step action plan to reach the next level in your career.</p><p><br></p><p>Through expert coaching, you’ll learn how to evaluate your current position, uncover growth opportunities, and align your skills with future market demands. We focus on practical strategies such as networking effectively, enhancing leadership capabilities, and improving your professional brand.</p><p><br></p><p>Whether you aim for a promotion, career transition, or entrepreneurial path, this session equips you with the tools and clarity to move forward confidently. Let’s turn your professional aspirations into achievable milestones — with a strategy that works for you.</p>',300.00,'/uploads/service_images/image-1760944042925-62335455.png','2025-10-20 07:07:34','2025-10-20 07:07:34',0,NULL,0,NULL),
+(10,21,'Mentorship & Career Pathways Strategist','<p>As a <strong>Mentorship &amp; Career Pathways Strategist</strong>, I help individuals and organizations design structured, sustainable, and high-impact mentorship and career growth systems.</p><p>Through data-driven insights and personalized strategies, I create pathways that align people’s potential with organizational goals — turning talent into long-term success.</p><p><strong>My services include:</strong></p><ul><li>Mentorship program design and implementation</li><li>Career mapping and development frameworks</li><li>Leadership and succession planning</li><li>One-on-one and group coaching sessions</li><li>Workforce skill-gap analysis and growth strategy</li></ul><p>Whether you’re an HR leader, educator, or professional seeking direction, I’ll help you unlock clarity, confidence, and measurable progress in your career or organization.</p>',350.00,'/uploads/service_images/image-1760966276283-869190999.png','2025-10-20 13:18:10','2025-10-20 13:18:10',0,NULL,0,NULL),
+(11,22,'People-Centered Growth & Transformation Leadership Coaching','<p>Empower your organization — and yourself — to grow through human connection and purpose-driven leadership.</p><p>As a <strong>People-Centered Growth &amp; Transformation Leader</strong>, I provide personalized coaching and strategic guidance to help leaders and teams thrive during change. My approach focuses on empathy, communication, and collaboration as the foundation for sustainable success.</p><p>Through one-on-one sessions and organizational strategy development, you will learn to:</p><ul><li>Lead with authenticity and emotional intelligence.</li><li>Foster trust, engagement, and high-performing teams.</li><li>Navigate transformation with clarity and confidence.</li><li>Align people, purpose, and performance for long-term impact.</li></ul><p>This service is ideal for executives, entrepreneurs, and organizations seeking to inspire meaningful change while keeping people at the heart of progress.</p><p><strong>Let’s build transformation that begins with people — and grows into lasting success.</strong></p>',300.00,'/uploads/service_images/image-1760980942916-433520288.jpg','2025-10-20 17:23:00','2025-10-20 17:23:00',0,NULL,0,NULL),
+(12,23,'Technology & People Leader | Driving Sustainable Innovation','<p>In today’s rapidly evolving digital world, success requires more than just technology — it demands visionary leadership that connects innovation with people.</p><p> As a <strong>Technology &amp; People Leader</strong>, I help organizations drive sustainable growth by aligning technology strategy with human potential.</p><p>This service focuses on building <strong>future-ready teams</strong>, improving **</p>',400.00,'/uploads/service_images/image-1760982817755-177735289.jpg','2025-10-20 17:54:23','2025-10-20 17:54:23',0,NULL,0,NULL),
+(13,24,'Senior IT Strategist & Enterprise Architecture Consultant','<p>I help organizations bridge the gap between business strategy and technology execution. With expertise in enterprise architecture, IT strategy, and digital transformation, I design and implement robust, scalable IT frameworks that align technology initiatives with business goals.</p><p><strong>Key Services Include:</strong></p><ul><li>Enterprise Architecture Planning &amp; Roadmaps</li><li>IT Strategy Development &amp; Digital Transformation Guidance</li><li>Cloud &amp; Infrastructure Modernization</li><li>Business Process Optimization &amp; Systems Integration</li><li>Technology Risk Assessment &amp; Governance</li></ul><p>By combining strategic insight with technical expertise, I ensure that IT investments deliver maximum business value while future-proofing enterprise systems.</p>',350.00,'/uploads/service_images/image-1760984241353-411200235.jpg','2025-10-20 18:17:58','2025-10-20 18:17:58',0,NULL,0,NULL),
+(14,25,'Human Resources Strategist | Talent Acquisition & Employee Development','<p>I help organizations attract, develop, and retain top talent while fostering a culture of growth and engagement. By combining strategic HR insights with hands-on expertise in employee development, I deliver solutions that align people strategies with business objectives.</p><p><strong>Key Services Include:</strong></p><ul><li>Talent Acquisition Strategy &amp; Recruitment Optimization</li><li>Employee Onboarding, Training &amp; Career Development</li><li>Leadership Coaching &amp; Employee Engagement Programs</li><li>Performance Management &amp; Succession Planning</li><li>HR Policy Development &amp; Organizational Culture Enhancement</li></ul><p>I partner with businesses to create high-performing teams, maximize employee potential, and support sustainable organizational success.</p>',400.00,'/uploads/service_images/image-1760985204697-397871909.jpg','2025-10-20 18:33:30','2025-10-20 18:33:30',0,NULL,0,NULL);
+/*!40000 ALTER TABLE `expert_services` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `expert_skills`
+--
+
+DROP TABLE IF EXISTS `expert_skills`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `expert_skills` (
+  `id` int(11) NOT NULL,
+  `expert_id` int(11) NOT NULL,
+  `skill_id` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `expert_skills`
+--
+
+LOCK TABLES `expert_skills` WRITE;
+/*!40000 ALTER TABLE `expert_skills` DISABLE KEYS */;
+INSERT INTO `expert_skills` VALUES
+(31,1,4),
+(32,1,6),
+(58,3,4),
+(59,3,5),
+(23,5,4),
+(24,5,5),
+(199,6,7),
+(200,6,8),
+(201,6,9),
+(202,6,10),
+(203,6,11),
+(204,6,12),
+(205,6,13),
+(206,6,14),
+(207,21,15),
+(208,21,16),
+(209,21,17),
+(210,21,18),
+(211,22,15),
+(212,22,17),
+(213,22,19),
+(214,23,15),
+(215,23,17),
+(216,23,18),
+(217,24,15),
+(218,24,19),
+(219,25,20),
+(220,25,21),
+(221,25,22),
+(222,25,23);
+/*!40000 ALTER TABLE `expert_skills` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `expert_time_slots`
+--
+
+DROP TABLE IF EXISTS `expert_time_slots`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `expert_time_slots` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `expert_id` int(11) NOT NULL,
+  `start_time` datetime NOT NULL,
+  `end_time` datetime NOT NULL,
+  `is_booked` tinyint(1) DEFAULT 0,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1024 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `expert_time_slots`
+--
+
+LOCK TABLES `expert_time_slots` WRITE;
+/*!40000 ALTER TABLE `expert_time_slots` DISABLE KEYS */;
+INSERT INTO `expert_time_slots` VALUES
+(1,3,'2025-08-15 10:00:00','2025-08-15 11:00:00',0,'2025-12-31 17:04:12'),
+(2,3,'2025-08-11 09:00:00','2025-08-11 10:00:00',0,'2025-12-31 17:04:12'),
+(3,3,'2025-08-11 10:00:00','2025-08-11 11:00:00',0,'2025-12-31 17:04:12'),
+(4,3,'2025-08-11 11:00:00','2025-08-11 12:00:00',0,'2025-12-31 17:04:12'),
+(5,3,'2025-08-11 12:00:00','2025-08-11 13:00:00',0,'2025-12-31 17:04:12'),
+(6,3,'2025-08-18 09:00:00','2025-08-18 10:00:00',1,'2025-12-31 17:04:12'),
+(7,3,'2025-08-18 10:00:00','2025-08-18 11:00:00',1,'2025-12-31 17:04:12'),
+(8,3,'2025-08-18 11:00:00','2025-08-18 12:00:00',1,'2025-12-31 17:04:12'),
+(9,3,'2025-08-18 12:00:00','2025-08-18 13:00:00',0,'2025-12-31 17:04:12'),
+(10,3,'2025-08-25 09:00:00','2025-08-25 10:00:00',0,'2025-12-31 17:04:12'),
+(11,3,'2025-08-25 10:00:00','2025-08-25 11:00:00',0,'2025-12-31 17:04:12'),
+(12,3,'2025-08-25 11:00:00','2025-08-25 12:00:00',0,'2025-12-31 17:04:12'),
+(13,3,'2025-08-25 12:00:00','2025-08-25 13:00:00',0,'2025-12-31 17:04:12'),
+(14,3,'2025-08-11 15:00:00','2025-08-11 16:00:00',0,'2025-12-31 17:04:12'),
+(15,3,'2025-08-11 16:00:00','2025-08-11 17:00:00',0,'2025-12-31 17:04:12'),
+(16,3,'2025-08-11 17:00:00','2025-08-11 18:00:00',0,'2025-12-31 17:04:12'),
+(17,3,'2025-08-18 15:00:00','2025-08-18 16:00:00',0,'2025-12-31 17:04:12'),
+(18,3,'2025-08-18 16:00:00','2025-08-18 17:00:00',0,'2025-12-31 17:04:12'),
+(19,3,'2025-08-18 17:00:00','2025-08-18 18:00:00',0,'2025-12-31 17:04:12'),
+(20,3,'2025-08-25 15:00:00','2025-08-25 16:00:00',0,'2025-12-31 17:04:12'),
+(21,3,'2025-08-25 16:00:00','2025-08-25 17:00:00',0,'2025-12-31 17:04:12'),
+(22,3,'2025-08-25 17:00:00','2025-08-25 18:00:00',0,'2025-12-31 17:04:12'),
+(23,3,'2025-08-13 10:00:00','2025-08-13 11:00:00',0,'2025-12-31 17:04:12'),
+(24,3,'2025-08-13 11:00:00','2025-08-13 12:00:00',0,'2025-12-31 17:04:12'),
+(25,3,'2025-08-20 10:00:00','2025-08-20 11:00:00',1,'2025-12-31 17:04:12'),
+(26,3,'2025-08-20 11:00:00','2025-08-20 12:00:00',0,'2025-12-31 17:04:12'),
+(27,3,'2025-08-27 10:00:00','2025-08-27 11:00:00',0,'2025-12-31 17:04:12'),
+(28,3,'2025-08-27 11:00:00','2025-08-27 12:00:00',0,'2025-12-31 17:04:12'),
+(29,3,'2025-08-15 09:00:00','2025-08-15 10:00:00',0,'2025-12-31 17:04:12'),
+(30,3,'2025-08-15 11:00:00','2025-08-15 12:00:00',1,'2025-12-31 17:04:12'),
+(31,3,'2025-08-15 12:00:00','2025-08-15 13:00:00',0,'2025-12-31 17:04:12'),
+(32,3,'2025-08-15 13:00:00','2025-08-15 14:00:00',1,'2025-12-31 17:04:12'),
+(33,3,'2025-08-15 14:00:00','2025-08-15 15:00:00',1,'2025-12-31 17:04:12'),
+(34,3,'2025-08-15 15:00:00','2025-08-15 16:00:00',0,'2025-12-31 17:04:12'),
+(35,3,'2025-08-15 16:00:00','2025-08-15 17:00:00',0,'2025-12-31 17:04:12'),
+(36,3,'2025-08-22 09:00:00','2025-08-22 10:00:00',0,'2025-12-31 17:04:12'),
+(37,3,'2025-08-22 10:00:00','2025-08-22 11:00:00',0,'2025-12-31 17:04:12'),
+(38,3,'2025-08-22 11:00:00','2025-08-22 12:00:00',0,'2025-12-31 17:04:12'),
+(39,3,'2025-08-22 12:00:00','2025-08-22 13:00:00',0,'2025-12-31 17:04:12'),
+(40,3,'2025-08-22 13:00:00','2025-08-22 14:00:00',0,'2025-12-31 17:04:12'),
+(41,3,'2025-08-22 14:00:00','2025-08-22 15:00:00',0,'2025-12-31 17:04:12'),
+(42,3,'2025-08-22 15:00:00','2025-08-22 16:00:00',0,'2025-12-31 17:04:12'),
+(43,3,'2025-08-22 16:00:00','2025-08-22 17:00:00',0,'2025-12-31 17:04:12'),
+(44,3,'2025-08-29 09:00:00','2025-08-29 10:00:00',0,'2025-12-31 17:04:12'),
+(45,3,'2025-08-29 10:00:00','2025-08-29 11:00:00',0,'2025-12-31 17:04:12'),
+(46,3,'2025-08-29 11:00:00','2025-08-29 12:00:00',0,'2025-12-31 17:04:12'),
+(47,3,'2025-08-29 12:00:00','2025-08-29 13:00:00',0,'2025-12-31 17:04:12'),
+(48,3,'2025-08-29 13:00:00','2025-08-29 14:00:00',0,'2025-12-31 17:04:12'),
+(49,3,'2025-08-29 14:00:00','2025-08-29 15:00:00',0,'2025-12-31 17:04:12'),
+(50,3,'2025-08-29 15:00:00','2025-08-29 16:00:00',0,'2025-12-31 17:04:12'),
+(51,3,'2025-08-29 16:00:00','2025-08-29 17:00:00',0,'2025-12-31 17:04:12'),
+(52,3,'2025-09-01 09:00:00','2025-09-01 10:00:00',0,'2025-12-31 17:04:12'),
+(53,3,'2025-09-01 10:00:00','2025-09-01 11:00:00',0,'2025-12-31 17:04:12'),
+(54,3,'2025-09-01 11:00:00','2025-09-01 12:00:00',0,'2025-12-31 17:04:12'),
+(55,3,'2025-09-01 12:00:00','2025-09-01 13:00:00',0,'2025-12-31 17:04:12'),
+(56,3,'2025-09-08 09:00:00','2025-09-08 10:00:00',1,'2025-12-31 17:04:12'),
+(57,3,'2025-09-08 10:00:00','2025-09-08 11:00:00',0,'2025-12-31 17:04:12'),
+(58,3,'2025-09-08 11:00:00','2025-09-08 12:00:00',0,'2025-12-31 17:04:12'),
+(59,3,'2025-09-08 12:00:00','2025-09-08 13:00:00',1,'2025-12-31 17:04:12'),
+(60,3,'2025-09-15 09:00:00','2025-09-15 10:00:00',0,'2025-12-31 17:04:12'),
+(61,3,'2025-09-15 10:00:00','2025-09-15 11:00:00',0,'2025-12-31 17:04:12'),
+(62,3,'2025-09-15 11:00:00','2025-09-15 12:00:00',0,'2025-12-31 17:04:12'),
+(63,3,'2025-09-15 12:00:00','2025-09-15 13:00:00',0,'2025-12-31 17:04:12'),
+(64,3,'2025-09-22 09:00:00','2025-09-22 10:00:00',0,'2025-12-31 17:04:12'),
+(65,3,'2025-09-22 10:00:00','2025-09-22 11:00:00',0,'2025-12-31 17:04:12'),
+(66,3,'2025-09-22 11:00:00','2025-09-22 12:00:00',0,'2025-12-31 17:04:12'),
+(67,3,'2025-09-22 12:00:00','2025-09-22 13:00:00',0,'2025-12-31 17:04:12'),
+(68,3,'2025-09-29 09:00:00','2025-09-29 10:00:00',0,'2025-12-31 17:04:12'),
+(69,3,'2025-09-29 10:00:00','2025-09-29 11:00:00',0,'2025-12-31 17:04:12'),
+(70,3,'2025-09-29 11:00:00','2025-09-29 12:00:00',0,'2025-12-31 17:04:12'),
+(71,3,'2025-09-29 12:00:00','2025-09-29 13:00:00',0,'2025-12-31 17:04:12'),
+(72,3,'2025-09-01 17:00:00','2025-09-01 18:00:00',0,'2025-12-31 17:04:12'),
+(73,3,'2025-09-08 17:00:00','2025-09-08 18:00:00',0,'2025-12-31 17:04:12'),
+(74,3,'2025-09-15 17:00:00','2025-09-15 18:00:00',0,'2025-12-31 17:04:12'),
+(75,3,'2025-09-22 17:00:00','2025-09-22 18:00:00',0,'2025-12-31 17:04:12'),
+(76,3,'2025-09-29 17:00:00','2025-09-29 18:00:00',0,'2025-12-31 17:04:12'),
+(77,3,'2025-09-03 10:00:00','2025-09-03 11:00:00',1,'2025-12-31 17:04:12'),
+(78,3,'2025-09-03 11:00:00','2025-09-03 12:00:00',1,'2025-12-31 17:04:12'),
+(79,3,'2025-09-10 10:00:00','2025-09-10 11:00:00',0,'2025-12-31 17:04:12'),
+(80,3,'2025-09-10 11:00:00','2025-09-10 12:00:00',0,'2025-12-31 17:04:12'),
+(81,3,'2025-09-17 10:00:00','2025-09-17 11:00:00',0,'2025-12-31 17:04:12'),
+(82,3,'2025-09-17 11:00:00','2025-09-17 12:00:00',0,'2025-12-31 17:04:12'),
+(83,3,'2025-09-24 10:00:00','2025-09-24 11:00:00',0,'2025-12-31 17:04:12'),
+(84,3,'2025-09-24 11:00:00','2025-09-24 12:00:00',0,'2025-12-31 17:04:12'),
+(85,3,'2025-09-05 09:00:00','2025-09-05 10:00:00',1,'2025-12-31 17:04:12'),
+(86,3,'2025-09-05 10:00:00','2025-09-05 11:00:00',0,'2025-12-31 17:04:12'),
+(87,3,'2025-09-05 11:00:00','2025-09-05 12:00:00',0,'2025-12-31 17:04:12'),
+(88,3,'2025-09-05 12:00:00','2025-09-05 13:00:00',0,'2025-12-31 17:04:12'),
+(89,3,'2025-09-05 13:00:00','2025-09-05 14:00:00',0,'2025-12-31 17:04:12'),
+(90,3,'2025-09-05 14:00:00','2025-09-05 15:00:00',0,'2025-12-31 17:04:12'),
+(91,3,'2025-09-05 15:00:00','2025-09-05 16:00:00',0,'2025-12-31 17:04:12'),
+(92,3,'2025-09-05 16:00:00','2025-09-05 17:00:00',0,'2025-12-31 17:04:12'),
+(93,3,'2025-09-12 09:00:00','2025-09-12 10:00:00',0,'2025-12-31 17:04:12'),
+(94,3,'2025-09-12 10:00:00','2025-09-12 11:00:00',0,'2025-12-31 17:04:12'),
+(95,3,'2025-09-12 11:00:00','2025-09-12 12:00:00',0,'2025-12-31 17:04:12'),
+(96,3,'2025-09-12 12:00:00','2025-09-12 13:00:00',0,'2025-12-31 17:04:12'),
+(97,3,'2025-09-12 13:00:00','2025-09-12 14:00:00',0,'2025-12-31 17:04:12'),
+(98,3,'2025-09-12 14:00:00','2025-09-12 15:00:00',0,'2025-12-31 17:04:12'),
+(99,3,'2025-09-12 15:00:00','2025-09-12 16:00:00',0,'2025-12-31 17:04:12'),
+(100,3,'2025-09-12 16:00:00','2025-09-12 17:00:00',0,'2025-12-31 17:04:12'),
+(101,3,'2025-09-19 09:00:00','2025-09-19 10:00:00',0,'2025-12-31 17:04:12'),
+(102,3,'2025-09-19 10:00:00','2025-09-19 11:00:00',0,'2025-12-31 17:04:12'),
+(103,3,'2025-09-19 11:00:00','2025-09-19 12:00:00',0,'2025-12-31 17:04:12'),
+(104,3,'2025-09-19 12:00:00','2025-09-19 13:00:00',0,'2025-12-31 17:04:12'),
+(105,3,'2025-09-19 13:00:00','2025-09-19 14:00:00',0,'2025-12-31 17:04:12'),
+(106,3,'2025-09-19 14:00:00','2025-09-19 15:00:00',0,'2025-12-31 17:04:12'),
+(107,3,'2025-09-19 15:00:00','2025-09-19 16:00:00',0,'2025-12-31 17:04:12'),
+(108,3,'2025-09-19 16:00:00','2025-09-19 17:00:00',0,'2025-12-31 17:04:12'),
+(109,3,'2025-09-26 09:00:00','2025-09-26 10:00:00',0,'2025-12-31 17:04:12'),
+(110,3,'2025-09-26 10:00:00','2025-09-26 11:00:00',0,'2025-12-31 17:04:12'),
+(111,3,'2025-09-26 11:00:00','2025-09-26 12:00:00',1,'2025-12-31 17:04:12'),
+(112,3,'2025-09-26 12:00:00','2025-09-26 13:00:00',1,'2025-12-31 17:04:12'),
+(113,3,'2025-09-26 13:00:00','2025-09-26 14:00:00',0,'2025-12-31 17:04:12'),
+(114,3,'2025-09-26 14:00:00','2025-09-26 15:00:00',0,'2025-12-31 17:04:12'),
+(115,3,'2025-09-26 15:00:00','2025-09-26 16:00:00',0,'2025-12-31 17:04:12'),
+(116,3,'2025-09-26 16:00:00','2025-09-26 17:00:00',0,'2025-12-31 17:04:12'),
+(117,3,'2025-08-30 03:00:00','2025-08-30 04:00:00',0,'2025-12-31 17:04:12'),
+(118,1,'2025-08-24 11:00:00','2025-08-24 12:00:00',0,'2025-12-31 17:04:12'),
+(119,1,'2025-08-31 11:00:00','2025-08-31 12:00:00',0,'2025-12-31 17:04:12'),
+(120,1,'2025-08-18 14:00:00','2025-08-18 15:00:00',0,'2025-12-31 17:04:12'),
+(121,1,'2025-08-25 14:00:00','2025-08-25 15:00:00',0,'2025-12-31 17:04:12'),
+(122,1,'2025-08-17 18:00:00','2025-08-17 19:00:00',0,'2025-12-31 17:04:12'),
+(123,1,'2025-08-24 18:00:00','2025-08-24 19:00:00',0,'2025-12-31 17:04:12'),
+(124,1,'2025-08-31 18:00:00','2025-08-31 19:00:00',0,'2025-12-31 17:04:12'),
+(125,1,'2025-09-07 11:00:00','2025-09-07 12:00:00',0,'2025-12-31 17:04:12'),
+(126,1,'2025-09-14 11:00:00','2025-09-14 12:00:00',0,'2025-12-31 17:04:12'),
+(127,1,'2025-09-21 11:00:00','2025-09-21 12:00:00',0,'2025-12-31 17:04:12'),
+(128,1,'2025-09-28 11:00:00','2025-09-28 12:00:00',0,'2025-12-31 17:04:12'),
+(129,1,'2025-09-01 14:00:00','2025-09-01 15:00:00',0,'2025-12-31 17:04:12'),
+(130,1,'2025-09-08 14:00:00','2025-09-08 15:00:00',0,'2025-12-31 17:04:12'),
+(131,1,'2025-09-15 14:00:00','2025-09-15 15:00:00',0,'2025-12-31 17:04:12'),
+(132,1,'2025-09-22 14:00:00','2025-09-22 15:00:00',0,'2025-12-31 17:04:12'),
+(133,1,'2025-09-29 14:00:00','2025-09-29 15:00:00',0,'2025-12-31 17:04:12'),
+(134,1,'2025-09-07 18:00:00','2025-09-07 19:00:00',0,'2025-12-31 17:04:12'),
+(135,1,'2025-09-14 18:00:00','2025-09-14 19:00:00',0,'2025-12-31 17:04:12'),
+(136,1,'2025-09-21 18:00:00','2025-09-21 19:00:00',0,'2025-12-31 17:04:12'),
+(137,1,'2025-09-28 18:00:00','2025-09-28 19:00:00',0,'2025-12-31 17:04:12'),
+(138,6,'2025-09-14 10:00:00','2025-09-14 11:00:00',0,'2025-12-31 17:04:12'),
+(139,6,'2025-09-21 10:00:00','2025-09-21 11:00:00',0,'2025-12-31 17:04:12'),
+(140,6,'2025-09-28 10:00:00','2025-09-28 11:00:00',0,'2025-12-31 17:04:12'),
+(141,6,'2025-09-14 14:00:00','2025-09-14 15:00:00',0,'2025-12-31 17:04:12'),
+(142,6,'2025-09-21 14:00:00','2025-09-21 15:00:00',0,'2025-12-31 17:04:12'),
+(143,6,'2025-09-28 14:00:00','2025-09-28 15:00:00',0,'2025-12-31 17:04:12'),
+(144,6,'2025-09-14 15:00:00','2025-09-14 16:00:00',0,'2025-12-31 17:04:12'),
+(145,6,'2025-09-21 15:00:00','2025-09-21 16:00:00',0,'2025-12-31 17:04:12'),
+(146,6,'2025-09-28 15:00:00','2025-09-28 16:00:00',0,'2025-12-31 17:04:12'),
+(147,6,'2025-09-14 16:00:00','2025-09-14 17:00:00',0,'2025-12-31 17:04:12'),
+(148,6,'2025-09-21 16:00:00','2025-09-21 17:00:00',0,'2025-12-31 17:04:12'),
+(149,6,'2025-09-28 16:00:00','2025-09-28 17:00:00',0,'2025-12-31 17:04:12'),
+(150,3,'2025-10-06 09:00:00','2025-10-06 10:00:00',0,'2025-12-31 17:04:12'),
+(151,3,'2025-10-13 09:00:00','2025-10-13 10:00:00',0,'2025-12-31 17:04:12'),
+(152,3,'2025-10-20 09:00:00','2025-10-20 10:00:00',1,'2025-12-31 17:04:12'),
+(153,3,'2025-10-27 09:00:00','2025-10-27 10:00:00',0,'2025-12-31 17:04:12'),
+(154,3,'2025-10-06 10:00:00','2025-10-06 11:00:00',0,'2025-12-31 17:04:12'),
+(155,3,'2025-10-06 11:00:00','2025-10-06 12:00:00',0,'2025-12-31 17:04:12'),
+(156,3,'2025-10-06 12:00:00','2025-10-06 13:00:00',0,'2025-12-31 17:04:12'),
+(157,3,'2025-10-13 10:00:00','2025-10-13 11:00:00',0,'2025-12-31 17:04:12'),
+(158,3,'2025-10-13 11:00:00','2025-10-13 12:00:00',0,'2025-12-31 17:04:12'),
+(159,3,'2025-10-13 12:00:00','2025-10-13 13:00:00',0,'2025-12-31 17:04:12'),
+(160,3,'2025-10-20 10:00:00','2025-10-20 11:00:00',0,'2025-12-31 17:04:12'),
+(161,3,'2025-10-20 11:00:00','2025-10-20 12:00:00',0,'2025-12-31 17:04:12'),
+(162,3,'2025-10-20 12:00:00','2025-10-20 13:00:00',0,'2025-12-31 17:04:12'),
+(163,3,'2025-10-27 10:00:00','2025-10-27 11:00:00',0,'2025-12-31 17:04:12'),
+(164,3,'2025-10-27 11:00:00','2025-10-27 12:00:00',0,'2025-12-31 17:04:12'),
+(165,3,'2025-10-27 12:00:00','2025-10-27 13:00:00',0,'2025-12-31 17:04:12'),
+(166,3,'2025-10-06 17:00:00','2025-10-06 18:00:00',0,'2025-12-31 17:04:12'),
+(167,3,'2025-10-13 17:00:00','2025-10-13 18:00:00',0,'2025-12-31 17:04:12'),
+(168,3,'2025-10-20 17:00:00','2025-10-20 18:00:00',0,'2025-12-31 17:04:12'),
+(169,3,'2025-10-27 17:00:00','2025-10-27 18:00:00',0,'2025-12-31 17:04:12'),
+(170,3,'2025-10-01 10:00:00','2025-10-01 11:00:00',0,'2025-12-31 17:04:12'),
+(171,3,'2025-10-01 11:00:00','2025-10-01 12:00:00',0,'2025-12-31 17:04:12'),
+(172,3,'2025-10-08 10:00:00','2025-10-08 11:00:00',0,'2025-12-31 17:04:12'),
+(173,3,'2025-10-08 11:00:00','2025-10-08 12:00:00',0,'2025-12-31 17:04:12'),
+(174,3,'2025-10-15 10:00:00','2025-10-15 11:00:00',0,'2025-12-31 17:04:12'),
+(175,3,'2025-10-15 11:00:00','2025-10-15 12:00:00',0,'2025-12-31 17:04:12'),
+(176,3,'2025-10-22 10:00:00','2025-10-22 11:00:00',0,'2025-12-31 17:04:12'),
+(177,3,'2025-10-22 11:00:00','2025-10-22 12:00:00',0,'2025-12-31 17:04:12'),
+(178,3,'2025-10-29 10:00:00','2025-10-29 11:00:00',0,'2025-12-31 17:04:12'),
+(179,3,'2025-10-29 11:00:00','2025-10-29 12:00:00',0,'2025-12-31 17:04:12'),
+(180,3,'2025-10-03 09:00:00','2025-10-03 10:00:00',0,'2025-12-31 17:04:12'),
+(181,3,'2025-10-03 10:00:00','2025-10-03 11:00:00',0,'2025-12-31 17:04:12'),
+(182,3,'2025-10-03 11:00:00','2025-10-03 12:00:00',0,'2025-12-31 17:04:12'),
+(183,3,'2025-10-03 12:00:00','2025-10-03 13:00:00',0,'2025-12-31 17:04:12'),
+(184,3,'2025-10-03 13:00:00','2025-10-03 14:00:00',0,'2025-12-31 17:04:12'),
+(185,3,'2025-10-03 14:00:00','2025-10-03 15:00:00',0,'2025-12-31 17:04:12'),
+(186,3,'2025-10-03 15:00:00','2025-10-03 16:00:00',0,'2025-12-31 17:04:12'),
+(187,3,'2025-10-03 16:00:00','2025-10-03 17:00:00',0,'2025-12-31 17:04:12'),
+(188,3,'2025-10-10 09:00:00','2025-10-10 10:00:00',0,'2025-12-31 17:04:12'),
+(189,3,'2025-10-10 10:00:00','2025-10-10 11:00:00',0,'2025-12-31 17:04:12'),
+(190,3,'2025-10-10 11:00:00','2025-10-10 12:00:00',0,'2025-12-31 17:04:12'),
+(191,3,'2025-10-10 12:00:00','2025-10-10 13:00:00',0,'2025-12-31 17:04:12'),
+(192,3,'2025-10-10 13:00:00','2025-10-10 14:00:00',0,'2025-12-31 17:04:12'),
+(193,3,'2025-10-10 14:00:00','2025-10-10 15:00:00',0,'2025-12-31 17:04:12'),
+(194,3,'2025-10-10 15:00:00','2025-10-10 16:00:00',0,'2025-12-31 17:04:12'),
+(195,3,'2025-10-10 16:00:00','2025-10-10 17:00:00',0,'2025-12-31 17:04:12'),
+(196,3,'2025-10-17 09:00:00','2025-10-17 10:00:00',0,'2025-12-31 17:04:12'),
+(197,3,'2025-10-17 10:00:00','2025-10-17 11:00:00',0,'2025-12-31 17:04:12'),
+(198,3,'2025-10-17 11:00:00','2025-10-17 12:00:00',0,'2025-12-31 17:04:12'),
+(199,3,'2025-10-17 12:00:00','2025-10-17 13:00:00',0,'2025-12-31 17:04:12'),
+(200,3,'2025-10-17 13:00:00','2025-10-17 14:00:00',0,'2025-12-31 17:04:12'),
+(201,3,'2025-10-17 14:00:00','2025-10-17 15:00:00',0,'2025-12-31 17:04:12'),
+(202,3,'2025-10-17 15:00:00','2025-10-17 16:00:00',0,'2025-12-31 17:04:12'),
+(203,3,'2025-10-17 16:00:00','2025-10-17 17:00:00',0,'2025-12-31 17:04:12'),
+(204,3,'2025-10-24 09:00:00','2025-10-24 10:00:00',1,'2025-12-31 17:04:12'),
+(205,3,'2025-10-24 10:00:00','2025-10-24 11:00:00',0,'2025-12-31 17:04:12'),
+(206,3,'2025-10-24 11:00:00','2025-10-24 12:00:00',1,'2025-12-31 17:04:12'),
+(207,3,'2025-10-24 12:00:00','2025-10-24 13:00:00',0,'2025-12-31 17:04:12'),
+(208,3,'2025-10-24 13:00:00','2025-10-24 14:00:00',0,'2025-12-31 17:04:12'),
+(209,3,'2025-10-24 14:00:00','2025-10-24 15:00:00',0,'2025-12-31 17:04:12'),
+(210,3,'2025-10-24 15:00:00','2025-10-24 16:00:00',0,'2025-12-31 17:04:12'),
+(211,3,'2025-10-24 16:00:00','2025-10-24 17:00:00',0,'2025-12-31 17:04:12'),
+(212,3,'2025-10-31 09:00:00','2025-10-31 10:00:00',0,'2025-12-31 17:04:12'),
+(213,3,'2025-10-31 10:00:00','2025-10-31 11:00:00',0,'2025-12-31 17:04:12'),
+(214,3,'2025-10-31 11:00:00','2025-10-31 12:00:00',0,'2025-12-31 17:04:12'),
+(215,3,'2025-10-31 12:00:00','2025-10-31 13:00:00',0,'2025-12-31 17:04:12'),
+(216,3,'2025-10-31 13:00:00','2025-10-31 14:00:00',0,'2025-12-31 17:04:12'),
+(217,3,'2025-10-31 14:00:00','2025-10-31 15:00:00',0,'2025-12-31 17:04:12'),
+(218,3,'2025-10-31 15:00:00','2025-10-31 16:00:00',0,'2025-12-31 17:04:12'),
+(219,3,'2025-10-31 16:00:00','2025-10-31 17:00:00',0,'2025-12-31 17:04:12'),
+(220,6,'2025-09-28 19:00:00','2025-09-28 20:00:00',1,'2025-12-31 17:04:12'),
+(221,6,'2025-09-28 20:00:00','2025-09-28 21:00:00',1,'2025-12-31 17:04:12'),
+(222,6,'2025-09-28 22:00:00','2025-09-28 23:00:00',1,'2025-12-31 17:04:12'),
+(223,6,'2025-10-12 10:00:00','2025-10-12 11:00:00',1,'2025-12-31 17:04:12'),
+(224,6,'2025-10-19 10:00:00','2025-10-19 11:00:00',1,'2025-12-31 17:04:12'),
+(225,6,'2025-10-26 10:00:00','2025-10-26 11:00:00',1,'2025-12-31 17:04:12'),
+(226,6,'2025-10-12 14:00:00','2025-10-12 15:00:00',0,'2025-12-31 17:04:12'),
+(227,6,'2025-10-19 14:00:00','2025-10-19 15:00:00',1,'2025-12-31 17:04:12'),
+(228,6,'2025-10-26 14:00:00','2025-10-26 15:00:00',1,'2025-12-31 17:04:12'),
+(229,6,'2025-10-12 15:00:00','2025-10-12 16:00:00',0,'2025-12-31 17:04:12'),
+(230,6,'2025-10-19 15:00:00','2025-10-19 16:00:00',1,'2025-12-31 17:04:12'),
+(231,6,'2025-10-26 15:00:00','2025-10-26 16:00:00',1,'2025-12-31 17:04:12'),
+(232,6,'2025-10-05 16:00:00','2025-10-05 17:00:00',0,'2025-12-31 17:04:12'),
+(233,6,'2025-10-12 16:00:00','2025-10-12 17:00:00',0,'2025-12-31 17:04:12'),
+(234,6,'2025-10-19 16:00:00','2025-10-19 17:00:00',1,'2025-12-31 17:04:12'),
+(235,6,'2025-10-26 16:00:00','2025-10-26 17:00:00',0,'2025-12-31 17:04:12'),
+(236,6,'2025-10-18 15:00:00','2025-10-18 16:00:00',0,'2025-12-31 17:04:12'),
+(237,6,'2025-10-25 15:00:00','2025-10-25 16:00:00',1,'2025-12-31 17:04:12'),
+(238,6,'2025-10-14 02:00:00','2025-10-14 03:00:00',0,'2025-12-31 17:04:12'),
+(239,6,'2025-10-13 18:30:00','2025-10-13 19:00:00',0,'2025-12-31 17:04:12'),
+(240,6,'2025-10-12 19:00:00','2025-10-12 20:00:00',1,'2025-12-31 17:04:12'),
+(241,6,'2025-10-17 01:00:00','2025-10-17 02:00:00',1,'2025-12-31 17:04:12'),
+(242,6,'2025-10-23 21:00:00','2025-10-23 22:00:00',0,'2025-12-31 17:04:12'),
+(243,6,'2025-10-30 21:00:00','2025-10-30 22:00:00',0,'2025-12-31 17:04:12'),
+(244,6,'2025-10-19 18:00:00','2025-10-19 19:00:00',1,'2025-12-31 17:04:12'),
+(245,6,'2025-10-19 19:00:00','2025-10-19 21:00:00',1,'2025-12-31 17:04:12'),
+(246,6,'2025-10-19 22:00:00','2025-10-19 23:00:00',0,'2025-12-31 17:04:12'),
+(247,6,'2025-10-20 16:00:00','2025-10-20 17:00:00',1,'2025-12-31 17:04:12'),
+(248,6,'2025-10-20 22:00:00','2025-10-20 23:00:00',1,'2025-12-31 17:04:12'),
+(249,6,'2025-10-21 00:00:00','2025-10-21 01:00:00',1,'2025-12-31 17:04:12'),
+(250,6,'2025-10-21 01:00:00','2025-10-21 02:00:00',1,'2025-12-31 17:04:12'),
+(251,6,'2025-10-26 13:00:00','2025-10-26 14:00:00',0,'2025-12-31 17:04:12'),
+(252,6,'2025-10-26 17:00:00','2025-10-26 18:00:00',1,'2025-12-31 17:04:12'),
+(253,6,'2025-10-26 18:00:00','2025-10-26 19:00:00',0,'2025-12-31 17:04:12'),
+(254,6,'2025-10-26 19:00:00','2025-10-26 20:00:00',0,'2025-12-31 17:04:12'),
+(255,6,'2025-10-27 19:00:00','2025-10-27 20:00:00',0,'2025-12-31 17:04:12'),
+(256,6,'2025-10-27 20:00:00','2025-10-27 21:00:00',0,'2025-12-31 17:04:12'),
+(257,6,'2025-10-27 21:00:00','2025-10-27 22:00:00',1,'2025-12-31 17:04:12'),
+(258,6,'2025-10-21 19:00:00','2025-10-21 20:00:00',1,'2025-12-31 17:04:12'),
+(259,6,'2025-10-28 19:00:00','2025-10-28 20:00:00',1,'2025-12-31 17:04:12'),
+(260,6,'2025-10-21 21:00:00','2025-10-21 22:00:00',0,'2025-12-31 17:04:12'),
+(261,6,'2025-10-28 21:00:00','2025-10-28 22:00:00',1,'2025-12-31 17:04:12'),
+(262,6,'2025-10-22 19:00:00','2025-10-22 20:00:00',0,'2025-12-31 17:04:12'),
+(263,6,'2025-10-29 19:00:00','2025-10-29 20:00:00',1,'2025-12-31 17:04:12'),
+(264,6,'2025-10-22 20:00:00','2025-10-22 21:00:00',0,'2025-12-31 17:04:12'),
+(265,6,'2025-10-29 20:00:00','2025-10-29 21:00:00',1,'2025-12-31 17:04:12'),
+(266,6,'2025-10-22 21:00:00','2025-10-22 22:00:00',0,'2025-12-31 17:04:12'),
+(267,6,'2025-10-29 21:00:00','2025-10-29 22:00:00',0,'2025-12-31 17:04:12'),
+(268,6,'2025-10-23 19:00:00','2025-10-23 20:00:00',0,'2025-12-31 17:04:12'),
+(269,6,'2025-10-30 19:00:00','2025-10-30 20:00:00',1,'2025-12-31 17:04:12'),
+(270,6,'2025-10-24 19:00:00','2025-10-24 20:00:00',0,'2025-12-31 17:04:12'),
+(271,6,'2025-10-31 19:00:00','2025-10-31 20:00:00',0,'2025-12-31 17:04:12'),
+(272,6,'2025-10-24 20:00:00','2025-10-24 21:00:00',0,'2025-12-31 17:04:12'),
+(273,6,'2025-10-31 20:00:00','2025-10-31 21:00:00',1,'2025-12-31 17:04:12'),
+(274,6,'2025-10-24 21:00:00','2025-10-24 22:00:00',0,'2025-12-31 17:04:12'),
+(275,6,'2025-10-31 21:00:00','2025-10-31 22:00:00',0,'2025-12-31 17:04:12'),
+(276,6,'2025-10-25 13:00:00','2025-10-25 14:00:00',0,'2025-12-31 17:04:12'),
+(277,6,'2025-10-25 14:00:00','2025-10-25 15:00:00',0,'2025-12-31 17:04:12'),
+(278,6,'2025-10-25 16:00:00','2025-10-25 17:00:00',0,'2025-12-31 17:04:12'),
+(279,6,'2025-10-25 17:00:00','2025-10-25 18:00:00',0,'2025-12-31 17:04:12'),
+(280,6,'2025-10-25 18:00:00','2025-10-25 19:00:00',0,'2025-12-31 17:04:12'),
+(281,6,'2025-10-25 19:00:00','2025-10-25 20:00:00',0,'2025-12-31 17:04:12'),
+(282,6,'2025-10-26 21:00:00','2025-10-26 22:00:00',0,'2025-12-31 17:04:12'),
+(283,6,'2025-10-26 23:00:00','2025-10-27 00:00:00',0,'2025-12-31 17:04:12'),
+(284,6,'2025-11-02 13:00:00','2025-11-02 14:00:00',0,'2025-12-31 17:04:12'),
+(285,6,'2025-11-09 13:00:00','2025-11-09 14:00:00',1,'2025-12-31 17:04:12'),
+(286,6,'2025-11-16 13:00:00','2025-11-16 14:00:00',0,'2025-12-31 17:04:12'),
+(287,6,'2025-11-23 13:00:00','2025-11-23 14:00:00',0,'2025-12-31 17:04:12'),
+(288,6,'2025-11-30 13:00:00','2025-11-30 14:00:00',0,'2025-12-31 17:04:12'),
+(289,6,'2025-11-02 14:00:00','2025-11-02 15:00:00',0,'2025-12-31 17:04:12'),
+(290,6,'2025-11-09 14:00:00','2025-11-09 15:00:00',0,'2025-12-31 17:04:12'),
+(291,6,'2025-11-16 14:00:00','2025-11-16 15:00:00',0,'2025-12-31 17:04:12'),
+(292,6,'2025-11-23 14:00:00','2025-11-23 15:00:00',0,'2025-12-31 17:04:12'),
+(293,6,'2025-11-30 14:00:00','2025-11-30 15:00:00',0,'2025-12-31 17:04:12'),
+(294,6,'2025-11-02 15:00:00','2025-11-02 16:00:00',0,'2025-12-31 17:04:12'),
+(295,6,'2025-11-09 15:00:00','2025-11-09 16:00:00',0,'2025-12-31 17:04:12'),
+(296,6,'2025-11-16 15:00:00','2025-11-16 16:00:00',0,'2025-12-31 17:04:12'),
+(297,6,'2025-11-23 15:00:00','2025-11-23 16:00:00',0,'2025-12-31 17:04:12'),
+(298,6,'2025-11-30 15:00:00','2025-11-30 16:00:00',0,'2025-12-31 17:04:12'),
+(299,6,'2025-11-02 16:00:00','2025-11-02 17:00:00',0,'2025-12-31 17:04:12'),
+(300,6,'2025-11-09 16:00:00','2025-11-09 17:00:00',0,'2025-12-31 17:04:12'),
+(301,6,'2025-11-16 16:00:00','2025-11-16 17:00:00',0,'2025-12-31 17:04:12'),
+(302,6,'2025-11-23 16:00:00','2025-11-23 17:00:00',0,'2025-12-31 17:04:12'),
+(303,6,'2025-11-30 16:00:00','2025-11-30 17:00:00',0,'2025-12-31 17:04:12'),
+(304,6,'2025-11-02 17:00:00','2025-11-02 18:00:00',0,'2025-12-31 17:04:12'),
+(305,6,'2025-11-09 17:00:00','2025-11-09 18:00:00',0,'2025-12-31 17:04:12'),
+(306,6,'2025-11-16 17:00:00','2025-11-16 18:00:00',0,'2025-12-31 17:04:12'),
+(307,6,'2025-11-23 17:00:00','2025-11-23 18:00:00',0,'2025-12-31 17:04:12'),
+(308,6,'2025-11-30 17:00:00','2025-11-30 18:00:00',0,'2025-12-31 17:04:12'),
+(309,6,'2025-11-02 18:00:00','2025-11-02 19:00:00',0,'2025-12-31 17:04:12'),
+(310,6,'2025-11-09 18:00:00','2025-11-09 19:00:00',0,'2025-12-31 17:04:12'),
+(311,6,'2025-11-16 18:00:00','2025-11-16 19:00:00',0,'2025-12-31 17:04:12'),
+(312,6,'2025-11-23 18:00:00','2025-11-23 19:00:00',0,'2025-12-31 17:04:12'),
+(313,6,'2025-11-30 18:00:00','2025-11-30 19:00:00',0,'2025-12-31 17:04:12'),
+(314,6,'2025-11-02 19:00:00','2025-11-02 20:00:00',0,'2025-12-31 17:04:12'),
+(315,6,'2025-11-09 19:00:00','2025-11-09 20:00:00',0,'2025-12-31 17:04:12'),
+(316,6,'2025-11-16 19:00:00','2025-11-16 20:00:00',0,'2025-12-31 17:04:12'),
+(317,6,'2025-11-23 19:00:00','2025-11-23 20:00:00',0,'2025-12-31 17:04:12'),
+(318,6,'2025-11-30 19:00:00','2025-11-30 20:00:00',0,'2025-12-31 17:04:12'),
+(319,6,'2025-11-03 19:00:00','2025-11-03 20:00:00',0,'2025-12-31 17:04:12'),
+(320,6,'2025-11-10 19:00:00','2025-11-10 20:00:00',0,'2025-12-31 17:04:12'),
+(321,6,'2025-11-17 19:00:00','2025-11-17 20:00:00',1,'2025-12-31 17:04:12'),
+(322,6,'2025-11-24 19:00:00','2025-11-24 20:00:00',0,'2025-12-31 17:04:12'),
+(323,6,'2025-11-03 20:00:00','2025-11-03 21:00:00',0,'2025-12-31 17:04:12'),
+(324,6,'2025-11-10 20:00:00','2025-11-10 21:00:00',0,'2025-12-31 17:04:12'),
+(325,6,'2025-11-17 20:00:00','2025-11-17 21:00:00',0,'2025-12-31 17:04:12'),
+(326,6,'2025-11-24 20:00:00','2025-11-24 21:00:00',0,'2025-12-31 17:04:12'),
+(327,6,'2025-11-03 21:00:00','2025-11-03 22:00:00',0,'2025-12-31 17:04:12'),
+(328,6,'2025-11-10 21:00:00','2025-11-10 22:00:00',1,'2025-12-31 17:04:12'),
+(329,6,'2025-11-17 21:00:00','2025-11-17 22:00:00',0,'2025-12-31 17:04:12'),
+(330,6,'2025-11-24 21:00:00','2025-11-24 22:00:00',0,'2025-12-31 17:04:12'),
+(331,6,'2025-11-04 19:00:00','2025-11-04 20:00:00',0,'2025-12-31 17:04:12'),
+(332,6,'2025-11-11 19:00:00','2025-11-11 20:00:00',0,'2025-12-31 17:04:12'),
+(333,6,'2025-11-18 19:00:00','2025-11-18 20:00:00',0,'2025-12-31 17:04:12'),
+(334,6,'2025-11-25 19:00:00','2025-11-25 20:00:00',0,'2025-12-31 17:04:12'),
+(335,6,'2025-11-04 21:00:00','2025-11-04 22:00:00',0,'2025-12-31 17:04:12'),
+(336,6,'2025-11-11 21:00:00','2025-11-11 22:00:00',0,'2025-12-31 17:04:12'),
+(337,6,'2025-11-18 21:00:00','2025-11-18 22:00:00',0,'2025-12-31 17:04:12'),
+(338,6,'2025-11-25 21:00:00','2025-11-25 22:00:00',0,'2025-12-31 17:04:12'),
+(339,6,'2025-11-05 19:00:00','2025-11-05 20:00:00',0,'2025-12-31 17:04:12'),
+(340,6,'2025-11-12 12:45:00','2025-11-12 13:05:00',1,'2025-12-31 17:04:12'),
+(341,6,'2025-11-19 19:00:00','2025-11-19 20:00:00',0,'2025-12-31 17:04:12'),
+(342,6,'2025-11-26 19:00:00','2025-11-26 20:00:00',0,'2025-12-31 17:04:12'),
+(343,6,'2025-11-05 20:00:00','2025-11-05 21:00:00',1,'2025-12-31 17:04:12'),
+(344,6,'2025-11-12 20:00:00','2025-11-12 21:00:00',0,'2025-12-31 17:04:12'),
+(345,6,'2025-11-19 20:00:00','2025-11-19 21:00:00',0,'2025-12-31 17:04:12'),
+(346,6,'2025-11-26 20:00:00','2025-11-26 21:00:00',0,'2025-12-31 17:04:12'),
+(347,6,'2025-11-05 21:00:00','2025-11-05 22:00:00',0,'2025-12-31 17:04:12'),
+(348,6,'2025-11-12 21:00:00','2025-11-12 22:00:00',0,'2025-12-31 17:04:12'),
+(349,6,'2025-11-19 21:00:00','2025-11-19 22:00:00',0,'2025-12-31 17:04:12'),
+(350,6,'2025-11-26 21:00:00','2025-11-26 22:00:00',0,'2025-12-31 17:04:12'),
+(351,6,'2025-11-06 19:00:00','2025-11-06 20:00:00',0,'2025-12-31 17:04:12'),
+(352,6,'2025-11-13 19:00:00','2025-11-13 20:00:00',0,'2025-12-31 17:04:12'),
+(353,6,'2025-11-20 19:00:00','2025-11-20 20:00:00',0,'2025-12-31 17:04:12'),
+(354,6,'2025-11-27 19:00:00','2025-11-27 20:00:00',0,'2025-12-31 17:04:12'),
+(355,6,'2025-11-06 21:00:00','2025-11-06 22:00:00',0,'2025-12-31 17:04:12'),
+(356,6,'2025-11-13 21:00:00','2025-11-13 22:00:00',0,'2025-12-31 17:04:12'),
+(357,6,'2025-11-20 21:00:00','2025-11-20 22:00:00',0,'2025-12-31 17:04:12'),
+(358,6,'2025-11-27 21:00:00','2025-11-27 22:00:00',0,'2025-12-31 17:04:12'),
+(359,6,'2025-11-07 19:00:00','2025-11-07 20:00:00',0,'2025-12-31 17:04:12'),
+(360,6,'2025-11-14 19:00:00','2025-11-14 20:00:00',0,'2025-12-31 17:04:12'),
+(361,6,'2025-11-21 19:00:00','2025-11-21 20:00:00',0,'2025-12-31 17:04:12'),
+(362,6,'2025-11-28 19:00:00','2025-11-28 20:00:00',0,'2025-12-31 17:04:12'),
+(363,6,'2025-11-07 20:00:00','2025-11-07 21:00:00',0,'2025-12-31 17:04:12'),
+(364,6,'2025-11-14 20:00:00','2025-11-14 21:00:00',0,'2025-12-31 17:04:12'),
+(365,6,'2025-11-21 20:00:00','2025-11-21 21:00:00',0,'2025-12-31 17:04:12'),
+(366,6,'2025-11-28 20:00:00','2025-11-28 21:00:00',0,'2025-12-31 17:04:12'),
+(367,6,'2025-11-07 21:00:00','2025-11-07 22:00:00',0,'2025-12-31 17:04:12'),
+(368,6,'2025-11-14 21:00:00','2025-11-14 22:00:00',0,'2025-12-31 17:04:12'),
+(369,6,'2025-11-21 21:00:00','2025-11-21 22:00:00',0,'2025-12-31 17:04:12'),
+(370,6,'2025-11-28 21:00:00','2025-11-28 22:00:00',0,'2025-12-31 17:04:12'),
+(371,6,'2025-11-08 13:00:00','2025-11-08 14:00:00',0,'2025-12-31 17:04:12'),
+(372,6,'2025-11-15 13:00:00','2025-11-15 14:00:00',0,'2025-12-31 17:04:12'),
+(373,6,'2025-11-22 13:00:00','2025-11-22 14:00:00',0,'2025-12-31 17:04:12'),
+(374,6,'2025-11-29 13:00:00','2025-11-29 14:00:00',0,'2025-12-31 17:04:12'),
+(375,6,'2025-11-01 14:00:00','2025-11-01 15:00:00',0,'2025-12-31 17:04:12'),
+(376,6,'2025-11-08 14:00:00','2025-11-08 15:00:00',0,'2025-12-31 17:04:12'),
+(377,6,'2025-11-15 14:00:00','2025-11-15 15:00:00',0,'2025-12-31 17:04:12'),
+(378,6,'2025-11-22 14:00:00','2025-11-22 15:00:00',0,'2025-12-31 17:04:12'),
+(379,6,'2025-11-29 14:00:00','2025-11-29 15:00:00',0,'2025-12-31 17:04:12'),
+(380,6,'2025-11-01 15:00:00','2025-11-01 16:00:00',0,'2025-12-31 17:04:12'),
+(381,6,'2025-11-08 15:00:00','2025-11-08 16:00:00',0,'2025-12-31 17:04:12'),
+(382,6,'2025-11-15 15:00:00','2025-11-15 16:00:00',0,'2025-12-31 17:04:12'),
+(383,6,'2025-11-22 15:00:00','2025-11-22 16:00:00',0,'2025-12-31 17:04:12'),
+(384,6,'2025-11-29 15:00:00','2025-11-29 16:00:00',0,'2025-12-31 17:04:12'),
+(385,6,'2025-11-01 16:00:00','2025-11-01 17:00:00',0,'2025-12-31 17:04:12'),
+(386,6,'2025-11-08 16:00:00','2025-11-08 17:00:00',0,'2025-12-31 17:04:12'),
+(387,6,'2025-11-15 16:00:00','2025-11-15 17:00:00',0,'2025-12-31 17:04:12'),
+(388,6,'2025-11-22 16:00:00','2025-11-22 17:00:00',0,'2025-12-31 17:04:12'),
+(389,6,'2025-11-29 16:00:00','2025-11-29 17:00:00',0,'2025-12-31 17:04:12'),
+(390,6,'2025-11-01 17:00:00','2025-11-01 18:00:00',0,'2025-12-31 17:04:12'),
+(391,6,'2025-11-08 17:00:00','2025-11-08 18:00:00',0,'2025-12-31 17:04:12'),
+(392,6,'2025-11-15 17:00:00','2025-11-15 18:00:00',0,'2025-12-31 17:04:12'),
+(393,6,'2025-11-22 17:00:00','2025-11-22 18:00:00',0,'2025-12-31 17:04:12'),
+(394,6,'2025-11-29 17:00:00','2025-11-29 18:00:00',0,'2025-12-31 17:04:12'),
+(395,6,'2025-11-01 18:00:00','2025-11-01 19:00:00',0,'2025-12-31 17:04:12'),
+(396,6,'2025-11-08 18:00:00','2025-11-08 19:00:00',0,'2025-12-31 17:04:12'),
+(397,6,'2025-11-15 18:00:00','2025-11-15 19:00:00',0,'2025-12-31 17:04:12'),
+(398,6,'2025-11-22 18:00:00','2025-11-22 19:00:00',0,'2025-12-31 17:04:12'),
+(399,6,'2025-11-29 18:00:00','2025-11-29 19:00:00',0,'2025-12-31 17:04:12'),
+(400,6,'2025-11-01 19:00:00','2025-11-01 20:00:00',0,'2025-12-31 17:04:12'),
+(401,6,'2025-11-08 19:00:00','2025-11-08 20:00:00',0,'2025-12-31 17:04:12'),
+(402,6,'2025-11-15 19:00:00','2025-11-15 20:00:00',0,'2025-12-31 17:04:12'),
+(403,6,'2025-11-22 19:00:00','2025-11-22 20:00:00',0,'2025-12-31 17:04:12'),
+(404,6,'2025-11-29 19:00:00','2025-11-29 20:00:00',0,'2025-12-31 17:04:12'),
+(405,6,'2025-11-02 22:00:00','2025-11-02 23:00:00',1,'2025-12-31 17:04:12'),
+(406,6,'2025-11-02 23:00:00','2025-11-03 00:00:00',0,'2025-12-31 17:04:12'),
+(407,3,'2025-11-10 09:00:00','2025-11-10 10:00:00',0,'2025-12-31 17:04:12'),
+(408,3,'2025-11-17 09:00:00','2025-11-17 10:00:00',1,'2025-12-31 17:04:12'),
+(409,3,'2025-11-24 09:00:00','2025-11-24 10:00:00',0,'2025-12-31 17:04:12'),
+(410,3,'2025-11-03 10:00:00','2025-11-03 11:00:00',1,'2025-12-31 17:04:12'),
+(411,3,'2025-11-03 11:00:00','2025-11-03 12:00:00',0,'2025-12-31 17:04:12'),
+(412,3,'2025-11-03 12:00:00','2025-11-03 13:00:00',0,'2025-12-31 17:04:12'),
+(413,3,'2025-11-10 10:00:00','2025-11-10 11:00:00',0,'2025-12-31 17:04:12'),
+(414,3,'2025-11-10 11:00:00','2025-11-10 12:00:00',0,'2025-12-31 17:04:12'),
+(415,3,'2025-11-10 12:00:00','2025-11-10 13:00:00',0,'2025-12-31 17:04:12'),
+(416,3,'2025-11-17 10:00:00','2025-11-17 11:00:00',0,'2025-12-31 17:04:12'),
+(417,3,'2025-11-17 11:00:00','2025-11-17 12:00:00',0,'2025-12-31 17:04:12'),
+(418,3,'2025-11-17 12:00:00','2025-11-17 13:00:00',0,'2025-12-31 17:04:12'),
+(419,3,'2025-11-24 10:00:00','2025-11-24 11:00:00',0,'2025-12-31 17:04:12'),
+(420,3,'2025-11-24 11:00:00','2025-11-24 12:00:00',0,'2025-12-31 17:04:12'),
+(421,3,'2025-11-24 12:00:00','2025-11-24 13:00:00',0,'2025-12-31 17:04:12'),
+(422,3,'2025-11-03 17:00:00','2025-11-03 18:00:00',0,'2025-12-31 17:04:12'),
+(423,3,'2025-11-10 17:00:00','2025-11-10 18:00:00',0,'2025-12-31 17:04:12'),
+(424,3,'2025-11-17 17:00:00','2025-11-17 18:00:00',0,'2025-12-31 17:04:12'),
+(425,3,'2025-11-24 17:00:00','2025-11-24 18:00:00',0,'2025-12-31 17:04:12'),
+(426,3,'2025-11-05 10:00:00','2025-11-05 11:00:00',1,'2025-12-31 17:04:12'),
+(427,3,'2025-11-05 11:00:00','2025-11-05 12:00:00',1,'2025-12-31 17:04:12'),
+(428,3,'2025-11-12 10:00:00','2025-11-12 11:00:00',1,'2025-12-31 17:04:12'),
+(429,3,'2025-11-12 11:00:00','2025-11-12 12:00:00',0,'2025-12-31 17:04:12'),
+(430,3,'2025-11-19 10:00:00','2025-11-19 11:00:00',0,'2025-12-31 17:04:12'),
+(431,3,'2025-11-19 11:00:00','2025-11-19 12:00:00',0,'2025-12-31 17:04:12'),
+(432,3,'2025-11-26 10:00:00','2025-11-26 11:00:00',0,'2025-12-31 17:04:12'),
+(433,3,'2025-11-26 11:00:00','2025-11-26 12:00:00',0,'2025-12-31 17:04:12'),
+(434,3,'2025-11-07 09:00:00','2025-11-07 10:00:00',0,'2025-12-31 17:04:12'),
+(435,3,'2025-11-07 10:00:00','2025-11-07 11:00:00',0,'2025-12-31 17:04:12'),
+(436,3,'2025-11-07 11:00:00','2025-11-07 12:00:00',0,'2025-12-31 17:04:12'),
+(437,3,'2025-11-07 12:00:00','2025-11-07 13:00:00',0,'2025-12-31 17:04:12'),
+(438,3,'2025-11-07 13:00:00','2025-11-07 14:00:00',0,'2025-12-31 17:04:12'),
+(439,3,'2025-11-07 14:00:00','2025-11-07 15:00:00',0,'2025-12-31 17:04:12'),
+(440,3,'2025-11-07 15:00:00','2025-11-07 16:00:00',0,'2025-12-31 17:04:12'),
+(441,3,'2025-11-07 16:00:00','2025-11-07 17:00:00',0,'2025-12-31 17:04:12'),
+(442,3,'2025-11-14 09:00:00','2025-11-14 10:00:00',1,'2025-12-31 17:04:12'),
+(443,3,'2025-11-14 10:00:00','2025-11-14 11:00:00',0,'2025-12-31 17:04:12'),
+(444,3,'2025-11-14 11:00:00','2025-11-14 12:00:00',0,'2025-12-31 17:04:12'),
+(445,3,'2025-11-14 12:00:00','2025-11-14 13:00:00',0,'2025-12-31 17:04:12'),
+(446,3,'2025-11-14 13:00:00','2025-11-14 14:00:00',0,'2025-12-31 17:04:12'),
+(447,3,'2025-11-14 14:00:00','2025-11-14 15:00:00',0,'2025-12-31 17:04:12'),
+(448,3,'2025-11-14 15:00:00','2025-11-14 16:00:00',0,'2025-12-31 17:04:12'),
+(449,3,'2025-11-14 16:00:00','2025-11-14 17:00:00',0,'2025-12-31 17:04:12'),
+(450,3,'2025-11-21 09:00:00','2025-11-21 10:00:00',0,'2025-12-31 17:04:12'),
+(451,3,'2025-11-21 10:00:00','2025-11-21 11:00:00',0,'2025-12-31 17:04:12'),
+(452,3,'2025-11-21 11:00:00','2025-11-21 12:00:00',0,'2025-12-31 17:04:12'),
+(453,3,'2025-11-21 12:00:00','2025-11-21 13:00:00',0,'2025-12-31 17:04:12'),
+(454,3,'2025-11-21 13:00:00','2025-11-21 14:00:00',0,'2025-12-31 17:04:12'),
+(455,3,'2025-11-21 14:00:00','2025-11-21 15:00:00',0,'2025-12-31 17:04:12'),
+(456,3,'2025-11-21 15:00:00','2025-11-21 16:00:00',0,'2025-12-31 17:04:12'),
+(457,3,'2025-11-21 16:00:00','2025-11-21 17:00:00',0,'2025-12-31 17:04:12'),
+(458,3,'2025-11-28 09:00:00','2025-11-28 10:00:00',0,'2025-12-31 17:04:12'),
+(459,3,'2025-11-28 10:00:00','2025-11-28 11:00:00',0,'2025-12-31 17:04:12'),
+(460,3,'2025-11-28 11:00:00','2025-11-28 12:00:00',0,'2025-12-31 17:04:12'),
+(461,3,'2025-11-28 12:00:00','2025-11-28 13:00:00',0,'2025-12-31 17:04:12'),
+(462,3,'2025-11-28 13:00:00','2025-11-28 14:00:00',0,'2025-12-31 17:04:12'),
+(463,3,'2025-11-28 14:00:00','2025-11-28 15:00:00',0,'2025-12-31 17:04:12'),
+(464,3,'2025-11-28 15:00:00','2025-11-28 16:00:00',0,'2025-12-31 17:04:12'),
+(465,3,'2025-11-28 16:00:00','2025-11-28 17:00:00',0,'2025-12-31 17:04:12'),
+(466,6,'2025-11-05 14:00:00','2025-11-05 15:00:00',1,'2025-12-31 17:04:12'),
+(467,6,'2025-11-05 15:00:00','2025-11-05 16:00:00',1,'2025-12-31 17:04:12'),
+(468,6,'2025-11-06 01:00:00','2025-11-06 02:00:00',1,'2025-12-31 17:04:12'),
+(469,6,'2025-11-06 03:00:00','2025-11-06 04:00:00',0,'2025-12-31 17:04:12'),
+(470,6,'2025-11-06 13:00:00','2025-11-06 14:00:00',1,'2025-12-31 17:04:12'),
+(471,6,'2025-11-06 14:00:00','2025-11-06 15:00:00',1,'2025-12-31 17:04:12'),
+(472,6,'2025-11-06 22:00:00','2025-11-06 23:00:00',1,'2025-12-31 17:04:12'),
+(473,6,'2025-11-07 16:30:00','2025-11-07 17:00:00',1,'2025-12-31 17:04:12'),
+(474,6,'2025-11-09 23:45:00','2025-11-10 01:00:00',1,'2025-12-31 17:04:12'),
+(475,6,'2025-11-12 16:50:00','2025-11-12 17:00:00',1,'2025-12-31 17:04:12'),
+(476,6,'2025-11-13 03:30:00','2025-11-13 04:00:00',1,'2025-12-31 17:04:12'),
+(477,6,'2025-11-13 22:00:00','2025-11-13 22:35:00',1,'2025-12-31 17:04:12'),
+(478,6,'2025-11-22 23:15:00','2025-11-23 00:00:00',1,'2025-12-31 17:04:12'),
+(479,6,'2025-12-21 15:00:00','2025-12-21 16:00:00',0,'2025-12-31 17:04:12'),
+(480,6,'2025-12-28 15:00:00','2025-12-28 16:00:00',0,'2025-12-31 17:04:12'),
+(481,6,'2025-12-21 16:00:00','2025-12-21 17:00:00',0,'2025-12-31 17:04:12'),
+(482,6,'2025-12-28 16:00:00','2025-12-28 17:00:00',0,'2025-12-31 17:04:12'),
+(483,6,'2025-12-14 17:00:00','2025-12-14 18:00:00',0,'2025-12-31 17:04:12'),
+(484,6,'2025-12-21 17:00:00','2025-12-21 18:00:00',0,'2025-12-31 17:04:12'),
+(485,6,'2025-12-28 17:00:00','2025-12-28 18:00:00',0,'2025-12-31 17:04:12'),
+(486,6,'2025-12-14 18:00:00','2025-12-14 19:00:00',0,'2025-12-31 17:04:12'),
+(487,6,'2025-12-21 18:00:00','2025-12-21 19:00:00',0,'2025-12-31 17:04:12'),
+(488,6,'2025-12-28 18:00:00','2025-12-28 19:00:00',0,'2025-12-31 17:04:12'),
+(489,6,'2025-12-14 19:00:00','2025-12-14 20:00:00',0,'2025-12-31 17:04:12'),
+(490,6,'2025-12-21 19:00:00','2025-12-21 20:00:00',0,'2025-12-31 17:04:12'),
+(491,6,'2025-12-28 19:00:00','2025-12-28 20:00:00',0,'2025-12-31 17:04:12'),
+(492,6,'2025-12-20 15:00:00','2025-12-20 16:00:00',0,'2025-12-31 17:04:12'),
+(493,6,'2025-12-27 15:00:00','2025-12-27 16:00:00',0,'2025-12-31 17:04:12'),
+(494,6,'2025-12-13 16:00:00','2025-12-13 17:00:00',0,'2025-12-31 17:04:12'),
+(495,6,'2025-12-20 16:00:00','2025-12-20 17:00:00',0,'2025-12-31 17:04:12'),
+(496,6,'2025-12-27 16:00:00','2025-12-27 17:00:00',0,'2025-12-31 17:04:12'),
+(497,6,'2025-12-13 17:00:00','2025-12-13 18:00:00',0,'2025-12-31 17:04:12'),
+(498,6,'2025-12-20 17:00:00','2025-12-20 18:00:00',0,'2025-12-31 17:04:12'),
+(499,6,'2025-12-27 17:00:00','2025-12-27 18:00:00',0,'2025-12-31 17:04:12'),
+(500,6,'2025-12-13 18:00:00','2025-12-13 19:00:00',0,'2025-12-31 17:04:12'),
+(501,6,'2025-12-20 18:00:00','2025-12-20 19:00:00',0,'2025-12-31 17:04:12'),
+(502,6,'2025-12-27 18:00:00','2025-12-27 19:00:00',0,'2025-12-31 17:04:12'),
+(503,6,'2025-12-13 19:00:00','2025-12-13 20:00:00',0,'2025-12-31 17:04:12'),
+(504,6,'2025-12-20 19:00:00','2025-12-20 20:00:00',0,'2025-12-31 17:04:12'),
+(505,6,'2025-12-27 19:00:00','2025-12-27 20:00:00',0,'2025-12-31 17:04:12'),
+(506,6,'2025-12-14 15:00:00','2025-12-14 16:00:00',0,'2025-12-31 17:04:12'),
+(507,6,'2025-12-14 16:00:00','2025-12-14 17:00:00',0,'2025-12-31 17:04:12'),
+(508,6,'2025-12-13 15:00:00','2025-12-13 16:00:00',0,'2025-12-31 17:04:12'),
+(509,6,'2025-12-10 02:00:00','2025-12-10 03:00:00',0,'2025-12-31 17:04:12'),
+(510,6,'2025-12-11 02:00:00','2025-12-11 03:00:00',0,'2025-12-31 17:04:12'),
+(511,6,'2025-12-12 02:00:00','2025-12-12 03:00:00',0,'2025-12-31 17:04:12'),
+(512,6,'2025-12-13 02:00:00','2025-12-13 03:00:00',0,'2025-12-31 17:04:12'),
+(513,6,'2025-12-16 02:00:00','2025-12-16 03:00:00',0,'2025-12-31 17:04:12'),
+(514,6,'2025-12-17 02:00:00','2025-12-17 03:00:00',0,'2025-12-31 17:04:12'),
+(515,6,'2025-12-18 02:00:00','2025-12-18 03:00:00',0,'2025-12-31 17:04:12'),
+(516,6,'2025-12-19 02:00:00','2025-12-19 03:00:00',0,'2025-12-31 17:04:12'),
+(517,6,'2025-12-20 02:00:00','2025-12-20 03:00:00',0,'2025-12-31 17:04:12'),
+(518,6,'2025-12-23 02:00:00','2025-12-23 03:00:00',0,'2025-12-31 17:04:12'),
+(519,6,'2025-12-24 02:00:00','2025-12-24 03:00:00',0,'2025-12-31 17:04:12'),
+(520,6,'2025-12-25 02:00:00','2025-12-25 03:00:00',0,'2025-12-31 17:04:12'),
+(521,6,'2025-12-26 02:00:00','2025-12-26 03:00:00',0,'2025-12-31 17:04:12'),
+(522,6,'2025-12-27 02:00:00','2025-12-27 03:00:00',0,'2025-12-31 17:04:12'),
+(523,6,'2025-12-10 01:00:00','2025-12-10 02:00:00',0,'2025-12-31 17:04:12'),
+(524,6,'2025-12-11 01:00:00','2025-12-11 02:00:00',0,'2025-12-31 17:04:12'),
+(525,6,'2025-12-12 01:00:00','2025-12-12 02:00:00',0,'2025-12-31 17:04:12'),
+(526,6,'2025-12-13 01:00:00','2025-12-13 02:00:00',0,'2025-12-31 17:04:12'),
+(527,6,'2025-12-16 01:00:00','2025-12-16 02:00:00',0,'2025-12-31 17:04:12'),
+(528,6,'2025-12-17 01:00:00','2025-12-17 02:00:00',0,'2025-12-31 17:04:12'),
+(529,6,'2025-12-18 01:00:00','2025-12-18 02:00:00',0,'2025-12-31 17:04:12'),
+(530,6,'2025-12-19 01:00:00','2025-12-19 02:00:00',0,'2025-12-31 17:04:12'),
+(531,6,'2025-12-20 01:00:00','2025-12-20 02:00:00',0,'2025-12-31 17:04:12'),
+(532,6,'2025-12-27 01:00:00','2025-12-27 02:00:00',0,'2025-12-31 17:04:12'),
+(533,6,'2025-12-26 01:00:00','2025-12-26 02:00:00',0,'2025-12-31 17:04:12'),
+(534,6,'2025-12-25 01:00:00','2025-12-25 02:00:00',0,'2025-12-31 17:04:12'),
+(535,6,'2025-12-24 01:00:00','2025-12-24 02:00:00',0,'2025-12-31 17:04:12'),
+(536,6,'2025-12-23 01:00:00','2025-12-23 02:00:00',0,'2025-12-31 17:04:12'),
+(537,6,'2025-12-30 01:00:00','2025-12-30 02:00:00',0,'2025-12-31 17:04:12'),
+(538,6,'2025-12-31 01:00:00','2025-12-31 02:00:00',0,'2025-12-31 17:04:12'),
+(539,6,'2026-01-01 01:00:00','2026-01-01 02:00:00',0,'2025-12-31 17:04:12'),
+(540,6,'2025-12-30 02:00:00','2025-12-30 03:00:00',0,'2025-12-31 17:04:12'),
+(541,6,'2025-12-31 02:00:00','2025-12-31 03:00:00',0,'2025-12-31 17:04:12'),
+(542,6,'2026-01-01 02:00:00','2026-01-01 03:00:00',0,'2025-12-31 17:04:12'),
+(543,6,'2025-12-16 03:00:00','2025-12-16 04:00:00',0,'2025-12-31 17:04:12'),
+(544,6,'2025-12-17 03:00:00','2025-12-17 04:00:00',0,'2025-12-31 17:04:12'),
+(545,6,'2025-12-18 03:00:00','2025-12-18 04:00:00',0,'2025-12-31 17:04:12'),
+(546,6,'2025-12-19 03:00:00','2025-12-19 04:00:00',0,'2025-12-31 17:04:12'),
+(547,6,'2025-12-20 03:00:00','2025-12-20 04:00:00',0,'2025-12-31 17:04:12'),
+(548,6,'2025-12-10 03:00:00','2025-12-10 04:00:00',0,'2025-12-31 17:04:12'),
+(549,6,'2025-12-11 03:00:00','2025-12-11 04:00:00',0,'2025-12-31 17:04:12'),
+(550,6,'2025-12-12 03:00:00','2025-12-12 04:00:00',0,'2025-12-31 17:04:12'),
+(551,6,'2025-12-13 03:00:00','2025-12-13 04:00:00',0,'2025-12-31 17:04:12'),
+(552,6,'2025-12-23 03:00:00','2025-12-23 04:00:00',0,'2025-12-31 17:04:12'),
+(553,6,'2025-12-24 03:00:00','2025-12-24 04:00:00',0,'2025-12-31 17:04:12'),
+(554,6,'2025-12-25 03:00:00','2025-12-25 04:00:00',0,'2025-12-31 17:04:12'),
+(555,6,'2025-12-26 03:00:00','2025-12-26 04:00:00',0,'2025-12-31 17:04:12'),
+(556,6,'2025-12-27 03:00:00','2025-12-27 04:00:00',0,'2025-12-31 17:04:12'),
+(557,6,'2025-12-30 03:00:00','2025-12-30 04:00:00',0,'2025-12-31 17:04:12'),
+(558,6,'2025-12-31 03:00:00','2025-12-31 04:00:00',0,'2025-12-31 17:04:12'),
+(559,3,'2025-12-31 10:00:00','2025-12-31 11:00:00',0,'2025-12-31 17:04:12'),
+(560,3,'2025-12-31 11:00:00','2025-12-31 12:00:00',0,'2025-12-31 17:04:12'),
+(561,3,'2026-01-05 09:00:00','2026-01-05 10:00:00',1,'2025-12-31 17:04:12'),
+(562,3,'2026-01-05 10:00:00','2026-01-05 11:00:00',1,'2025-12-31 17:04:12'),
+(563,3,'2026-01-05 11:00:00','2026-01-05 12:00:00',1,'2025-12-31 17:04:12'),
+(564,3,'2026-01-05 12:00:00','2026-01-05 13:00:00',0,'2025-12-31 17:04:12'),
+(565,3,'2026-01-12 09:00:00','2026-01-12 10:00:00',0,'2025-12-31 17:04:12'),
+(566,3,'2026-01-12 10:00:00','2026-01-12 11:00:00',0,'2025-12-31 17:04:12'),
+(567,3,'2026-01-12 11:00:00','2026-01-12 12:00:00',0,'2025-12-31 17:04:12'),
+(568,3,'2026-01-12 12:00:00','2026-01-12 13:00:00',0,'2025-12-31 17:04:12'),
+(569,3,'2026-01-19 09:00:00','2026-01-19 10:00:00',0,'2025-12-31 17:04:12'),
+(570,3,'2026-01-19 10:00:00','2026-01-19 11:00:00',0,'2025-12-31 17:04:12'),
+(571,3,'2026-01-19 11:00:00','2026-01-19 12:00:00',0,'2025-12-31 17:04:12'),
+(572,3,'2026-01-19 12:00:00','2026-01-19 13:00:00',0,'2025-12-31 17:04:12'),
+(573,3,'2026-01-26 09:00:00','2026-01-26 10:00:00',0,'2025-12-31 17:04:12'),
+(574,3,'2026-01-26 10:00:00','2026-01-26 11:00:00',0,'2025-12-31 17:04:12'),
+(575,3,'2026-01-26 11:00:00','2026-01-26 12:00:00',0,'2025-12-31 17:04:12'),
+(576,3,'2026-01-26 12:00:00','2026-01-26 13:00:00',0,'2025-12-31 17:04:12'),
+(577,3,'2026-01-05 17:00:00','2026-01-05 18:00:00',0,'2025-12-31 17:04:12'),
+(578,3,'2026-01-12 17:00:00','2026-01-12 18:00:00',0,'2025-12-31 17:04:12'),
+(579,3,'2026-01-19 17:00:00','2026-01-19 18:00:00',0,'2025-12-31 17:04:12'),
+(580,3,'2026-01-26 17:00:00','2026-01-26 18:00:00',0,'2025-12-31 17:04:12'),
+(581,3,'2026-01-07 10:00:00','2026-01-07 11:00:00',0,'2025-12-31 17:04:12'),
+(582,3,'2026-01-07 11:00:00','2026-01-07 12:00:00',0,'2025-12-31 17:04:12'),
+(583,3,'2026-01-14 10:00:00','2026-01-14 11:00:00',0,'2025-12-31 17:04:12'),
+(584,3,'2026-01-14 11:00:00','2026-01-14 12:00:00',0,'2025-12-31 17:04:12'),
+(585,3,'2026-01-21 10:00:00','2026-01-21 11:00:00',0,'2025-12-31 17:04:12'),
+(586,3,'2026-01-21 11:00:00','2026-01-21 12:00:00',0,'2025-12-31 17:04:12'),
+(587,3,'2026-01-28 10:00:00','2026-01-28 11:00:00',0,'2025-12-31 17:04:12'),
+(588,3,'2026-01-28 11:00:00','2026-01-28 12:00:00',0,'2025-12-31 17:04:12'),
+(589,3,'2026-01-02 09:00:00','2026-01-02 10:00:00',0,'2025-12-31 17:04:12'),
+(590,3,'2026-01-02 10:00:00','2026-01-02 11:00:00',0,'2025-12-31 17:04:12'),
+(591,3,'2026-01-02 11:00:00','2026-01-02 12:00:00',0,'2025-12-31 17:04:12'),
+(592,3,'2026-01-02 12:00:00','2026-01-02 13:00:00',0,'2025-12-31 17:04:12'),
+(593,3,'2026-01-02 13:00:00','2026-01-02 14:00:00',0,'2025-12-31 17:04:12'),
+(594,3,'2026-01-02 14:00:00','2026-01-02 15:00:00',0,'2025-12-31 17:04:12'),
+(595,3,'2026-01-02 15:00:00','2026-01-02 16:00:00',1,'2025-12-31 17:04:12'),
+(596,3,'2026-01-02 16:00:00','2026-01-02 17:00:00',0,'2025-12-31 17:04:12'),
+(597,3,'2026-01-09 09:00:00','2026-01-09 10:00:00',0,'2025-12-31 17:04:12'),
+(598,3,'2026-01-09 10:00:00','2026-01-09 11:00:00',0,'2025-12-31 17:04:12'),
+(599,3,'2026-01-09 11:00:00','2026-01-09 12:00:00',0,'2025-12-31 17:04:12'),
+(600,3,'2026-01-09 12:00:00','2026-01-09 13:00:00',0,'2025-12-31 17:04:12'),
+(601,3,'2026-01-09 13:00:00','2026-01-09 14:00:00',0,'2025-12-31 17:04:12'),
+(602,3,'2026-01-09 14:00:00','2026-01-09 15:00:00',0,'2025-12-31 17:04:12'),
+(603,3,'2026-01-09 15:00:00','2026-01-09 16:00:00',0,'2025-12-31 17:04:12'),
+(604,3,'2026-01-09 16:00:00','2026-01-09 17:00:00',0,'2025-12-31 17:04:12'),
+(605,3,'2026-01-16 09:00:00','2026-01-16 10:00:00',0,'2025-12-31 17:04:12'),
+(606,3,'2026-01-16 10:00:00','2026-01-16 11:00:00',0,'2025-12-31 17:04:12'),
+(607,3,'2026-01-16 11:00:00','2026-01-16 12:00:00',0,'2025-12-31 17:04:12'),
+(608,3,'2026-01-16 12:00:00','2026-01-16 13:00:00',0,'2025-12-31 17:04:12'),
+(609,3,'2026-01-16 13:00:00','2026-01-16 14:00:00',0,'2025-12-31 17:04:12'),
+(610,3,'2026-01-16 14:00:00','2026-01-16 15:00:00',0,'2025-12-31 17:04:12'),
+(611,3,'2026-01-16 15:00:00','2026-01-16 16:00:00',0,'2025-12-31 17:04:12'),
+(612,3,'2026-01-16 16:00:00','2026-01-16 17:00:00',0,'2025-12-31 17:04:12'),
+(613,3,'2026-01-23 09:00:00','2026-01-23 10:00:00',0,'2025-12-31 17:04:12'),
+(614,3,'2026-01-23 10:00:00','2026-01-23 11:00:00',0,'2025-12-31 17:04:12'),
+(615,3,'2026-01-23 11:00:00','2026-01-23 12:00:00',0,'2025-12-31 17:04:12'),
+(616,3,'2026-01-23 12:00:00','2026-01-23 13:00:00',0,'2025-12-31 17:04:12'),
+(617,3,'2026-01-23 13:00:00','2026-01-23 14:00:00',0,'2025-12-31 17:04:12'),
+(618,3,'2026-01-23 14:00:00','2026-01-23 15:00:00',0,'2025-12-31 17:04:12'),
+(619,3,'2026-01-23 15:00:00','2026-01-23 16:00:00',0,'2025-12-31 17:04:12'),
+(620,3,'2026-01-23 16:00:00','2026-01-23 17:00:00',0,'2025-12-31 17:04:12'),
+(621,3,'2026-01-30 09:00:00','2026-01-30 10:00:00',0,'2025-12-31 17:04:12'),
+(622,3,'2026-01-30 10:00:00','2026-01-30 11:00:00',0,'2025-12-31 17:04:12'),
+(623,3,'2026-01-30 11:00:00','2026-01-30 12:00:00',0,'2025-12-31 17:04:12'),
+(624,3,'2026-01-30 12:00:00','2026-01-30 13:00:00',0,'2025-12-31 17:04:12'),
+(625,3,'2026-01-30 13:00:00','2026-01-30 14:00:00',0,'2025-12-31 17:04:12'),
+(626,3,'2026-01-30 14:00:00','2026-01-30 15:00:00',0,'2025-12-31 17:04:12'),
+(627,3,'2026-01-30 15:00:00','2026-01-30 16:00:00',0,'2025-12-31 17:04:12'),
+(628,3,'2026-01-30 16:00:00','2026-01-30 17:00:00',0,'2025-12-31 17:04:12'),
+(629,3,'2026-01-05 09:00:00','2026-01-05 10:00:00',1,'2025-12-31 17:04:12'),
+(630,3,'2026-01-12 09:00:00','2026-01-12 10:00:00',0,'2025-12-31 17:04:12'),
+(631,3,'2026-01-19 09:00:00','2026-01-19 10:00:00',0,'2025-12-31 17:04:12'),
+(632,3,'2026-01-26 09:00:00','2026-01-26 10:00:00',0,'2025-12-31 17:04:12'),
+(633,3,'2025-12-31 10:00:00','2025-12-31 11:00:00',0,'2025-12-31 17:04:12'),
+(634,3,'2025-12-31 11:00:00','2025-12-31 12:00:00',0,'2025-12-31 17:04:12'),
+(635,3,'2025-12-31 21:00:00','2025-12-31 22:00:00',1,'2025-12-31 17:04:12'),
+(636,3,'2025-12-31 13:00:00','2025-12-31 14:00:00',0,'2025-12-31 17:04:12'),
+(637,3,'2025-12-31 10:00:00','2025-12-31 11:00:00',0,'2025-12-31 17:04:12'),
+(638,3,'2025-12-31 11:00:00','2025-12-31 12:00:00',0,'2025-12-31 17:04:12'),
+(639,3,'2025-12-31 21:00:00','2025-12-31 22:00:00',1,'2025-12-31 17:04:12'),
+(640,6,'2025-12-31 19:00:00','2025-12-31 20:00:00',0,'2025-12-31 17:04:12'),
+(641,6,'2025-12-31 20:00:00','2025-12-31 21:00:00',0,'2025-12-31 17:04:12'),
+(642,6,'2025-12-31 21:00:00','2025-12-31 22:00:00',0,'2025-12-31 17:04:12');
+/*!40000 ALTER TABLE `expert_time_slots` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `expert_time_slots_old`
+--
+
+DROP TABLE IF EXISTS `expert_time_slots_old`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `expert_time_slots_old` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `expert_id` int(11) NOT NULL,
+  `start_time` datetime NOT NULL,
+  `end_time` datetime NOT NULL,
+  `is_booked` tinyint(1) DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_expert_time` (`expert_id`,`start_time`)
+) ENGINE=InnoDB AUTO_INCREMENT=1024 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `expert_time_slots_old`
+--
+
+LOCK TABLES `expert_time_slots_old` WRITE;
+/*!40000 ALTER TABLE `expert_time_slots_old` DISABLE KEYS */;
+INSERT INTO `expert_time_slots_old` VALUES
+(1,3,'2025-08-15 10:00:00','2025-08-15 11:00:00',0,'2025-08-09 21:20:55'),
+(2,3,'2025-08-11 09:00:00','2025-08-11 10:00:00',0,'2025-08-10 07:02:01'),
+(3,3,'2025-08-11 10:00:00','2025-08-11 11:00:00',0,'2025-08-10 07:02:01'),
+(4,3,'2025-08-11 11:00:00','2025-08-11 12:00:00',0,'2025-08-10 07:02:01'),
+(5,3,'2025-08-11 12:00:00','2025-08-11 13:00:00',0,'2025-08-10 07:02:01'),
+(6,3,'2025-08-18 09:00:00','2025-08-18 10:00:00',1,'2025-08-10 07:02:01'),
+(7,3,'2025-08-18 10:00:00','2025-08-18 11:00:00',1,'2025-08-10 07:02:01'),
+(8,3,'2025-08-18 11:00:00','2025-08-18 12:00:00',1,'2025-08-10 07:02:01'),
+(9,3,'2025-08-18 12:00:00','2025-08-18 13:00:00',0,'2025-08-10 07:02:01'),
+(10,3,'2025-08-25 09:00:00','2025-08-25 10:00:00',0,'2025-08-10 07:02:01'),
+(11,3,'2025-08-25 10:00:00','2025-08-25 11:00:00',0,'2025-08-10 07:02:01'),
+(12,3,'2025-08-25 11:00:00','2025-08-25 12:00:00',0,'2025-08-10 07:02:01'),
+(13,3,'2025-08-25 12:00:00','2025-08-25 13:00:00',0,'2025-08-10 07:02:01'),
+(14,3,'2025-08-11 15:00:00','2025-08-11 16:00:00',0,'2025-08-10 07:02:01'),
+(15,3,'2025-08-11 16:00:00','2025-08-11 17:00:00',0,'2025-08-10 07:02:01'),
+(16,3,'2025-08-11 17:00:00','2025-08-11 18:00:00',0,'2025-08-10 07:02:01'),
+(17,3,'2025-08-18 15:00:00','2025-08-18 16:00:00',0,'2025-08-10 07:02:01'),
+(18,3,'2025-08-18 16:00:00','2025-08-18 17:00:00',0,'2025-08-10 07:02:01'),
+(19,3,'2025-08-18 17:00:00','2025-08-18 18:00:00',0,'2025-08-10 07:02:01'),
+(20,3,'2025-08-25 15:00:00','2025-08-25 16:00:00',0,'2025-08-10 07:02:01'),
+(21,3,'2025-08-25 16:00:00','2025-08-25 17:00:00',0,'2025-08-10 07:02:01'),
+(22,3,'2025-08-25 17:00:00','2025-08-25 18:00:00',0,'2025-08-10 07:02:01'),
+(23,3,'2025-08-13 10:00:00','2025-08-13 11:00:00',0,'2025-08-10 07:02:01'),
+(24,3,'2025-08-13 11:00:00','2025-08-13 12:00:00',0,'2025-08-10 07:02:01'),
+(25,3,'2025-08-20 10:00:00','2025-08-20 11:00:00',1,'2025-08-10 07:02:01'),
+(26,3,'2025-08-20 11:00:00','2025-08-20 12:00:00',0,'2025-08-10 07:02:01'),
+(27,3,'2025-08-27 10:00:00','2025-08-27 11:00:00',0,'2025-08-10 07:02:01'),
+(28,3,'2025-08-27 11:00:00','2025-08-27 12:00:00',0,'2025-08-10 07:02:01'),
+(29,3,'2025-08-15 09:00:00','2025-08-15 10:00:00',0,'2025-08-10 07:02:01'),
+(30,3,'2025-08-15 11:00:00','2025-08-15 12:00:00',1,'2025-08-10 07:02:01'),
+(31,3,'2025-08-15 12:00:00','2025-08-15 13:00:00',0,'2025-08-10 07:02:01'),
+(32,3,'2025-08-15 13:00:00','2025-08-15 14:00:00',1,'2025-08-10 07:02:01'),
+(33,3,'2025-08-15 14:00:00','2025-08-15 15:00:00',1,'2025-08-10 07:02:01'),
+(34,3,'2025-08-15 15:00:00','2025-08-15 16:00:00',0,'2025-08-10 07:02:01'),
+(35,3,'2025-08-15 16:00:00','2025-08-15 17:00:00',0,'2025-08-10 07:02:01'),
+(36,3,'2025-08-22 09:00:00','2025-08-22 10:00:00',0,'2025-08-10 07:02:01'),
+(37,3,'2025-08-22 10:00:00','2025-08-22 11:00:00',0,'2025-08-10 07:02:01'),
+(38,3,'2025-08-22 11:00:00','2025-08-22 12:00:00',0,'2025-08-10 07:02:01'),
+(39,3,'2025-08-22 12:00:00','2025-08-22 13:00:00',0,'2025-08-10 07:02:01'),
+(40,3,'2025-08-22 13:00:00','2025-08-22 14:00:00',0,'2025-08-10 07:02:01'),
+(41,3,'2025-08-22 14:00:00','2025-08-22 15:00:00',0,'2025-08-10 07:02:01'),
+(42,3,'2025-08-22 15:00:00','2025-08-22 16:00:00',0,'2025-08-10 07:02:01'),
+(43,3,'2025-08-22 16:00:00','2025-08-22 17:00:00',0,'2025-08-10 07:02:01'),
+(44,3,'2025-08-29 09:00:00','2025-08-29 10:00:00',0,'2025-08-10 07:02:01'),
+(45,3,'2025-08-29 10:00:00','2025-08-29 11:00:00',0,'2025-08-10 07:02:01'),
+(46,3,'2025-08-29 11:00:00','2025-08-29 12:00:00',0,'2025-08-10 07:02:01'),
+(47,3,'2025-08-29 12:00:00','2025-08-29 13:00:00',0,'2025-08-10 07:02:01'),
+(48,3,'2025-08-29 13:00:00','2025-08-29 14:00:00',0,'2025-08-10 07:02:01'),
+(49,3,'2025-08-29 14:00:00','2025-08-29 15:00:00',0,'2025-08-10 07:02:01'),
+(50,3,'2025-08-29 15:00:00','2025-08-29 16:00:00',0,'2025-08-10 07:02:01'),
+(51,3,'2025-08-29 16:00:00','2025-08-29 17:00:00',0,'2025-08-10 07:02:01'),
+(52,3,'2025-09-01 09:00:00','2025-09-01 10:00:00',0,'2025-08-15 09:30:42'),
+(53,3,'2025-09-01 10:00:00','2025-09-01 11:00:00',0,'2025-08-15 09:30:42'),
+(54,3,'2025-09-01 11:00:00','2025-09-01 12:00:00',0,'2025-08-15 09:30:42'),
+(55,3,'2025-09-01 12:00:00','2025-09-01 13:00:00',0,'2025-08-15 09:30:42'),
+(56,3,'2025-09-08 09:00:00','2025-09-08 10:00:00',1,'2025-08-15 09:30:42'),
+(57,3,'2025-09-08 10:00:00','2025-09-08 11:00:00',0,'2025-08-15 09:30:42'),
+(58,3,'2025-09-08 11:00:00','2025-09-08 12:00:00',0,'2025-08-15 09:30:42'),
+(59,3,'2025-09-08 12:00:00','2025-09-08 13:00:00',1,'2025-08-15 09:30:42'),
+(60,3,'2025-09-15 09:00:00','2025-09-15 10:00:00',0,'2025-08-15 09:30:42'),
+(61,3,'2025-09-15 10:00:00','2025-09-15 11:00:00',0,'2025-08-15 09:30:42'),
+(62,3,'2025-09-15 11:00:00','2025-09-15 12:00:00',0,'2025-08-15 09:30:42'),
+(63,3,'2025-09-15 12:00:00','2025-09-15 13:00:00',0,'2025-08-15 09:30:42'),
+(64,3,'2025-09-22 09:00:00','2025-09-22 10:00:00',0,'2025-08-15 09:30:42'),
+(65,3,'2025-09-22 10:00:00','2025-09-22 11:00:00',0,'2025-08-15 09:30:42'),
+(66,3,'2025-09-22 11:00:00','2025-09-22 12:00:00',0,'2025-08-15 09:30:42'),
+(67,3,'2025-09-22 12:00:00','2025-09-22 13:00:00',0,'2025-08-15 09:30:42'),
+(68,3,'2025-09-29 09:00:00','2025-09-29 10:00:00',0,'2025-08-15 09:30:42'),
+(69,3,'2025-09-29 10:00:00','2025-09-29 11:00:00',0,'2025-08-15 09:30:42'),
+(70,3,'2025-09-29 11:00:00','2025-09-29 12:00:00',0,'2025-08-15 09:30:42'),
+(71,3,'2025-09-29 12:00:00','2025-09-29 13:00:00',0,'2025-08-15 09:30:42'),
+(72,3,'2025-09-01 17:00:00','2025-09-01 18:00:00',0,'2025-08-15 09:30:42'),
+(73,3,'2025-09-08 17:00:00','2025-09-08 18:00:00',0,'2025-08-15 09:30:42'),
+(74,3,'2025-09-15 17:00:00','2025-09-15 18:00:00',0,'2025-08-15 09:30:42'),
+(75,3,'2025-09-22 17:00:00','2025-09-22 18:00:00',0,'2025-08-15 09:30:42'),
+(76,3,'2025-09-29 17:00:00','2025-09-29 18:00:00',0,'2025-08-15 09:30:42'),
+(77,3,'2025-09-03 10:00:00','2025-09-03 11:00:00',1,'2025-08-15 09:30:42'),
+(78,3,'2025-09-03 11:00:00','2025-09-03 12:00:00',1,'2025-08-15 09:30:42'),
+(79,3,'2025-09-10 10:00:00','2025-09-10 11:00:00',0,'2025-08-15 09:30:42'),
+(80,3,'2025-09-10 11:00:00','2025-09-10 12:00:00',0,'2025-08-15 09:30:42'),
+(81,3,'2025-09-17 10:00:00','2025-09-17 11:00:00',0,'2025-08-15 09:30:42'),
+(82,3,'2025-09-17 11:00:00','2025-09-17 12:00:00',0,'2025-08-15 09:30:42'),
+(83,3,'2025-09-24 10:00:00','2025-09-24 11:00:00',0,'2025-08-15 09:30:42'),
+(84,3,'2025-09-24 11:00:00','2025-09-24 12:00:00',0,'2025-08-15 09:30:42'),
+(85,3,'2025-09-05 09:00:00','2025-09-05 10:00:00',1,'2025-08-15 09:30:42'),
+(86,3,'2025-09-05 10:00:00','2025-09-05 11:00:00',0,'2025-08-15 09:30:42'),
+(87,3,'2025-09-05 11:00:00','2025-09-05 12:00:00',0,'2025-08-15 09:30:42'),
+(88,3,'2025-09-05 12:00:00','2025-09-05 13:00:00',0,'2025-08-15 09:30:42'),
+(89,3,'2025-09-05 13:00:00','2025-09-05 14:00:00',0,'2025-08-15 09:30:42'),
+(90,3,'2025-09-05 14:00:00','2025-09-05 15:00:00',0,'2025-08-15 09:30:42'),
+(91,3,'2025-09-05 15:00:00','2025-09-05 16:00:00',0,'2025-08-15 09:30:42'),
+(92,3,'2025-09-05 16:00:00','2025-09-05 17:00:00',0,'2025-08-15 09:30:42'),
+(93,3,'2025-09-12 09:00:00','2025-09-12 10:00:00',0,'2025-08-15 09:30:42'),
+(94,3,'2025-09-12 10:00:00','2025-09-12 11:00:00',0,'2025-08-15 09:30:42'),
+(95,3,'2025-09-12 11:00:00','2025-09-12 12:00:00',0,'2025-08-15 09:30:42'),
+(96,3,'2025-09-12 12:00:00','2025-09-12 13:00:00',0,'2025-08-15 09:30:42'),
+(97,3,'2025-09-12 13:00:00','2025-09-12 14:00:00',0,'2025-08-15 09:30:42'),
+(98,3,'2025-09-12 14:00:00','2025-09-12 15:00:00',0,'2025-08-15 09:30:42'),
+(99,3,'2025-09-12 15:00:00','2025-09-12 16:00:00',0,'2025-08-15 09:30:42'),
+(100,3,'2025-09-12 16:00:00','2025-09-12 17:00:00',0,'2025-08-15 09:30:42'),
+(101,3,'2025-09-19 09:00:00','2025-09-19 10:00:00',0,'2025-08-15 09:30:42'),
+(102,3,'2025-09-19 10:00:00','2025-09-19 11:00:00',0,'2025-08-15 09:30:42'),
+(103,3,'2025-09-19 11:00:00','2025-09-19 12:00:00',0,'2025-08-15 09:30:42'),
+(104,3,'2025-09-19 12:00:00','2025-09-19 13:00:00',0,'2025-08-15 09:30:42'),
+(105,3,'2025-09-19 13:00:00','2025-09-19 14:00:00',0,'2025-08-15 09:30:42'),
+(106,3,'2025-09-19 14:00:00','2025-09-19 15:00:00',0,'2025-08-15 09:30:42'),
+(107,3,'2025-09-19 15:00:00','2025-09-19 16:00:00',0,'2025-08-15 09:30:42'),
+(108,3,'2025-09-19 16:00:00','2025-09-19 17:00:00',0,'2025-08-15 09:30:42'),
+(109,3,'2025-09-26 09:00:00','2025-09-26 10:00:00',0,'2025-08-15 09:30:42'),
+(110,3,'2025-09-26 10:00:00','2025-09-26 11:00:00',0,'2025-08-15 09:30:42'),
+(111,3,'2025-09-26 11:00:00','2025-09-26 12:00:00',1,'2025-08-15 09:30:42'),
+(112,3,'2025-09-26 12:00:00','2025-09-26 13:00:00',1,'2025-08-15 09:30:42'),
+(113,3,'2025-09-26 13:00:00','2025-09-26 14:00:00',0,'2025-08-15 09:30:42'),
+(114,3,'2025-09-26 14:00:00','2025-09-26 15:00:00',0,'2025-08-15 09:30:42'),
+(115,3,'2025-09-26 15:00:00','2025-09-26 16:00:00',0,'2025-08-15 09:30:42'),
+(116,3,'2025-09-26 16:00:00','2025-09-26 17:00:00',0,'2025-08-15 09:30:42'),
+(117,3,'2025-08-30 03:00:00','2025-08-30 04:00:00',0,'2025-08-15 10:12:54'),
+(118,1,'2025-08-24 11:00:00','2025-08-24 12:00:00',0,'2025-08-17 14:32:12'),
+(119,1,'2025-08-31 11:00:00','2025-08-31 12:00:00',0,'2025-08-17 14:32:12'),
+(120,1,'2025-08-18 14:00:00','2025-08-18 15:00:00',0,'2025-08-17 14:32:12'),
+(121,1,'2025-08-25 14:00:00','2025-08-25 15:00:00',0,'2025-08-17 14:32:12'),
+(122,1,'2025-08-17 18:00:00','2025-08-17 19:00:00',0,'2025-08-17 14:32:49'),
+(123,1,'2025-08-24 18:00:00','2025-08-24 19:00:00',0,'2025-08-17 14:32:49'),
+(124,1,'2025-08-31 18:00:00','2025-08-31 19:00:00',0,'2025-08-17 14:32:49'),
+(125,1,'2025-09-07 11:00:00','2025-09-07 12:00:00',0,'2025-08-17 14:33:11'),
+(126,1,'2025-09-14 11:00:00','2025-09-14 12:00:00',0,'2025-08-17 14:33:11'),
+(127,1,'2025-09-21 11:00:00','2025-09-21 12:00:00',0,'2025-08-17 14:33:11'),
+(128,1,'2025-09-28 11:00:00','2025-09-28 12:00:00',0,'2025-08-17 14:33:11'),
+(129,1,'2025-09-01 14:00:00','2025-09-01 15:00:00',0,'2025-08-17 14:33:11'),
+(130,1,'2025-09-08 14:00:00','2025-09-08 15:00:00',0,'2025-08-17 14:33:11'),
+(131,1,'2025-09-15 14:00:00','2025-09-15 15:00:00',0,'2025-08-17 14:33:11'),
+(132,1,'2025-09-22 14:00:00','2025-09-22 15:00:00',0,'2025-08-17 14:33:11'),
+(133,1,'2025-09-29 14:00:00','2025-09-29 15:00:00',0,'2025-08-17 14:33:11'),
+(134,1,'2025-09-07 18:00:00','2025-09-07 19:00:00',0,'2025-08-17 14:33:11'),
+(135,1,'2025-09-14 18:00:00','2025-09-14 19:00:00',0,'2025-08-17 14:33:11'),
+(136,1,'2025-09-21 18:00:00','2025-09-21 19:00:00',0,'2025-08-17 14:33:11'),
+(137,1,'2025-09-28 18:00:00','2025-09-28 19:00:00',0,'2025-08-17 14:33:11'),
+(138,6,'2025-09-14 10:00:00','2025-09-14 11:00:00',0,'2025-09-13 14:59:22'),
+(139,6,'2025-09-21 10:00:00','2025-09-21 11:00:00',0,'2025-09-13 14:59:22'),
+(140,6,'2025-09-28 10:00:00','2025-09-28 11:00:00',0,'2025-09-13 14:59:22'),
+(141,6,'2025-09-14 14:00:00','2025-09-14 15:00:00',0,'2025-09-13 14:59:22'),
+(142,6,'2025-09-21 14:00:00','2025-09-21 15:00:00',0,'2025-09-13 14:59:22'),
+(143,6,'2025-09-28 14:00:00','2025-09-28 15:00:00',0,'2025-09-13 14:59:22'),
+(144,6,'2025-09-14 15:00:00','2025-09-14 16:00:00',0,'2025-09-13 14:59:22'),
+(145,6,'2025-09-21 15:00:00','2025-09-21 16:00:00',0,'2025-09-13 14:59:22'),
+(146,6,'2025-09-28 15:00:00','2025-09-28 16:00:00',0,'2025-09-13 14:59:22'),
+(147,6,'2025-09-14 16:00:00','2025-09-14 17:00:00',0,'2025-09-13 14:59:22'),
+(148,6,'2025-09-21 16:00:00','2025-09-21 17:00:00',0,'2025-09-13 14:59:22'),
+(149,6,'2025-09-28 16:00:00','2025-09-28 17:00:00',0,'2025-09-13 14:59:22'),
+(150,3,'2025-10-06 09:00:00','2025-10-06 10:00:00',0,'2025-09-27 09:04:21'),
+(151,3,'2025-10-13 09:00:00','2025-10-13 10:00:00',0,'2025-09-27 09:04:21'),
+(152,3,'2025-10-20 09:00:00','2025-10-20 10:00:00',1,'2025-09-27 09:04:21'),
+(153,3,'2025-10-27 09:00:00','2025-10-27 10:00:00',0,'2025-09-27 09:04:21'),
+(154,3,'2025-10-06 10:00:00','2025-10-06 11:00:00',0,'2025-09-27 09:04:21'),
+(155,3,'2025-10-06 11:00:00','2025-10-06 12:00:00',0,'2025-09-27 09:04:21'),
+(156,3,'2025-10-06 12:00:00','2025-10-06 13:00:00',0,'2025-09-27 09:04:21'),
+(157,3,'2025-10-13 10:00:00','2025-10-13 11:00:00',0,'2025-09-27 09:04:21'),
+(158,3,'2025-10-13 11:00:00','2025-10-13 12:00:00',0,'2025-09-27 09:04:21'),
+(159,3,'2025-10-13 12:00:00','2025-10-13 13:00:00',0,'2025-09-27 09:04:21'),
+(160,3,'2025-10-20 10:00:00','2025-10-20 11:00:00',0,'2025-09-27 09:04:21'),
+(161,3,'2025-10-20 11:00:00','2025-10-20 12:00:00',0,'2025-09-27 09:04:21'),
+(162,3,'2025-10-20 12:00:00','2025-10-20 13:00:00',0,'2025-09-27 09:04:21'),
+(163,3,'2025-10-27 10:00:00','2025-10-27 11:00:00',0,'2025-09-27 09:04:21'),
+(164,3,'2025-10-27 11:00:00','2025-10-27 12:00:00',0,'2025-09-27 09:04:21'),
+(165,3,'2025-10-27 12:00:00','2025-10-27 13:00:00',0,'2025-09-27 09:04:21'),
+(166,3,'2025-10-06 17:00:00','2025-10-06 18:00:00',0,'2025-09-27 09:04:21'),
+(167,3,'2025-10-13 17:00:00','2025-10-13 18:00:00',0,'2025-09-27 09:04:21'),
+(168,3,'2025-10-20 17:00:00','2025-10-20 18:00:00',0,'2025-09-27 09:04:21'),
+(169,3,'2025-10-27 17:00:00','2025-10-27 18:00:00',0,'2025-09-27 09:04:21'),
+(170,3,'2025-10-01 10:00:00','2025-10-01 11:00:00',0,'2025-09-27 09:04:21'),
+(171,3,'2025-10-01 11:00:00','2025-10-01 12:00:00',0,'2025-09-27 09:04:21'),
+(172,3,'2025-10-08 10:00:00','2025-10-08 11:00:00',0,'2025-09-27 09:04:21'),
+(173,3,'2025-10-08 11:00:00','2025-10-08 12:00:00',0,'2025-09-27 09:04:21'),
+(174,3,'2025-10-15 10:00:00','2025-10-15 11:00:00',0,'2025-09-27 09:04:21'),
+(175,3,'2025-10-15 11:00:00','2025-10-15 12:00:00',0,'2025-09-27 09:04:21'),
+(176,3,'2025-10-22 10:00:00','2025-10-22 11:00:00',0,'2025-09-27 09:04:21'),
+(177,3,'2025-10-22 11:00:00','2025-10-22 12:00:00',0,'2025-09-27 09:04:21'),
+(178,3,'2025-10-29 10:00:00','2025-10-29 11:00:00',0,'2025-09-27 09:04:21'),
+(179,3,'2025-10-29 11:00:00','2025-10-29 12:00:00',0,'2025-09-27 09:04:21'),
+(180,3,'2025-10-03 09:00:00','2025-10-03 10:00:00',0,'2025-09-27 09:04:21'),
+(181,3,'2025-10-03 10:00:00','2025-10-03 11:00:00',0,'2025-09-27 09:04:21'),
+(182,3,'2025-10-03 11:00:00','2025-10-03 12:00:00',0,'2025-09-27 09:04:21'),
+(183,3,'2025-10-03 12:00:00','2025-10-03 13:00:00',0,'2025-09-27 09:04:21'),
+(184,3,'2025-10-03 13:00:00','2025-10-03 14:00:00',0,'2025-09-27 09:04:21'),
+(185,3,'2025-10-03 14:00:00','2025-10-03 15:00:00',0,'2025-09-27 09:04:21'),
+(186,3,'2025-10-03 15:00:00','2025-10-03 16:00:00',0,'2025-09-27 09:04:21'),
+(187,3,'2025-10-03 16:00:00','2025-10-03 17:00:00',0,'2025-09-27 09:04:21'),
+(188,3,'2025-10-10 09:00:00','2025-10-10 10:00:00',0,'2025-09-27 09:04:21'),
+(189,3,'2025-10-10 10:00:00','2025-10-10 11:00:00',0,'2025-09-27 09:04:21'),
+(190,3,'2025-10-10 11:00:00','2025-10-10 12:00:00',0,'2025-09-27 09:04:21'),
+(191,3,'2025-10-10 12:00:00','2025-10-10 13:00:00',0,'2025-09-27 09:04:21'),
+(192,3,'2025-10-10 13:00:00','2025-10-10 14:00:00',0,'2025-09-27 09:04:21'),
+(193,3,'2025-10-10 14:00:00','2025-10-10 15:00:00',0,'2025-09-27 09:04:21'),
+(194,3,'2025-10-10 15:00:00','2025-10-10 16:00:00',0,'2025-09-27 09:04:21'),
+(195,3,'2025-10-10 16:00:00','2025-10-10 17:00:00',0,'2025-09-27 09:04:21'),
+(196,3,'2025-10-17 09:00:00','2025-10-17 10:00:00',0,'2025-09-27 09:04:21'),
+(197,3,'2025-10-17 10:00:00','2025-10-17 11:00:00',0,'2025-09-27 09:04:21'),
+(198,3,'2025-10-17 11:00:00','2025-10-17 12:00:00',0,'2025-09-27 09:04:21'),
+(199,3,'2025-10-17 12:00:00','2025-10-17 13:00:00',0,'2025-09-27 09:04:21'),
+(200,3,'2025-10-17 13:00:00','2025-10-17 14:00:00',0,'2025-09-27 09:04:21'),
+(201,3,'2025-10-17 14:00:00','2025-10-17 15:00:00',0,'2025-09-27 09:04:21'),
+(202,3,'2025-10-17 15:00:00','2025-10-17 16:00:00',0,'2025-09-27 09:04:21'),
+(203,3,'2025-10-17 16:00:00','2025-10-17 17:00:00',0,'2025-09-27 09:04:21'),
+(204,3,'2025-10-24 09:00:00','2025-10-24 10:00:00',1,'2025-09-27 09:04:21'),
+(205,3,'2025-10-24 10:00:00','2025-10-24 11:00:00',0,'2025-09-27 09:04:21'),
+(206,3,'2025-10-24 11:00:00','2025-10-24 12:00:00',1,'2025-09-27 09:04:21'),
+(207,3,'2025-10-24 12:00:00','2025-10-24 13:00:00',0,'2025-09-27 09:04:21'),
+(208,3,'2025-10-24 13:00:00','2025-10-24 14:00:00',0,'2025-09-27 09:04:21'),
+(209,3,'2025-10-24 14:00:00','2025-10-24 15:00:00',0,'2025-09-27 09:04:21'),
+(210,3,'2025-10-24 15:00:00','2025-10-24 16:00:00',0,'2025-09-27 09:04:21'),
+(211,3,'2025-10-24 16:00:00','2025-10-24 17:00:00',0,'2025-09-27 09:04:21'),
+(212,3,'2025-10-31 09:00:00','2025-10-31 10:00:00',0,'2025-09-27 09:04:21'),
+(213,3,'2025-10-31 10:00:00','2025-10-31 11:00:00',0,'2025-09-27 09:04:21'),
+(214,3,'2025-10-31 11:00:00','2025-10-31 12:00:00',0,'2025-09-27 09:04:21'),
+(215,3,'2025-10-31 12:00:00','2025-10-31 13:00:00',0,'2025-09-27 09:04:21'),
+(216,3,'2025-10-31 13:00:00','2025-10-31 14:00:00',0,'2025-09-27 09:04:21'),
+(217,3,'2025-10-31 14:00:00','2025-10-31 15:00:00',0,'2025-09-27 09:04:21'),
+(218,3,'2025-10-31 15:00:00','2025-10-31 16:00:00',0,'2025-09-27 09:04:21'),
+(219,3,'2025-10-31 16:00:00','2025-10-31 17:00:00',0,'2025-09-27 09:04:21'),
+(220,6,'2025-09-28 19:00:00','2025-09-28 20:00:00',1,'2025-09-28 17:29:47'),
+(221,6,'2025-09-28 20:00:00','2025-09-28 21:00:00',1,'2025-09-28 17:31:33'),
+(222,6,'2025-09-28 22:00:00','2025-09-28 23:00:00',1,'2025-09-28 17:31:54'),
+(223,6,'2025-10-12 10:00:00','2025-10-12 11:00:00',1,'2025-10-05 15:30:09'),
+(224,6,'2025-10-19 10:00:00','2025-10-19 11:00:00',1,'2025-10-05 15:30:09'),
+(225,6,'2025-10-26 10:00:00','2025-10-26 11:00:00',1,'2025-10-05 15:30:09'),
+(226,6,'2025-10-12 14:00:00','2025-10-12 15:00:00',0,'2025-10-05 15:30:09'),
+(227,6,'2025-10-19 14:00:00','2025-10-19 15:00:00',1,'2025-10-05 15:30:09'),
+(228,6,'2025-10-26 14:00:00','2025-10-26 15:00:00',1,'2025-10-05 15:30:09'),
+(229,6,'2025-10-12 15:00:00','2025-10-12 16:00:00',0,'2025-10-05 15:30:09'),
+(230,6,'2025-10-19 15:00:00','2025-10-19 16:00:00',1,'2025-10-05 15:30:09'),
+(231,6,'2025-10-26 15:00:00','2025-10-26 16:00:00',1,'2025-10-05 15:30:09'),
+(232,6,'2025-10-05 16:00:00','2025-10-05 17:00:00',0,'2025-10-05 15:30:09'),
+(233,6,'2025-10-12 16:00:00','2025-10-12 17:00:00',0,'2025-10-05 15:30:09'),
+(234,6,'2025-10-19 16:00:00','2025-10-19 17:00:00',1,'2025-10-05 15:30:09'),
+(235,6,'2025-10-26 16:00:00','2025-10-26 17:00:00',0,'2025-10-05 15:30:09'),
+(236,6,'2025-10-18 15:00:00','2025-10-18 16:00:00',0,'2025-10-12 18:10:26'),
+(237,6,'2025-10-25 15:00:00','2025-10-25 16:00:00',1,'2025-10-12 18:10:26'),
+(238,6,'2025-10-14 02:00:00','2025-10-14 03:00:00',0,'2025-10-12 18:18:58'),
+(239,6,'2025-10-13 18:30:00','2025-10-13 19:00:00',0,'2025-10-12 18:19:45'),
+(240,6,'2025-10-12 19:00:00','2025-10-12 20:00:00',1,'2025-10-12 18:20:53'),
+(241,6,'2025-10-17 01:00:00','2025-10-17 02:00:00',1,'2025-10-15 01:45:22'),
+(242,6,'2025-10-23 21:00:00','2025-10-23 22:00:00',0,'2025-10-15 01:45:22'),
+(243,6,'2025-10-30 21:00:00','2025-10-30 22:00:00',0,'2025-10-15 01:45:22'),
+(244,6,'2025-10-19 18:00:00','2025-10-19 19:00:00',1,'2025-10-19 17:35:24'),
+(245,6,'2025-10-19 19:00:00','2025-10-19 21:00:00',1,'2025-10-19 17:35:40'),
+(246,6,'2025-10-19 22:00:00','2025-10-19 23:00:00',0,'2025-10-19 17:36:29'),
+(247,6,'2025-10-20 16:00:00','2025-10-20 17:00:00',1,'2025-10-20 15:20:11'),
+(248,6,'2025-10-20 22:00:00','2025-10-20 23:00:00',1,'2025-10-20 21:52:28'),
+(249,6,'2025-10-21 00:00:00','2025-10-21 01:00:00',1,'2025-10-20 21:52:51'),
+(250,6,'2025-10-21 01:00:00','2025-10-21 02:00:00',1,'2025-10-20 21:53:12'),
+(251,6,'2025-10-26 13:00:00','2025-10-26 14:00:00',0,'2025-10-21 10:54:01'),
+(252,6,'2025-10-26 17:00:00','2025-10-26 18:00:00',1,'2025-10-21 10:54:01'),
+(253,6,'2025-10-26 18:00:00','2025-10-26 19:00:00',0,'2025-10-21 10:54:01'),
+(254,6,'2025-10-26 19:00:00','2025-10-26 20:00:00',0,'2025-10-21 10:54:01'),
+(255,6,'2025-10-27 19:00:00','2025-10-27 20:00:00',0,'2025-10-21 10:54:01'),
+(256,6,'2025-10-27 20:00:00','2025-10-27 21:00:00',0,'2025-10-21 10:54:01'),
+(257,6,'2025-10-27 21:00:00','2025-10-27 22:00:00',1,'2025-10-21 10:54:01'),
+(258,6,'2025-10-21 19:00:00','2025-10-21 20:00:00',1,'2025-10-21 10:54:01'),
+(259,6,'2025-10-28 19:00:00','2025-10-28 20:00:00',1,'2025-10-21 10:54:01'),
+(260,6,'2025-10-21 21:00:00','2025-10-21 22:00:00',0,'2025-10-21 10:54:01'),
+(261,6,'2025-10-28 21:00:00','2025-10-28 22:00:00',1,'2025-10-21 10:54:01'),
+(262,6,'2025-10-22 19:00:00','2025-10-22 20:00:00',0,'2025-10-21 10:54:01'),
+(263,6,'2025-10-29 19:00:00','2025-10-29 20:00:00',1,'2025-10-21 10:54:01'),
+(264,6,'2025-10-22 20:00:00','2025-10-22 21:00:00',0,'2025-10-21 10:54:01'),
+(265,6,'2025-10-29 20:00:00','2025-10-29 21:00:00',1,'2025-10-21 10:54:01'),
+(266,6,'2025-10-22 21:00:00','2025-10-22 22:00:00',0,'2025-10-21 10:54:01'),
+(267,6,'2025-10-29 21:00:00','2025-10-29 22:00:00',0,'2025-10-21 10:54:01'),
+(268,6,'2025-10-23 19:00:00','2025-10-23 20:00:00',0,'2025-10-21 10:54:01'),
+(269,6,'2025-10-30 19:00:00','2025-10-30 20:00:00',1,'2025-10-21 10:54:01'),
+(270,6,'2025-10-24 19:00:00','2025-10-24 20:00:00',0,'2025-10-21 10:54:01'),
+(271,6,'2025-10-31 19:00:00','2025-10-31 20:00:00',0,'2025-10-21 10:54:01'),
+(272,6,'2025-10-24 20:00:00','2025-10-24 21:00:00',0,'2025-10-21 10:54:01'),
+(273,6,'2025-10-31 20:00:00','2025-10-31 21:00:00',1,'2025-10-21 10:54:01'),
+(274,6,'2025-10-24 21:00:00','2025-10-24 22:00:00',0,'2025-10-21 10:54:01'),
+(275,6,'2025-10-31 21:00:00','2025-10-31 22:00:00',0,'2025-10-21 10:54:01'),
+(276,6,'2025-10-25 13:00:00','2025-10-25 14:00:00',0,'2025-10-21 10:54:01'),
+(277,6,'2025-10-25 14:00:00','2025-10-25 15:00:00',0,'2025-10-21 10:54:01'),
+(278,6,'2025-10-25 16:00:00','2025-10-25 17:00:00',0,'2025-10-21 10:54:01'),
+(279,6,'2025-10-25 17:00:00','2025-10-25 18:00:00',0,'2025-10-21 10:54:01'),
+(280,6,'2025-10-25 18:00:00','2025-10-25 19:00:00',0,'2025-10-21 10:54:01'),
+(281,6,'2025-10-25 19:00:00','2025-10-25 20:00:00',0,'2025-10-21 10:54:01'),
+(282,6,'2025-10-26 21:00:00','2025-10-26 22:00:00',0,'2025-10-26 20:50:25'),
+(283,6,'2025-10-26 23:00:00','2025-10-27 00:00:00',0,'2025-10-26 20:50:41'),
+(284,6,'2025-11-02 13:00:00','2025-11-02 14:00:00',0,'2025-11-01 13:42:37'),
+(285,6,'2025-11-09 13:00:00','2025-11-09 14:00:00',1,'2025-11-01 13:42:37'),
+(286,6,'2025-11-16 13:00:00','2025-11-16 14:00:00',0,'2025-11-01 13:42:37'),
+(287,6,'2025-11-23 13:00:00','2025-11-23 14:00:00',0,'2025-11-01 13:42:37'),
+(288,6,'2025-11-30 13:00:00','2025-11-30 14:00:00',0,'2025-11-01 13:42:37'),
+(289,6,'2025-11-02 14:00:00','2025-11-02 15:00:00',0,'2025-11-01 13:42:37'),
+(290,6,'2025-11-09 14:00:00','2025-11-09 15:00:00',0,'2025-11-01 13:42:37'),
+(291,6,'2025-11-16 14:00:00','2025-11-16 15:00:00',0,'2025-11-01 13:42:37'),
+(292,6,'2025-11-23 14:00:00','2025-11-23 15:00:00',0,'2025-11-01 13:42:37'),
+(293,6,'2025-11-30 14:00:00','2025-11-30 15:00:00',0,'2025-11-01 13:42:37'),
+(294,6,'2025-11-02 15:00:00','2025-11-02 16:00:00',0,'2025-11-01 13:42:37'),
+(295,6,'2025-11-09 15:00:00','2025-11-09 16:00:00',0,'2025-11-01 13:42:37'),
+(296,6,'2025-11-16 15:00:00','2025-11-16 16:00:00',0,'2025-11-01 13:42:37'),
+(297,6,'2025-11-23 15:00:00','2025-11-23 16:00:00',0,'2025-11-01 13:42:37'),
+(298,6,'2025-11-30 15:00:00','2025-11-30 16:00:00',0,'2025-11-01 13:42:37'),
+(299,6,'2025-11-02 16:00:00','2025-11-02 17:00:00',0,'2025-11-01 13:42:37'),
+(300,6,'2025-11-09 16:00:00','2025-11-09 17:00:00',0,'2025-11-01 13:42:37'),
+(301,6,'2025-11-16 16:00:00','2025-11-16 17:00:00',0,'2025-11-01 13:42:37'),
+(302,6,'2025-11-23 16:00:00','2025-11-23 17:00:00',0,'2025-11-01 13:42:37'),
+(303,6,'2025-11-30 16:00:00','2025-11-30 17:00:00',0,'2025-11-01 13:42:37'),
+(304,6,'2025-11-02 17:00:00','2025-11-02 18:00:00',0,'2025-11-01 13:42:37'),
+(305,6,'2025-11-09 17:00:00','2025-11-09 18:00:00',0,'2025-11-01 13:42:37'),
+(306,6,'2025-11-16 17:00:00','2025-11-16 18:00:00',0,'2025-11-01 13:42:37'),
+(307,6,'2025-11-23 17:00:00','2025-11-23 18:00:00',0,'2025-11-01 13:42:37'),
+(308,6,'2025-11-30 17:00:00','2025-11-30 18:00:00',0,'2025-11-01 13:42:37'),
+(309,6,'2025-11-02 18:00:00','2025-11-02 19:00:00',0,'2025-11-01 13:42:37'),
+(310,6,'2025-11-09 18:00:00','2025-11-09 19:00:00',0,'2025-11-01 13:42:37'),
+(311,6,'2025-11-16 18:00:00','2025-11-16 19:00:00',0,'2025-11-01 13:42:37'),
+(312,6,'2025-11-23 18:00:00','2025-11-23 19:00:00',0,'2025-11-01 13:42:37'),
+(313,6,'2025-11-30 18:00:00','2025-11-30 19:00:00',0,'2025-11-01 13:42:37'),
+(314,6,'2025-11-02 19:00:00','2025-11-02 20:00:00',0,'2025-11-01 13:42:37'),
+(315,6,'2025-11-09 19:00:00','2025-11-09 20:00:00',0,'2025-11-01 13:42:37'),
+(316,6,'2025-11-16 19:00:00','2025-11-16 20:00:00',0,'2025-11-01 13:42:37'),
+(317,6,'2025-11-23 19:00:00','2025-11-23 20:00:00',0,'2025-11-01 13:42:37'),
+(318,6,'2025-11-30 19:00:00','2025-11-30 20:00:00',0,'2025-11-01 13:42:37'),
+(319,6,'2025-11-03 19:00:00','2025-11-03 20:00:00',0,'2025-11-01 13:42:37'),
+(320,6,'2025-11-10 19:00:00','2025-11-10 20:00:00',0,'2025-11-01 13:42:37'),
+(321,6,'2025-11-17 19:00:00','2025-11-17 20:00:00',1,'2025-11-01 13:42:37'),
+(322,6,'2025-11-24 19:00:00','2025-11-24 20:00:00',0,'2025-11-01 13:42:37'),
+(323,6,'2025-11-03 20:00:00','2025-11-03 21:00:00',0,'2025-11-01 13:42:37'),
+(324,6,'2025-11-10 20:00:00','2025-11-10 21:00:00',0,'2025-11-01 13:42:37'),
+(325,6,'2025-11-17 20:00:00','2025-11-17 21:00:00',0,'2025-11-01 13:42:37'),
+(326,6,'2025-11-24 20:00:00','2025-11-24 21:00:00',0,'2025-11-01 13:42:37'),
+(327,6,'2025-11-03 21:00:00','2025-11-03 22:00:00',0,'2025-11-01 13:42:37'),
+(328,6,'2025-11-10 21:00:00','2025-11-10 22:00:00',1,'2025-11-01 13:42:37'),
+(329,6,'2025-11-17 21:00:00','2025-11-17 22:00:00',0,'2025-11-01 13:42:37'),
+(330,6,'2025-11-24 21:00:00','2025-11-24 22:00:00',0,'2025-11-01 13:42:37'),
+(331,6,'2025-11-04 19:00:00','2025-11-04 20:00:00',0,'2025-11-01 13:42:37'),
+(332,6,'2025-11-11 19:00:00','2025-11-11 20:00:00',0,'2025-11-01 13:42:37'),
+(333,6,'2025-11-18 19:00:00','2025-11-18 20:00:00',0,'2025-11-01 13:42:37'),
+(334,6,'2025-11-25 19:00:00','2025-11-25 20:00:00',0,'2025-11-01 13:42:37'),
+(335,6,'2025-11-04 21:00:00','2025-11-04 22:00:00',0,'2025-11-01 13:42:37'),
+(336,6,'2025-11-11 21:00:00','2025-11-11 22:00:00',0,'2025-11-01 13:42:37'),
+(337,6,'2025-11-18 21:00:00','2025-11-18 22:00:00',0,'2025-11-01 13:42:37'),
+(338,6,'2025-11-25 21:00:00','2025-11-25 22:00:00',0,'2025-11-01 13:42:37'),
+(339,6,'2025-11-05 19:00:00','2025-11-05 20:00:00',0,'2025-11-01 13:42:37'),
+(340,6,'2025-11-12 12:45:00','2025-11-12 13:05:00',1,'2025-11-01 13:42:37'),
+(341,6,'2025-11-19 19:00:00','2025-11-19 20:00:00',0,'2025-11-01 13:42:37'),
+(342,6,'2025-11-26 19:00:00','2025-11-26 20:00:00',0,'2025-11-01 13:42:37'),
+(343,6,'2025-11-05 20:00:00','2025-11-05 21:00:00',1,'2025-11-01 13:42:37'),
+(344,6,'2025-11-12 20:00:00','2025-11-12 21:00:00',0,'2025-11-01 13:42:37'),
+(345,6,'2025-11-19 20:00:00','2025-11-19 21:00:00',0,'2025-11-01 13:42:37'),
+(346,6,'2025-11-26 20:00:00','2025-11-26 21:00:00',0,'2025-11-01 13:42:37'),
+(347,6,'2025-11-05 21:00:00','2025-11-05 22:00:00',0,'2025-11-01 13:42:37'),
+(348,6,'2025-11-12 21:00:00','2025-11-12 22:00:00',0,'2025-11-01 13:42:37'),
+(349,6,'2025-11-19 21:00:00','2025-11-19 22:00:00',0,'2025-11-01 13:42:37'),
+(350,6,'2025-11-26 21:00:00','2025-11-26 22:00:00',0,'2025-11-01 13:42:37'),
+(351,6,'2025-11-06 19:00:00','2025-11-06 20:00:00',0,'2025-11-01 13:42:37'),
+(352,6,'2025-11-13 19:00:00','2025-11-13 20:00:00',0,'2025-11-01 13:42:37'),
+(353,6,'2025-11-20 19:00:00','2025-11-20 20:00:00',0,'2025-11-01 13:42:37'),
+(354,6,'2025-11-27 19:00:00','2025-11-27 20:00:00',0,'2025-11-01 13:42:37'),
+(355,6,'2025-11-06 21:00:00','2025-11-06 22:00:00',0,'2025-11-01 13:42:37'),
+(356,6,'2025-11-13 21:00:00','2025-11-13 22:00:00',0,'2025-11-01 13:42:37'),
+(357,6,'2025-11-20 21:00:00','2025-11-20 22:00:00',0,'2025-11-01 13:42:37'),
+(358,6,'2025-11-27 21:00:00','2025-11-27 22:00:00',0,'2025-11-01 13:42:37'),
+(359,6,'2025-11-07 19:00:00','2025-11-07 20:00:00',0,'2025-11-01 13:42:37'),
+(360,6,'2025-11-14 19:00:00','2025-11-14 20:00:00',0,'2025-11-01 13:42:37'),
+(361,6,'2025-11-21 19:00:00','2025-11-21 20:00:00',0,'2025-11-01 13:42:37'),
+(362,6,'2025-11-28 19:00:00','2025-11-28 20:00:00',0,'2025-11-01 13:42:37'),
+(363,6,'2025-11-07 20:00:00','2025-11-07 21:00:00',0,'2025-11-01 13:42:37'),
+(364,6,'2025-11-14 20:00:00','2025-11-14 21:00:00',0,'2025-11-01 13:42:37'),
+(365,6,'2025-11-21 20:00:00','2025-11-21 21:00:00',0,'2025-11-01 13:42:37'),
+(366,6,'2025-11-28 20:00:00','2025-11-28 21:00:00',0,'2025-11-01 13:42:37'),
+(367,6,'2025-11-07 21:00:00','2025-11-07 22:00:00',0,'2025-11-01 13:42:37'),
+(368,6,'2025-11-14 21:00:00','2025-11-14 22:00:00',0,'2025-11-01 13:42:37'),
+(369,6,'2025-11-21 21:00:00','2025-11-21 22:00:00',0,'2025-11-01 13:42:37'),
+(370,6,'2025-11-28 21:00:00','2025-11-28 22:00:00',0,'2025-11-01 13:42:37'),
+(371,6,'2025-11-08 13:00:00','2025-11-08 14:00:00',0,'2025-11-01 13:42:37'),
+(372,6,'2025-11-15 13:00:00','2025-11-15 14:00:00',0,'2025-11-01 13:42:37'),
+(373,6,'2025-11-22 13:00:00','2025-11-22 14:00:00',0,'2025-11-01 13:42:37'),
+(374,6,'2025-11-29 13:00:00','2025-11-29 14:00:00',0,'2025-11-01 13:42:37'),
+(375,6,'2025-11-01 14:00:00','2025-11-01 15:00:00',0,'2025-11-01 13:42:37'),
+(376,6,'2025-11-08 14:00:00','2025-11-08 15:00:00',0,'2025-11-01 13:42:37'),
+(377,6,'2025-11-15 14:00:00','2025-11-15 15:00:00',0,'2025-11-01 13:42:37'),
+(378,6,'2025-11-22 14:00:00','2025-11-22 15:00:00',0,'2025-11-01 13:42:37'),
+(379,6,'2025-11-29 14:00:00','2025-11-29 15:00:00',0,'2025-11-01 13:42:37'),
+(380,6,'2025-11-01 15:00:00','2025-11-01 16:00:00',0,'2025-11-01 13:42:37'),
+(381,6,'2025-11-08 15:00:00','2025-11-08 16:00:00',0,'2025-11-01 13:42:37'),
+(382,6,'2025-11-15 15:00:00','2025-11-15 16:00:00',0,'2025-11-01 13:42:37'),
+(383,6,'2025-11-22 15:00:00','2025-11-22 16:00:00',0,'2025-11-01 13:42:37'),
+(384,6,'2025-11-29 15:00:00','2025-11-29 16:00:00',0,'2025-11-01 13:42:37'),
+(385,6,'2025-11-01 16:00:00','2025-11-01 17:00:00',0,'2025-11-01 13:42:37'),
+(386,6,'2025-11-08 16:00:00','2025-11-08 17:00:00',0,'2025-11-01 13:42:37'),
+(387,6,'2025-11-15 16:00:00','2025-11-15 17:00:00',0,'2025-11-01 13:42:37'),
+(388,6,'2025-11-22 16:00:00','2025-11-22 17:00:00',0,'2025-11-01 13:42:37'),
+(389,6,'2025-11-29 16:00:00','2025-11-29 17:00:00',0,'2025-11-01 13:42:37'),
+(390,6,'2025-11-01 17:00:00','2025-11-01 18:00:00',0,'2025-11-01 13:42:37'),
+(391,6,'2025-11-08 17:00:00','2025-11-08 18:00:00',0,'2025-11-01 13:42:37'),
+(392,6,'2025-11-15 17:00:00','2025-11-15 18:00:00',0,'2025-11-01 13:42:37'),
+(393,6,'2025-11-22 17:00:00','2025-11-22 18:00:00',0,'2025-11-01 13:42:37'),
+(394,6,'2025-11-29 17:00:00','2025-11-29 18:00:00',0,'2025-11-01 13:42:37'),
+(395,6,'2025-11-01 18:00:00','2025-11-01 19:00:00',0,'2025-11-01 13:42:37'),
+(396,6,'2025-11-08 18:00:00','2025-11-08 19:00:00',0,'2025-11-01 13:42:37'),
+(397,6,'2025-11-15 18:00:00','2025-11-15 19:00:00',0,'2025-11-01 13:42:37'),
+(398,6,'2025-11-22 18:00:00','2025-11-22 19:00:00',0,'2025-11-01 13:42:37'),
+(399,6,'2025-11-29 18:00:00','2025-11-29 19:00:00',0,'2025-11-01 13:42:37'),
+(400,6,'2025-11-01 19:00:00','2025-11-01 20:00:00',0,'2025-11-01 13:42:37'),
+(401,6,'2025-11-08 19:00:00','2025-11-08 20:00:00',0,'2025-11-01 13:42:37'),
+(402,6,'2025-11-15 19:00:00','2025-11-15 20:00:00',0,'2025-11-01 13:42:37'),
+(403,6,'2025-11-22 19:00:00','2025-11-22 20:00:00',0,'2025-11-01 13:42:37'),
+(404,6,'2025-11-29 19:00:00','2025-11-29 20:00:00',0,'2025-11-01 13:42:37'),
+(405,6,'2025-11-02 22:00:00','2025-11-02 23:00:00',1,'2025-11-02 21:19:26'),
+(406,6,'2025-11-02 23:00:00','2025-11-03 00:00:00',0,'2025-11-02 21:19:40'),
+(407,3,'2025-11-10 09:00:00','2025-11-10 10:00:00',0,'2025-11-03 09:17:11'),
+(408,3,'2025-11-17 09:00:00','2025-11-17 10:00:00',1,'2025-11-03 09:17:11'),
+(409,3,'2025-11-24 09:00:00','2025-11-24 10:00:00',0,'2025-11-03 09:17:11'),
+(410,3,'2025-11-03 10:00:00','2025-11-03 11:00:00',1,'2025-11-03 09:17:11'),
+(411,3,'2025-11-03 11:00:00','2025-11-03 12:00:00',0,'2025-11-03 09:17:11'),
+(412,3,'2025-11-03 12:00:00','2025-11-03 13:00:00',0,'2025-11-03 09:17:11'),
+(413,3,'2025-11-10 10:00:00','2025-11-10 11:00:00',0,'2025-11-03 09:17:11'),
+(414,3,'2025-11-10 11:00:00','2025-11-10 12:00:00',0,'2025-11-03 09:17:11'),
+(415,3,'2025-11-10 12:00:00','2025-11-10 13:00:00',0,'2025-11-03 09:17:11'),
+(416,3,'2025-11-17 10:00:00','2025-11-17 11:00:00',0,'2025-11-03 09:17:11'),
+(417,3,'2025-11-17 11:00:00','2025-11-17 12:00:00',0,'2025-11-03 09:17:11'),
+(418,3,'2025-11-17 12:00:00','2025-11-17 13:00:00',0,'2025-11-03 09:17:11'),
+(419,3,'2025-11-24 10:00:00','2025-11-24 11:00:00',0,'2025-11-03 09:17:11'),
+(420,3,'2025-11-24 11:00:00','2025-11-24 12:00:00',0,'2025-11-03 09:17:11'),
+(421,3,'2025-11-24 12:00:00','2025-11-24 13:00:00',0,'2025-11-03 09:17:11'),
+(422,3,'2025-11-03 17:00:00','2025-11-03 18:00:00',0,'2025-11-03 09:17:11'),
+(423,3,'2025-11-10 17:00:00','2025-11-10 18:00:00',0,'2025-11-03 09:17:11'),
+(424,3,'2025-11-17 17:00:00','2025-11-17 18:00:00',0,'2025-11-03 09:17:11'),
+(425,3,'2025-11-24 17:00:00','2025-11-24 18:00:00',0,'2025-11-03 09:17:11'),
+(426,3,'2025-11-05 10:00:00','2025-11-05 11:00:00',1,'2025-11-03 09:17:11'),
+(427,3,'2025-11-05 11:00:00','2025-11-05 12:00:00',1,'2025-11-03 09:17:11'),
+(428,3,'2025-11-12 10:00:00','2025-11-12 11:00:00',1,'2025-11-03 09:17:11'),
+(429,3,'2025-11-12 11:00:00','2025-11-12 12:00:00',0,'2025-11-03 09:17:11'),
+(430,3,'2025-11-19 10:00:00','2025-11-19 11:00:00',0,'2025-11-03 09:17:11'),
+(431,3,'2025-11-19 11:00:00','2025-11-19 12:00:00',0,'2025-11-03 09:17:11'),
+(432,3,'2025-11-26 10:00:00','2025-11-26 11:00:00',0,'2025-11-03 09:17:11'),
+(433,3,'2025-11-26 11:00:00','2025-11-26 12:00:00',0,'2025-11-03 09:17:11'),
+(434,3,'2025-11-07 09:00:00','2025-11-07 10:00:00',0,'2025-11-03 09:17:11'),
+(435,3,'2025-11-07 10:00:00','2025-11-07 11:00:00',0,'2025-11-03 09:17:11'),
+(436,3,'2025-11-07 11:00:00','2025-11-07 12:00:00',0,'2025-11-03 09:17:11'),
+(437,3,'2025-11-07 12:00:00','2025-11-07 13:00:00',0,'2025-11-03 09:17:11'),
+(438,3,'2025-11-07 13:00:00','2025-11-07 14:00:00',0,'2025-11-03 09:17:11'),
+(439,3,'2025-11-07 14:00:00','2025-11-07 15:00:00',0,'2025-11-03 09:17:11'),
+(440,3,'2025-11-07 15:00:00','2025-11-07 16:00:00',0,'2025-11-03 09:17:11'),
+(441,3,'2025-11-07 16:00:00','2025-11-07 17:00:00',0,'2025-11-03 09:17:11'),
+(442,3,'2025-11-14 09:00:00','2025-11-14 10:00:00',1,'2025-11-03 09:17:11'),
+(443,3,'2025-11-14 10:00:00','2025-11-14 11:00:00',0,'2025-11-03 09:17:11'),
+(444,3,'2025-11-14 11:00:00','2025-11-14 12:00:00',0,'2025-11-03 09:17:11'),
+(445,3,'2025-11-14 12:00:00','2025-11-14 13:00:00',0,'2025-11-03 09:17:11'),
+(446,3,'2025-11-14 13:00:00','2025-11-14 14:00:00',0,'2025-11-03 09:17:11'),
+(447,3,'2025-11-14 14:00:00','2025-11-14 15:00:00',0,'2025-11-03 09:17:11'),
+(448,3,'2025-11-14 15:00:00','2025-11-14 16:00:00',0,'2025-11-03 09:17:11'),
+(449,3,'2025-11-14 16:00:00','2025-11-14 17:00:00',0,'2025-11-03 09:17:11'),
+(450,3,'2025-11-21 09:00:00','2025-11-21 10:00:00',0,'2025-11-03 09:17:11'),
+(451,3,'2025-11-21 10:00:00','2025-11-21 11:00:00',0,'2025-11-03 09:17:11'),
+(452,3,'2025-11-21 11:00:00','2025-11-21 12:00:00',0,'2025-11-03 09:17:11'),
+(453,3,'2025-11-21 12:00:00','2025-11-21 13:00:00',0,'2025-11-03 09:17:11'),
+(454,3,'2025-11-21 13:00:00','2025-11-21 14:00:00',0,'2025-11-03 09:17:11'),
+(455,3,'2025-11-21 14:00:00','2025-11-21 15:00:00',0,'2025-11-03 09:17:11'),
+(456,3,'2025-11-21 15:00:00','2025-11-21 16:00:00',0,'2025-11-03 09:17:11'),
+(457,3,'2025-11-21 16:00:00','2025-11-21 17:00:00',0,'2025-11-03 09:17:11'),
+(458,3,'2025-11-28 09:00:00','2025-11-28 10:00:00',0,'2025-11-03 09:17:11'),
+(459,3,'2025-11-28 10:00:00','2025-11-28 11:00:00',0,'2025-11-03 09:17:11'),
+(460,3,'2025-11-28 11:00:00','2025-11-28 12:00:00',0,'2025-11-03 09:17:11'),
+(461,3,'2025-11-28 12:00:00','2025-11-28 13:00:00',0,'2025-11-03 09:17:11'),
+(462,3,'2025-11-28 13:00:00','2025-11-28 14:00:00',0,'2025-11-03 09:17:11'),
+(463,3,'2025-11-28 14:00:00','2025-11-28 15:00:00',0,'2025-11-03 09:17:11'),
+(464,3,'2025-11-28 15:00:00','2025-11-28 16:00:00',0,'2025-11-03 09:17:11'),
+(465,3,'2025-11-28 16:00:00','2025-11-28 17:00:00',0,'2025-11-03 09:17:11'),
+(466,6,'2025-11-05 14:00:00','2025-11-05 15:00:00',1,'2025-11-05 12:22:36'),
+(467,6,'2025-11-05 15:00:00','2025-11-05 16:00:00',1,'2025-11-05 14:22:59'),
+(468,6,'2025-11-06 01:00:00','2025-11-06 02:00:00',1,'2025-11-06 00:53:22'),
+(469,6,'2025-11-06 03:00:00','2025-11-06 04:00:00',0,'2025-11-06 01:06:14'),
+(470,6,'2025-11-06 13:00:00','2025-11-06 14:00:00',1,'2025-11-06 12:18:58'),
+(471,6,'2025-11-06 14:00:00','2025-11-06 15:00:00',1,'2025-11-06 12:20:06'),
+(472,6,'2025-11-06 22:00:00','2025-11-06 23:00:00',1,'2025-11-06 21:49:50'),
+(473,6,'2025-11-07 16:30:00','2025-11-07 17:00:00',1,'2025-11-07 16:04:56'),
+(474,6,'2025-11-09 23:45:00','2025-11-10 01:00:00',1,'2025-11-09 23:13:21'),
+(475,6,'2025-11-12 16:50:00','2025-11-12 17:00:00',1,'2025-11-12 16:38:27'),
+(476,6,'2025-11-13 03:30:00','2025-11-13 04:00:00',1,'2025-11-13 03:20:06'),
+(477,6,'2025-11-13 22:00:00','2025-11-13 22:35:00',1,'2025-11-13 21:44:06'),
+(478,6,'2025-11-22 23:15:00','2025-11-23 00:00:00',1,'2025-11-22 23:00:41'),
+(479,6,'2025-12-21 15:00:00','2025-12-21 16:00:00',0,'2025-12-09 00:55:52'),
+(480,6,'2025-12-28 15:00:00','2025-12-28 16:00:00',0,'2025-12-09 00:55:52'),
+(481,6,'2025-12-21 16:00:00','2025-12-21 17:00:00',0,'2025-12-09 00:55:52'),
+(482,6,'2025-12-28 16:00:00','2025-12-28 17:00:00',0,'2025-12-09 00:55:52'),
+(483,6,'2025-12-14 17:00:00','2025-12-14 18:00:00',0,'2025-12-09 00:55:52'),
+(484,6,'2025-12-21 17:00:00','2025-12-21 18:00:00',0,'2025-12-09 00:55:52'),
+(485,6,'2025-12-28 17:00:00','2025-12-28 18:00:00',0,'2025-12-09 00:55:52'),
+(486,6,'2025-12-14 18:00:00','2025-12-14 19:00:00',0,'2025-12-09 00:55:52'),
+(487,6,'2025-12-21 18:00:00','2025-12-21 19:00:00',0,'2025-12-09 00:55:52'),
+(488,6,'2025-12-28 18:00:00','2025-12-28 19:00:00',0,'2025-12-09 00:55:52'),
+(489,6,'2025-12-14 19:00:00','2025-12-14 20:00:00',0,'2025-12-09 00:55:52'),
+(490,6,'2025-12-21 19:00:00','2025-12-21 20:00:00',0,'2025-12-09 00:55:52'),
+(491,6,'2025-12-28 19:00:00','2025-12-28 20:00:00',0,'2025-12-09 00:55:52'),
+(492,6,'2025-12-20 15:00:00','2025-12-20 16:00:00',0,'2025-12-09 00:55:52'),
+(493,6,'2025-12-27 15:00:00','2025-12-27 16:00:00',0,'2025-12-09 00:55:52'),
+(494,6,'2025-12-13 16:00:00','2025-12-13 17:00:00',0,'2025-12-09 00:55:52'),
+(495,6,'2025-12-20 16:00:00','2025-12-20 17:00:00',0,'2025-12-09 00:55:52'),
+(496,6,'2025-12-27 16:00:00','2025-12-27 17:00:00',0,'2025-12-09 00:55:52'),
+(497,6,'2025-12-13 17:00:00','2025-12-13 18:00:00',0,'2025-12-09 00:55:52'),
+(498,6,'2025-12-20 17:00:00','2025-12-20 18:00:00',0,'2025-12-09 00:55:52'),
+(499,6,'2025-12-27 17:00:00','2025-12-27 18:00:00',0,'2025-12-09 00:55:52'),
+(500,6,'2025-12-13 18:00:00','2025-12-13 19:00:00',0,'2025-12-09 00:55:52'),
+(501,6,'2025-12-20 18:00:00','2025-12-20 19:00:00',0,'2025-12-09 00:55:52'),
+(502,6,'2025-12-27 18:00:00','2025-12-27 19:00:00',0,'2025-12-09 00:55:52'),
+(503,6,'2025-12-13 19:00:00','2025-12-13 20:00:00',0,'2025-12-09 00:55:52'),
+(504,6,'2025-12-20 19:00:00','2025-12-20 20:00:00',0,'2025-12-09 00:55:52'),
+(505,6,'2025-12-27 19:00:00','2025-12-27 20:00:00',0,'2025-12-09 00:55:52'),
+(506,6,'2025-12-14 15:00:00','2025-12-14 16:00:00',0,'2025-12-09 01:01:39'),
+(507,6,'2025-12-14 16:00:00','2025-12-14 17:00:00',0,'2025-12-09 01:01:39'),
+(508,6,'2025-12-13 15:00:00','2025-12-13 16:00:00',0,'2025-12-09 01:01:39'),
+(509,6,'2025-12-10 02:00:00','2025-12-10 03:00:00',0,'2025-12-09 01:03:52'),
+(510,6,'2025-12-11 02:00:00','2025-12-11 03:00:00',0,'2025-12-09 01:03:55'),
+(511,6,'2025-12-12 02:00:00','2025-12-12 03:00:00',0,'2025-12-09 01:03:58'),
+(512,6,'2025-12-13 02:00:00','2025-12-13 03:00:00',0,'2025-12-09 01:04:00'),
+(513,6,'2025-12-16 02:00:00','2025-12-16 03:00:00',0,'2025-12-09 01:04:03'),
+(514,6,'2025-12-17 02:00:00','2025-12-17 03:00:00',0,'2025-12-09 01:04:04'),
+(515,6,'2025-12-18 02:00:00','2025-12-18 03:00:00',0,'2025-12-09 01:04:07'),
+(516,6,'2025-12-19 02:00:00','2025-12-19 03:00:00',0,'2025-12-09 01:04:10'),
+(517,6,'2025-12-20 02:00:00','2025-12-20 03:00:00',0,'2025-12-09 01:04:12'),
+(518,6,'2025-12-23 02:00:00','2025-12-23 03:00:00',0,'2025-12-09 01:04:15'),
+(519,6,'2025-12-24 02:00:00','2025-12-24 03:00:00',0,'2025-12-09 01:04:17'),
+(520,6,'2025-12-25 02:00:00','2025-12-25 03:00:00',0,'2025-12-09 01:04:19'),
+(521,6,'2025-12-26 02:00:00','2025-12-26 03:00:00',0,'2025-12-09 01:04:21'),
+(522,6,'2025-12-27 02:00:00','2025-12-27 03:00:00',0,'2025-12-09 01:04:23'),
+(523,6,'2025-12-10 01:00:00','2025-12-10 02:00:00',0,'2025-12-09 01:04:46'),
+(524,6,'2025-12-11 01:00:00','2025-12-11 02:00:00',0,'2025-12-09 01:04:54'),
+(525,6,'2025-12-12 01:00:00','2025-12-12 02:00:00',0,'2025-12-09 01:04:57'),
+(526,6,'2025-12-13 01:00:00','2025-12-13 02:00:00',0,'2025-12-09 01:04:59'),
+(527,6,'2025-12-16 01:00:00','2025-12-16 02:00:00',0,'2025-12-09 01:05:02'),
+(528,6,'2025-12-17 01:00:00','2025-12-17 02:00:00',0,'2025-12-09 01:05:05'),
+(529,6,'2025-12-18 01:00:00','2025-12-18 02:00:00',0,'2025-12-09 01:05:07'),
+(530,6,'2025-12-19 01:00:00','2025-12-19 02:00:00',0,'2025-12-09 01:05:09'),
+(531,6,'2025-12-20 01:00:00','2025-12-20 02:00:00',0,'2025-12-09 01:05:11'),
+(532,6,'2025-12-27 01:00:00','2025-12-27 02:00:00',0,'2025-12-09 01:05:13'),
+(533,6,'2025-12-26 01:00:00','2025-12-26 02:00:00',0,'2025-12-09 01:05:15'),
+(534,6,'2025-12-25 01:00:00','2025-12-25 02:00:00',0,'2025-12-09 01:05:16'),
+(535,6,'2025-12-24 01:00:00','2025-12-24 02:00:00',0,'2025-12-09 01:05:19'),
+(536,6,'2025-12-23 01:00:00','2025-12-23 02:00:00',0,'2025-12-09 01:05:21'),
+(537,6,'2025-12-30 01:00:00','2025-12-30 02:00:00',0,'2025-12-09 01:05:35'),
+(538,6,'2025-12-31 01:00:00','2025-12-31 02:00:00',0,'2025-12-09 01:06:02'),
+(539,6,'2026-01-01 01:00:00','2026-01-01 02:00:00',0,'2025-12-09 01:06:04'),
+(540,6,'2025-12-30 02:00:00','2025-12-30 03:00:00',0,'2025-12-09 01:06:18'),
+(541,6,'2025-12-31 02:00:00','2025-12-31 03:00:00',0,'2025-12-09 01:06:21'),
+(542,6,'2026-01-01 02:00:00','2026-01-01 03:00:00',0,'2025-12-09 01:06:24'),
+(543,6,'2025-12-16 03:00:00','2025-12-16 04:00:00',0,'2025-12-09 01:08:01'),
+(544,6,'2025-12-17 03:00:00','2025-12-17 04:00:00',0,'2025-12-09 01:08:06'),
+(545,6,'2025-12-18 03:00:00','2025-12-18 04:00:00',0,'2025-12-09 01:08:08'),
+(546,6,'2025-12-19 03:00:00','2025-12-19 04:00:00',0,'2025-12-09 01:08:11'),
+(547,6,'2025-12-20 03:00:00','2025-12-20 04:00:00',0,'2025-12-09 01:08:13'),
+(548,6,'2025-12-10 03:00:00','2025-12-10 04:00:00',0,'2025-12-09 01:08:16'),
+(549,6,'2025-12-11 03:00:00','2025-12-11 04:00:00',0,'2025-12-09 01:08:18'),
+(550,6,'2025-12-12 03:00:00','2025-12-12 04:00:00',0,'2025-12-09 01:08:20'),
+(551,6,'2025-12-13 03:00:00','2025-12-13 04:00:00',0,'2025-12-09 01:08:22'),
+(552,6,'2025-12-23 03:00:00','2025-12-23 04:00:00',0,'2025-12-09 01:08:28'),
+(553,6,'2025-12-24 03:00:00','2025-12-24 04:00:00',0,'2025-12-09 01:08:30'),
+(554,6,'2025-12-25 03:00:00','2025-12-25 04:00:00',0,'2025-12-09 01:08:32'),
+(555,6,'2025-12-26 03:00:00','2025-12-26 04:00:00',0,'2025-12-09 01:08:34'),
+(556,6,'2025-12-27 03:00:00','2025-12-27 04:00:00',0,'2025-12-09 01:08:36'),
+(557,6,'2025-12-30 03:00:00','2025-12-30 04:00:00',0,'2025-12-09 01:08:41'),
+(558,6,'2025-12-31 03:00:00','2025-12-31 04:00:00',0,'2025-12-09 01:08:44'),
+(559,3,'2025-12-31 10:00:00','2025-12-31 11:00:00',0,'2025-12-31 05:59:10'),
+(560,3,'2025-12-31 11:00:00','2025-12-31 12:00:00',0,'2025-12-31 05:59:10'),
+(561,3,'2026-01-05 09:00:00','2026-01-05 10:00:00',0,'2025-12-31 06:01:31'),
+(562,3,'2026-01-05 10:00:00','2026-01-05 11:00:00',0,'2025-12-31 06:01:31'),
+(563,3,'2026-01-05 11:00:00','2026-01-05 12:00:00',0,'2025-12-31 06:01:31'),
+(564,3,'2026-01-05 12:00:00','2026-01-05 13:00:00',0,'2025-12-31 06:01:31'),
+(565,3,'2026-01-12 09:00:00','2026-01-12 10:00:00',0,'2025-12-31 06:01:31'),
+(566,3,'2026-01-12 10:00:00','2026-01-12 11:00:00',0,'2025-12-31 06:01:31'),
+(567,3,'2026-01-12 11:00:00','2026-01-12 12:00:00',0,'2025-12-31 06:01:31'),
+(568,3,'2026-01-12 12:00:00','2026-01-12 13:00:00',0,'2025-12-31 06:01:31'),
+(569,3,'2026-01-19 09:00:00','2026-01-19 10:00:00',0,'2025-12-31 06:01:31'),
+(570,3,'2026-01-19 10:00:00','2026-01-19 11:00:00',0,'2025-12-31 06:01:31'),
+(571,3,'2026-01-19 11:00:00','2026-01-19 12:00:00',0,'2025-12-31 06:01:31'),
+(572,3,'2026-01-19 12:00:00','2026-01-19 13:00:00',0,'2025-12-31 06:01:31'),
+(573,3,'2026-01-26 09:00:00','2026-01-26 10:00:00',0,'2025-12-31 06:01:31'),
+(574,3,'2026-01-26 10:00:00','2026-01-26 11:00:00',0,'2025-12-31 06:01:31'),
+(575,3,'2026-01-26 11:00:00','2026-01-26 12:00:00',0,'2025-12-31 06:01:31'),
+(576,3,'2026-01-26 12:00:00','2026-01-26 13:00:00',0,'2025-12-31 06:01:31'),
+(577,3,'2026-01-05 17:00:00','2026-01-05 18:00:00',0,'2025-12-31 06:01:31'),
+(578,3,'2026-01-12 17:00:00','2026-01-12 18:00:00',0,'2025-12-31 06:01:31'),
+(579,3,'2026-01-19 17:00:00','2026-01-19 18:00:00',0,'2025-12-31 06:01:31'),
+(580,3,'2026-01-26 17:00:00','2026-01-26 18:00:00',0,'2025-12-31 06:01:31'),
+(581,3,'2026-01-07 10:00:00','2026-01-07 11:00:00',0,'2025-12-31 06:01:31'),
+(582,3,'2026-01-07 11:00:00','2026-01-07 12:00:00',0,'2025-12-31 06:01:31'),
+(583,3,'2026-01-14 10:00:00','2026-01-14 11:00:00',0,'2025-12-31 06:01:31'),
+(584,3,'2026-01-14 11:00:00','2026-01-14 12:00:00',0,'2025-12-31 06:01:31'),
+(585,3,'2026-01-21 10:00:00','2026-01-21 11:00:00',0,'2025-12-31 06:01:31'),
+(586,3,'2026-01-21 11:00:00','2026-01-21 12:00:00',0,'2025-12-31 06:01:31'),
+(587,3,'2026-01-28 10:00:00','2026-01-28 11:00:00',0,'2025-12-31 06:01:31'),
+(588,3,'2026-01-28 11:00:00','2026-01-28 12:00:00',0,'2025-12-31 06:01:31'),
+(589,3,'2026-01-02 09:00:00','2026-01-02 10:00:00',0,'2025-12-31 06:01:31'),
+(590,3,'2026-01-02 10:00:00','2026-01-02 11:00:00',0,'2025-12-31 06:01:31'),
+(591,3,'2026-01-02 11:00:00','2026-01-02 12:00:00',0,'2025-12-31 06:01:31'),
+(592,3,'2026-01-02 12:00:00','2026-01-02 13:00:00',0,'2025-12-31 06:01:31'),
+(593,3,'2026-01-02 13:00:00','2026-01-02 14:00:00',0,'2025-12-31 06:01:31'),
+(594,3,'2026-01-02 14:00:00','2026-01-02 15:00:00',0,'2025-12-31 06:01:31'),
+(595,3,'2026-01-02 15:00:00','2026-01-02 16:00:00',0,'2025-12-31 06:01:31'),
+(596,3,'2026-01-02 16:00:00','2026-01-02 17:00:00',0,'2025-12-31 06:01:31'),
+(597,3,'2026-01-09 09:00:00','2026-01-09 10:00:00',0,'2025-12-31 06:01:31'),
+(598,3,'2026-01-09 10:00:00','2026-01-09 11:00:00',0,'2025-12-31 06:01:31'),
+(599,3,'2026-01-09 11:00:00','2026-01-09 12:00:00',0,'2025-12-31 06:01:31'),
+(600,3,'2026-01-09 12:00:00','2026-01-09 13:00:00',0,'2025-12-31 06:01:31'),
+(601,3,'2026-01-09 13:00:00','2026-01-09 14:00:00',0,'2025-12-31 06:01:31'),
+(602,3,'2026-01-09 14:00:00','2026-01-09 15:00:00',0,'2025-12-31 06:01:31'),
+(603,3,'2026-01-09 15:00:00','2026-01-09 16:00:00',0,'2025-12-31 06:01:31'),
+(604,3,'2026-01-09 16:00:00','2026-01-09 17:00:00',0,'2025-12-31 06:01:31'),
+(605,3,'2026-01-16 09:00:00','2026-01-16 10:00:00',0,'2025-12-31 06:01:31'),
+(606,3,'2026-01-16 10:00:00','2026-01-16 11:00:00',0,'2025-12-31 06:01:31'),
+(607,3,'2026-01-16 11:00:00','2026-01-16 12:00:00',0,'2025-12-31 06:01:31'),
+(608,3,'2026-01-16 12:00:00','2026-01-16 13:00:00',0,'2025-12-31 06:01:31'),
+(609,3,'2026-01-16 13:00:00','2026-01-16 14:00:00',0,'2025-12-31 06:01:31'),
+(610,3,'2026-01-16 14:00:00','2026-01-16 15:00:00',0,'2025-12-31 06:01:31'),
+(611,3,'2026-01-16 15:00:00','2026-01-16 16:00:00',0,'2025-12-31 06:01:31'),
+(612,3,'2026-01-16 16:00:00','2026-01-16 17:00:00',0,'2025-12-31 06:01:31'),
+(613,3,'2026-01-23 09:00:00','2026-01-23 10:00:00',0,'2025-12-31 06:01:31'),
+(614,3,'2026-01-23 10:00:00','2026-01-23 11:00:00',0,'2025-12-31 06:01:31'),
+(615,3,'2026-01-23 11:00:00','2026-01-23 12:00:00',0,'2025-12-31 06:01:31'),
+(616,3,'2026-01-23 12:00:00','2026-01-23 13:00:00',0,'2025-12-31 06:01:31'),
+(617,3,'2026-01-23 13:00:00','2026-01-23 14:00:00',0,'2025-12-31 06:01:31'),
+(618,3,'2026-01-23 14:00:00','2026-01-23 15:00:00',0,'2025-12-31 06:01:31'),
+(619,3,'2026-01-23 15:00:00','2026-01-23 16:00:00',0,'2025-12-31 06:01:31'),
+(620,3,'2026-01-23 16:00:00','2026-01-23 17:00:00',0,'2025-12-31 06:01:31'),
+(621,3,'2026-01-30 09:00:00','2026-01-30 10:00:00',0,'2025-12-31 06:01:31'),
+(622,3,'2026-01-30 10:00:00','2026-01-30 11:00:00',0,'2025-12-31 06:01:31'),
+(623,3,'2026-01-30 11:00:00','2026-01-30 12:00:00',0,'2025-12-31 06:01:31'),
+(624,3,'2026-01-30 12:00:00','2026-01-30 13:00:00',0,'2025-12-31 06:01:31'),
+(625,3,'2026-01-30 13:00:00','2026-01-30 14:00:00',0,'2025-12-31 06:01:31'),
+(626,3,'2026-01-30 14:00:00','2026-01-30 15:00:00',0,'2025-12-31 06:01:31'),
+(627,3,'2026-01-30 15:00:00','2026-01-30 16:00:00',0,'2025-12-31 06:01:31'),
+(628,3,'2026-01-30 16:00:00','2026-01-30 17:00:00',0,'2025-12-31 06:01:31'),
+(629,3,'2026-01-05 09:00:00','2026-01-05 10:00:00',0,'2025-12-31 06:01:31'),
+(630,3,'2026-01-12 09:00:00','2026-01-12 10:00:00',0,'2025-12-31 06:01:31'),
+(631,3,'2026-01-19 09:00:00','2026-01-19 10:00:00',0,'2025-12-31 06:01:31'),
+(632,3,'2026-01-26 09:00:00','2026-01-26 10:00:00',0,'2025-12-31 06:01:31'),
+(633,3,'2025-12-31 10:00:00','2025-12-31 11:00:00',0,'2025-12-31 06:37:37'),
+(634,3,'2025-12-31 11:00:00','2025-12-31 12:00:00',0,'2025-12-31 06:37:37'),
+(635,3,'2025-12-31 21:00:00','2025-12-31 22:00:00',1,'2025-12-31 06:37:37'),
+(636,3,'2025-12-31 13:00:00','2025-12-31 14:00:00',0,'2025-12-31 06:38:16'),
+(637,3,'2025-12-31 10:00:00','2025-12-31 11:00:00',0,'2025-12-31 06:38:32'),
+(638,3,'2025-12-31 11:00:00','2025-12-31 12:00:00',0,'2025-12-31 06:38:32'),
+(639,3,'2025-12-31 21:00:00','2025-12-31 22:00:00',0,'2025-12-31 06:38:32'),
+(640,6,'2025-12-31 19:00:00','2025-12-31 20:00:00',0,'2025-12-31 14:14:40'),
+(641,6,'2025-12-31 20:00:00','2025-12-31 21:00:00',0,'2025-12-31 14:14:40'),
+(642,6,'2025-12-31 21:00:00','2025-12-31 22:00:00',0,'2025-12-31 14:14:40');
+/*!40000 ALTER TABLE `expert_time_slots_old` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `expert_weekly_availability`
+--
+
+DROP TABLE IF EXISTS `expert_weekly_availability`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `expert_weekly_availability` (
+  `id` int(11) NOT NULL,
+  `expert_id` int(11) NOT NULL,
+  `day_of_week` enum('Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday') NOT NULL,
+  `start_time` time NOT NULL,
+  `end_time` time NOT NULL,
+  `duration_minutes` int(11) NOT NULL DEFAULT 30,
+  `buffer_minutes` int(11) NOT NULL DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `expert_weekly_availability`
+--
+
+LOCK TABLES `expert_weekly_availability` WRITE;
+/*!40000 ALTER TABLE `expert_weekly_availability` DISABLE KEYS */;
+INSERT INTO `expert_weekly_availability` VALUES
+(1,3,'Saturday','14:00:00','16:30:00',30,10,'2025-08-08 19:29:17'),
+(2,3,'Saturday','10:00:00','14:00:00',30,0,'2025-08-08 20:50:48');
+/*!40000 ALTER TABLE `expert_weekly_availability` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `expert_weekly_templates`
+--
+
+DROP TABLE IF EXISTS `expert_weekly_templates`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `expert_weekly_templates` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `expert_id` int(11) NOT NULL,
+  `day_of_week` enum('Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday') NOT NULL,
+  `start_time` time NOT NULL,
+  `end_time` time NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=39 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `expert_weekly_templates`
+--
+
+LOCK TABLES `expert_weekly_templates` WRITE;
+/*!40000 ALTER TABLE `expert_weekly_templates` DISABLE KEYS */;
+INSERT INTO `expert_weekly_templates` VALUES
+(1,1,'Sunday','11:00:00','12:00:00','2025-12-31 09:15:07'),
+(2,1,'Sunday','18:00:00','19:00:00','2025-12-31 09:15:07'),
+(3,1,'Monday','14:00:00','15:00:00','2025-12-31 09:15:07'),
+(4,3,'Monday','09:00:00','13:00:00','2025-12-31 09:15:07'),
+(5,3,'Monday','09:00:00','10:00:00','2025-12-31 09:15:07'),
+(6,3,'Monday','17:00:00','18:00:00','2025-12-31 09:15:07'),
+(7,3,'Monday','21:00:00','22:00:00','2025-12-31 09:15:07'),
+(8,3,'Wednesday','10:00:00','12:00:00','2025-12-31 09:15:07'),
+(9,3,'Wednesday','21:00:00','22:00:00','2025-12-31 09:15:07'),
+(10,3,'Friday','09:00:00','17:00:00','2025-12-31 09:15:07'),
+(11,6,'Sunday','13:00:00','14:00:00','2025-12-31 09:15:07'),
+(12,6,'Sunday','14:00:00','15:00:00','2025-12-31 09:15:07'),
+(13,6,'Sunday','15:00:00','16:00:00','2025-12-31 09:15:07'),
+(14,6,'Sunday','16:00:00','17:00:00','2025-12-31 09:15:07'),
+(15,6,'Sunday','17:00:00','18:00:00','2025-12-31 09:15:07'),
+(16,6,'Sunday','18:00:00','19:00:00','2025-12-31 09:15:07'),
+(17,6,'Sunday','19:00:00','20:00:00','2025-12-31 09:15:07'),
+(18,6,'Monday','19:00:00','20:00:00','2025-12-31 09:15:07'),
+(19,6,'Monday','20:00:00','21:00:00','2025-12-31 09:15:07'),
+(20,6,'Monday','21:00:00','22:00:00','2025-12-31 09:15:07'),
+(21,6,'Tuesday','19:00:00','20:00:00','2025-12-31 09:15:07'),
+(22,6,'Tuesday','21:00:00','22:00:00','2025-12-31 09:15:07'),
+(23,6,'Wednesday','19:00:00','20:00:00','2025-12-31 09:15:07'),
+(24,6,'Wednesday','20:00:00','21:00:00','2025-12-31 09:15:07'),
+(25,6,'Wednesday','21:00:00','22:00:00','2025-12-31 09:15:07'),
+(26,6,'Thursday','19:00:00','20:00:00','2025-12-31 09:15:07'),
+(27,6,'Thursday','21:00:00','22:00:00','2025-12-31 09:15:07'),
+(28,6,'Friday','19:00:00','20:00:00','2025-12-31 09:15:07'),
+(29,6,'Friday','20:00:00','21:00:00','2025-12-31 09:15:07'),
+(30,6,'Friday','21:00:00','22:00:00','2025-12-31 09:15:07'),
+(31,6,'Saturday','13:00:00','14:00:00','2025-12-31 09:15:07'),
+(32,6,'Saturday','14:00:00','15:00:00','2025-12-31 09:15:07'),
+(33,6,'Saturday','15:00:00','16:00:00','2025-12-31 09:15:07'),
+(34,6,'Saturday','16:00:00','17:00:00','2025-12-31 09:15:07'),
+(35,6,'Saturday','17:00:00','18:00:00','2025-12-31 09:15:07'),
+(36,6,'Saturday','18:00:00','19:00:00','2025-12-31 09:15:07'),
+(37,6,'Saturday','19:00:00','20:00:00','2025-12-31 09:15:07'),
+(38,6,'Monday','22:00:00','23:00:00','2025-12-31 14:14:36');
+/*!40000 ALTER TABLE `expert_weekly_templates` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `general_profiles`
+--
+
+DROP TABLE IF EXISTS `general_profiles`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `general_profiles` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `full_name` varchar(100) DEFAULT NULL,
+  `phone` varchar(20) DEFAULT NULL,
+  `interests` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `general_profiles`
+--
+
+LOCK TABLES `general_profiles` WRITE;
+/*!40000 ALTER TABLE `general_profiles` DISABLE KEYS */;
+/*!40000 ALTER TABLE `general_profiles` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `industries`
+--
+
+DROP TABLE IF EXISTS `industries`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `industries` (
+  `id` int(11) NOT NULL,
+  `name` varchar(100) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `industries`
+--
+
+LOCK TABLES `industries` WRITE;
+/*!40000 ALTER TABLE `industries` DISABLE KEYS */;
+INSERT INTO `industries` VALUES
+(2,'Business'),
+(1,'Updated Industry');
+/*!40000 ALTER TABLE `industries` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `ledger_entries`
+--
+
+DROP TABLE IF EXISTS `ledger_entries`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `ledger_entries` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `order_id` int(11) DEFAULT NULL,
+  `kind` enum('HOLD','RELEASE','PAYOUT_REQUEST','PAYOUT_REJECT','PAYOUT_PAID','ADJUSTMENT') NOT NULL,
+  `amount` decimal(12,2) NOT NULL,
+  `currency` char(3) NOT NULL DEFAULT 'USD',
+  `description` varchar(255) DEFAULT NULL,
+  `meta` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`meta`)),
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `ledger_entries`
+--
+
+LOCK TABLES `ledger_entries` WRITE;
+/*!40000 ALTER TABLE `ledger_entries` DISABLE KEYS */;
+INSERT INTO `ledger_entries` VALUES
+(1,3,NULL,'PAYOUT_REQUEST',37.00,'USD','Payout request created','{}','2025-09-07 20:23:22'),
+(2,3,NULL,'PAYOUT_PAID',37.00,'USD','Payout paid','{}','2025-09-07 20:24:55'),
+(3,3,NULL,'PAYOUT_REJECT',25.00,'USD','Payout rejected: Rejected by admin','{}','2025-09-07 21:04:05'),
+(4,3,NULL,'PAYOUT_REJECT',20.00,'USD','Payout rejected: Rejected by admin','{}','2025-09-07 21:04:06'),
+(5,3,NULL,'PAYOUT_PAID',25.00,'USD','Payout paid','{}','2025-09-07 21:05:03');
+/*!40000 ALTER TABLE `ledger_entries` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `meeting_attendance_sessions`
+--
+
+DROP TABLE IF EXISTS `meeting_attendance_sessions`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `meeting_attendance_sessions` (
+  `id` bigint(20) unsigned NOT NULL,
+  `meeting_id` int(11) DEFAULT NULL,
+  `room_name` varchar(191) NOT NULL,
+  `participant_sid` varchar(191) NOT NULL,
+  `identity` varchar(191) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `role` varchar(50) DEFAULT NULL,
+  `joined_at` datetime NOT NULL,
+  `last_seen_at` datetime DEFAULT NULL,
+  `left_at` datetime DEFAULT NULL,
+  `duration_seconds` int(10) unsigned DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `meeting_attendance_sessions`
+--
+
+LOCK TABLES `meeting_attendance_sessions` WRITE;
+/*!40000 ALTER TABLE `meeting_attendance_sessions` DISABLE KEYS */;
+INSERT INTO `meeting_attendance_sessions` VALUES
+(1,6,'room_915e28fc-6b01-4470-b983-0ea9f59d54ab','PA_icWLWoohnwML','3',3,'expert','2025-08-18 12:17:28',NULL,NULL,NULL,'2025-08-18 12:17:28','2025-08-18 12:17:28'),
+(2,6,'room_915e28fc-6b01-4470-b983-0ea9f59d54ab','PA_uqL5KsGRzftE','3',3,'expert','2025-08-18 12:17:54',NULL,'2025-08-18 12:18:22',28,'2025-08-18 12:17:54','2025-08-18 12:18:22'),
+(3,3,'room_2a118618-89e4-4bc9-bc0f-8aff03eda2fc','PA_YSAUAEBJhQAz','3',3,'expert','2025-08-18 12:18:39',NULL,NULL,NULL,'2025-08-18 12:18:39','2025-08-18 12:18:39'),
+(4,9,'room_5e4b73d9-5c8e-40b4-8629-e799524dc106','PA_UwzDYxSiexcF','3',3,'expert','2025-08-20 13:11:44','2025-08-20 13:11:44','2025-08-20 13:11:44',0,'2025-08-20 13:11:44','2025-08-20 13:14:00'),
+(5,9,'room_5e4b73d9-5c8e-40b4-8629-e799524dc106','PA_sZu4hEb3cbNw','3',3,'expert','2025-08-20 13:12:39','2025-08-20 13:12:39','2025-08-20 13:12:39',0,'2025-08-20 13:12:39','2025-08-20 13:15:00'),
+(6,9,'room_5e4b73d9-5c8e-40b4-8629-e799524dc106','PA_fLjfUdyDPU9B','3',3,'expert','2025-08-20 13:21:53','2025-08-20 13:21:53','2025-08-20 13:21:53',0,'2025-08-20 13:21:53','2025-08-20 13:24:00'),
+(7,22,'room_5713be9f-fc30-4b62-a29a-fd5a26b9f02a','PA_HcwQJAXMP5hs','2',2,'client','2025-09-14 14:15:35','2025-09-14 14:24:06','2025-09-14 14:24:06',511,'2025-09-14 14:15:35','2025-09-14 14:27:00'),
+(8,22,'room_5713be9f-fc30-4b62-a29a-fd5a26b9f02a','PA_kAZwsKzAGCdF','6',6,'expert','2025-09-14 14:16:30','2025-09-14 14:16:30','2025-09-14 14:16:30',0,'2025-09-14 14:16:30','2025-09-14 14:19:00'),
+(9,22,'room_5713be9f-fc30-4b62-a29a-fd5a26b9f02a','PA_4bLASJLPwGmG','6',6,'expert','2025-09-14 14:16:55','2025-09-14 14:16:55','2025-09-14 14:16:55',0,'2025-09-14 14:16:55','2025-09-14 14:19:00'),
+(10,22,'room_5713be9f-fc30-4b62-a29a-fd5a26b9f02a','PA_HXzqDZwv5JFr','6',6,'expert','2025-09-14 14:17:14','2025-09-14 14:17:44','2025-09-14 14:17:44',30,'2025-09-14 14:17:14','2025-09-14 14:20:00'),
+(11,22,'room_5713be9f-fc30-4b62-a29a-fd5a26b9f02a','PA_sKtZGqRGeLGo','6',6,'expert','2025-09-14 14:17:55','2025-09-14 14:22:55','2025-09-14 14:22:55',300,'2025-09-14 14:17:55','2025-09-14 14:25:00'),
+(12,22,'room_5713be9f-fc30-4b62-a29a-fd5a26b9f02a','PA_2DK6BXY4Fako','6',6,'expert','2025-09-14 14:23:00','2025-09-14 14:24:00','2025-09-14 14:24:00',60,'2025-09-14 14:23:00','2025-09-14 14:27:00'),
+(13,22,'room_5713be9f-fc30-4b62-a29a-fd5a26b9f02a','PA_um4R9QzG4Q6Y','6',6,'expert','2025-09-14 14:24:45','2025-09-14 14:26:45','2025-09-14 14:26:45',120,'2025-09-14 14:24:45','2025-09-14 14:29:00'),
+(14,22,'room_5713be9f-fc30-4b62-a29a-fd5a26b9f02a','PA_ujjvBhbAViyR','6',6,'expert','2025-09-14 14:27:40','2025-09-14 14:27:40','2025-09-14 14:27:40',0,'2025-09-14 14:27:40','2025-09-14 14:30:00'),
+(15,21,'room_c9ad3f77-0bc9-43a2-9a8d-610873a3c146','PA_K6ToD6joELgK','6',6,'expert','2025-09-14 20:31:27','2025-09-14 20:31:57','2025-09-14 20:31:57',30,'2025-09-14 20:31:27','2025-09-14 20:34:00'),
+(16,21,'room_c9ad3f77-0bc9-43a2-9a8d-610873a3c146','PA_MDWUKZnjU2Ja','6',6,'expert','2025-09-15 03:37:42','2025-09-15 03:37:42','2025-09-15 03:37:42',0,'2025-09-15 03:37:42','2025-09-15 03:40:00'),
+(17,21,'room_c9ad3f77-0bc9-43a2-9a8d-610873a3c146','PA_Rmwm9SqxpgA3','6',6,'expert','2025-09-20 19:27:17','2025-09-20 19:27:47','2025-09-20 19:27:47',30,'2025-09-20 19:27:17','2025-09-20 19:30:00'),
+(18,5,'room_56dbff05-1a15-416c-9577-ad04d2851035','PA_LbKPLPYdnK78','4',4,'client','2025-09-25 10:34:00','2025-09-25 10:34:00','2025-09-25 10:34:00',0,'2025-09-25 10:34:00','2025-09-25 10:37:00'),
+(19,6,'room_915e28fc-6b01-4470-b983-0ea9f59d54ab','PA_j4ZrGfz6Kr5W','4',4,'client','2025-09-25 10:38:24','2025-09-25 10:38:24','2025-09-25 10:38:24',0,'2025-09-25 10:38:24','2025-09-25 10:41:00'),
+(20,20,'room_a20cc180-5e96-4c0e-84bc-3f857b94eeed','PA_Dtaka9HZHKXM','3',3,'expert','2025-09-25 10:39:11','2025-09-25 10:39:11','2025-09-25 10:39:11',0,'2025-09-25 10:39:11','2025-09-25 10:42:00'),
+(21,19,'room_cdbafb4a-ace6-42f5-a2f2-d94d4a2c3930','PA_NtCBJJyKL4oE','3',3,'expert','2025-09-25 10:40:16','2025-09-25 10:40:16','2025-09-25 10:40:16',0,'2025-09-25 10:40:16','2025-09-25 10:43:00'),
+(22,19,'room_cdbafb4a-ace6-42f5-a2f2-d94d4a2c3930','PA_mdXNVWunzv3f','3',3,'expert','2025-09-25 10:41:52','2025-09-25 10:41:52','2025-09-25 10:41:52',0,'2025-09-25 10:41:52','2025-09-25 10:44:00'),
+(23,23,'room_d3ed6d6f-feec-4914-9453-e28a3f73c11c','PA_KqdARiTnCB3o','4',4,'client','2025-09-27 09:22:02','2025-09-27 09:22:02','2025-09-27 09:22:02',0,'2025-09-27 09:22:02','2025-09-27 09:25:00'),
+(24,23,'room_d3ed6d6f-feec-4914-9453-e28a3f73c11c','PA_ZXywUayiPJRP','4',4,'client','2025-09-27 09:22:25','2025-09-27 09:22:25','2025-09-27 09:22:25',0,'2025-09-27 09:22:25','2025-09-27 09:25:00'),
+(25,23,'room_d3ed6d6f-feec-4914-9453-e28a3f73c11c','PA_vkWBKr2nsgwK','4',4,'client','2025-09-27 09:26:17','2025-09-27 09:26:49','2025-09-27 09:26:49',32,'2025-09-27 09:26:17','2025-09-27 09:29:00'),
+(26,23,'room_d3ed6d6f-feec-4914-9453-e28a3f73c11c','PA_D96dLznZHjMK','4',4,'client','2025-09-27 10:17:54','2025-09-27 10:28:25','2025-09-27 10:28:25',631,'2025-09-27 10:17:54','2025-09-27 10:31:00'),
+(27,23,'room_d3ed6d6f-feec-4914-9453-e28a3f73c11c','PA_UAt8WW6U694F','4',4,'client','2025-09-27 10:28:53','2025-09-27 10:29:54','2025-09-27 10:29:54',61,'2025-09-27 10:28:53','2025-09-27 10:32:00'),
+(28,23,'room_d3ed6d6f-feec-4914-9453-e28a3f73c11c','PA_nq873BqQd3m2','4',4,'client','2025-09-27 10:30:17','2025-09-27 10:38:48','2025-09-27 10:38:48',511,'2025-09-27 10:30:17','2025-09-27 10:41:00'),
+(29,23,'room_d3ed6d6f-feec-4914-9453-e28a3f73c11c','PA_wvpzSmLzr5J8','4',4,'client','2025-09-27 10:38:51','2025-09-27 10:42:51','2025-09-27 10:42:51',240,'2025-09-27 10:38:51','2025-09-27 10:45:00'),
+(30,23,'room_d3ed6d6f-feec-4914-9453-e28a3f73c11c','PA_vkDHxeu9pKVM','3',3,'expert','2025-09-27 10:40:45','2025-09-27 10:49:46','2025-09-27 10:49:46',541,'2025-09-27 10:40:45','2025-09-27 10:52:00'),
+(31,23,'room_d3ed6d6f-feec-4914-9453-e28a3f73c11c','PA_3pDGfCW39h5r','4',4,'client','2025-09-27 10:43:17','2025-09-27 16:31:12','2025-09-27 15:49:12',18355,'2025-09-27 10:43:17','2025-09-27 16:31:12'),
+(33,23,'room_d3ed6d6f-feec-4914-9453-e28a3f73c11c','PA_B9zg6tHJxaVY','4',4,'client','2025-09-27 10:47:12','2025-09-27 10:50:13','2025-09-27 10:50:13',181,'2025-09-27 10:47:12','2025-09-27 10:53:00'),
+(34,23,'room_d3ed6d6f-feec-4914-9453-e28a3f73c11c','PA_3nyZB6rLv2bo','4',4,'client','2025-09-27 10:50:25','2025-09-27 10:57:26','2025-09-27 10:57:26',421,'2025-09-27 10:50:25','2025-09-27 11:00:00'),
+(35,23,'room_d3ed6d6f-feec-4914-9453-e28a3f73c11c','PA_jj7itPjXMpms','3',3,'expert','2025-09-27 10:51:23','2025-09-27 10:59:23','2025-09-27 10:59:23',480,'2025-09-27 10:51:23','2025-09-27 11:02:00'),
+(36,23,'room_d3ed6d6f-feec-4914-9453-e28a3f73c11c','PA_89usnSb3QZDK','4',4,'client','2025-09-27 10:58:18','2025-09-27 10:59:18','2025-09-27 10:59:18',60,'2025-09-27 10:58:18','2025-09-27 11:02:00'),
+(37,23,'room_d3ed6d6f-feec-4914-9453-e28a3f73c11c','PA_QfpMUiRscoXt','3',3,'expert','2025-09-27 11:02:15','2025-09-27 11:03:16','2025-09-27 11:03:16',61,'2025-09-27 11:02:15','2025-09-27 11:06:00'),
+(38,23,'room_d3ed6d6f-feec-4914-9453-e28a3f73c11c','PA_ohVaL5gqGrhU','4',4,'client','2025-09-27 11:02:29','2025-09-27 11:16:39','2025-09-27 11:16:39',850,'2025-09-27 11:02:29','2025-09-27 11:19:00'),
+(39,23,'room_d3ed6d6f-feec-4914-9453-e28a3f73c11c','PA_abALVjGzUtbp','3',3,'expert','2025-09-27 11:03:30','2025-09-27 11:08:00','2025-09-27 11:08:00',270,'2025-09-27 11:03:30','2025-09-27 11:11:00'),
+(40,23,'room_d3ed6d6f-feec-4914-9453-e28a3f73c11c','PA_FCzpKrdkh6Ez','3',3,'expert','2025-09-27 11:08:20','2025-09-27 11:15:51','2025-09-27 11:15:51',451,'2025-09-27 11:08:20','2025-09-27 11:18:00'),
+(41,23,'room_d3ed6d6f-feec-4914-9453-e28a3f73c11c','PA_Ur978JScLCqZ','3',3,'expert','2025-09-27 11:16:16','2025-09-27 11:17:16','2025-09-27 11:17:16',60,'2025-09-27 11:16:16','2025-09-27 11:20:00'),
+(42,23,'room_d3ed6d6f-feec-4914-9453-e28a3f73c11c','PA_7SwJFQThcbXe','4',4,'client','2025-09-27 11:16:50','2025-09-27 11:19:50','2025-09-27 11:19:50',180,'2025-09-27 11:16:50','2025-09-27 11:22:00'),
+(43,23,'room_d3ed6d6f-feec-4914-9453-e28a3f73c11c','PA_ATqUsfYKrpB9','3',3,'expert','2025-09-27 11:17:38','2025-09-27 11:18:09','2025-09-27 11:18:09',31,'2025-09-27 11:17:38','2025-09-27 11:21:00'),
+(44,23,'room_d3ed6d6f-feec-4914-9453-e28a3f73c11c','PA_GiszZyuNzX25','3',3,'expert','2025-09-27 11:18:16','2025-09-27 11:23:48','2025-09-27 11:23:48',332,'2025-09-27 11:18:16','2025-09-27 11:26:00'),
+(45,23,'room_d3ed6d6f-feec-4914-9453-e28a3f73c11c','PA_VU99nt247yFD','3',3,'expert','2025-09-27 11:24:04','2025-09-27 11:41:34','2025-09-27 11:41:34',1050,'2025-09-27 11:24:04','2025-09-27 11:44:00'),
+(46,23,'room_d3ed6d6f-feec-4914-9453-e28a3f73c11c','PA_CwKu7ZsSVVyH','3',3,'expert','2025-09-27 11:24:06','2025-09-27 11:33:07','2025-09-27 11:33:07',541,'2025-09-27 11:24:06','2025-09-27 11:36:00'),
+(47,23,'room_d3ed6d6f-feec-4914-9453-e28a3f73c11c','PA_9As3Y9ScfQiM','3',3,'expert','2025-09-27 11:33:18','2025-09-27 11:41:19','2025-09-27 11:41:19',481,'2025-09-27 11:33:18','2025-09-27 11:44:00'),
+(48,23,'room_d3ed6d6f-feec-4914-9453-e28a3f73c11c','PA_FHZzWtxiCrEo','4',4,'client','2025-09-27 11:43:04','2025-09-27 16:28:11','2025-09-27 15:49:46',14802,'2025-09-27 11:43:04','2025-09-27 16:28:11'),
+(49,23,'room_d3ed6d6f-feec-4914-9453-e28a3f73c11c','PA_agm8Fa4pMvCk','3',3,'expert','2025-09-27 11:43:52','2025-09-27 11:44:53','2025-09-27 11:44:53',61,'2025-09-27 11:43:52','2025-09-27 11:47:00'),
+(50,24,'room_d4c5526c-b07b-4178-bba0-37aa56640f11','PA_phBKMM2LVSq3','17',17,'client','2025-09-28 18:28:54','2025-09-28 18:28:54','2025-09-28 18:28:54',0,'2025-09-28 18:28:54','2025-09-28 18:31:00'),
+(51,24,'room_d4c5526c-b07b-4178-bba0-37aa56640f11','PA_PSJ72rE3uqEs','17',17,'client','2025-09-28 18:29:03','2025-09-28 18:33:03','2025-09-28 18:33:03',240,'2025-09-28 18:29:03','2025-09-28 18:36:00'),
+(52,25,'room_97161108-c747-4b31-97a0-39a6bb896be8','PA_ZZfeAWC8jrVC','16',16,'client','2025-09-28 18:37:59','2025-09-28 19:15:59','2025-09-28 19:15:59',2280,'2025-09-28 18:37:59','2025-09-28 19:18:00'),
+(53,25,'room_97161108-c747-4b31-97a0-39a6bb896be8','PA_4mNSDwJb8JZx','6',6,'expert','2025-09-28 18:38:02','2025-09-28 18:40:32','2025-09-28 18:40:32',150,'2025-09-28 18:38:02','2025-09-28 18:43:00'),
+(54,25,'room_97161108-c747-4b31-97a0-39a6bb896be8','PA_QiLMLGJtht9Y','6',6,'expert','2025-09-28 18:42:04','2025-09-28 18:42:34','2025-09-28 18:42:34',30,'2025-09-28 18:42:04','2025-09-28 18:45:00'),
+(55,25,'room_97161108-c747-4b31-97a0-39a6bb896be8','PA_ViutNySjFsLu','6',6,'expert','2025-09-28 18:43:03','2025-09-28 19:16:03','2025-09-28 19:16:03',1980,'2025-09-28 18:43:03','2025-09-28 19:19:00'),
+(56,26,'room_06fd2152-1aeb-448b-9c62-276096cc8a40','PA_EDAFBygEMCRo','6',6,'expert','2025-09-28 20:29:27','2025-09-28 20:31:27','2025-09-28 20:31:27',120,'2025-09-28 20:29:27','2025-09-28 20:34:00'),
+(57,23,'room_d3ed6d6f-feec-4914-9453-e28a3f73c11c','PA_ZidDwPfyDSBk','3',3,'expert','2025-10-05 05:10:08','2025-10-05 05:10:39','2025-10-05 05:10:39',31,'2025-10-05 05:10:08','2025-10-05 05:13:00'),
+(58,23,'room_d3ed6d6f-feec-4914-9453-e28a3f73c11c','PA_Eyc7e8HabW6g','3',3,'expert','2025-10-05 05:12:29','2025-10-05 05:12:29','2025-10-05 05:12:29',0,'2025-10-05 05:12:29','2025-10-05 05:15:00'),
+(59,23,'room_d3ed6d6f-feec-4914-9453-e28a3f73c11c','PA_fGJ5tqj5NW9p','3',3,'expert','2025-10-05 05:12:41','2025-10-05 07:33:11','2025-10-05 07:33:11',8430,'2025-10-05 05:12:41','2025-10-05 07:36:00'),
+(60,24,'room_d4c5526c-b07b-4178-bba0-37aa56640f11','PA_fabaFu3WAdsh','6',6,'expert','2025-10-05 15:32:38','2025-10-05 15:32:38','2025-10-05 15:32:38',0,'2025-10-05 15:32:38','2025-10-05 15:35:00'),
+(61,27,'room_3a8ce434-e47c-41d6-b395-1e2e1081af28','PA_eSXhpF9pKBT3','15',15,'client','2025-10-05 16:28:51','2025-10-05 16:29:51','2025-10-05 16:29:51',60,'2025-10-05 16:28:51','2025-10-05 16:32:00'),
+(62,27,'room_3a8ce434-e47c-41d6-b395-1e2e1081af28','PA_AHh5mpABxeb2','6',6,'expert','2025-10-05 16:29:36','2025-10-05 16:40:36','2025-10-05 16:40:36',660,'2025-10-05 16:29:36','2025-10-05 22:55:00'),
+(63,27,'room_3a8ce434-e47c-41d6-b395-1e2e1081af28','PA_W7dP7PLTicT2','15',15,'client','2025-10-05 16:30:13','2025-10-05 16:40:43','2025-10-05 16:40:43',630,'2025-10-05 16:30:13','2025-10-05 22:55:00'),
+(64,6,'room_915e28fc-6b01-4470-b983-0ea9f59d54ab','PA_mTiGwqyjqu64','3',3,'expert','2025-10-09 05:55:28','2025-10-09 07:01:59','2025-10-09 07:01:59',3991,'2025-10-09 05:55:28','2025-10-09 07:04:00'),
+(65,27,'room_3a8ce434-e47c-41d6-b395-1e2e1081af28','PA_skhnCr37iuDh','15',15,'client','2025-10-09 06:57:29','2025-10-09 07:00:00','2025-10-09 07:00:00',151,'2025-10-09 06:57:29','2025-10-09 07:03:00'),
+(66,27,'room_3a8ce434-e47c-41d6-b395-1e2e1081af28','PA_LPTfSzWyGXhQ','15',15,'client','2025-10-09 07:00:03','2025-10-09 07:01:34','2025-10-09 07:01:34',91,'2025-10-09 07:00:03','2025-10-09 07:04:00'),
+(67,27,'room_3a8ce434-e47c-41d6-b395-1e2e1081af28','PA_Pr4n4rWkYbqy','15',15,'client','2025-10-09 07:01:50','2025-10-09 07:02:21','2025-10-09 07:02:21',31,'2025-10-09 07:01:50','2025-10-09 07:05:00'),
+(68,27,'room_3a8ce434-e47c-41d6-b395-1e2e1081af28','PA_j7QV6E42P8GA','15',15,'client','2025-10-09 07:02:32','2025-10-09 07:10:33','2025-10-09 07:10:33',481,'2025-10-09 07:02:32','2025-10-09 07:13:00'),
+(69,27,'room_3a8ce434-e47c-41d6-b395-1e2e1081af28','PA_8QNVb9v3EP4d','15',15,'client','2025-10-09 07:10:49','2025-10-09 07:11:19','2025-10-09 07:11:19',30,'2025-10-09 07:10:49','2025-10-09 07:14:00'),
+(70,27,'room_3a8ce434-e47c-41d6-b395-1e2e1081af28','PA_oLDsPetR3yvy','15',15,'client','2025-10-09 07:11:28','2025-10-09 07:21:59','2025-10-09 07:21:59',631,'2025-10-09 07:11:28','2025-10-09 07:24:00'),
+(71,27,'room_3a8ce434-e47c-41d6-b395-1e2e1081af28','PA_SGbowk8aYTfm','15',15,'client','2025-10-09 07:22:02','2025-10-09 07:22:02','2025-10-09 07:22:02',0,'2025-10-09 07:22:02','2025-10-09 07:25:00'),
+(72,27,'room_3a8ce434-e47c-41d6-b395-1e2e1081af28','PA_AezwDmffDTzJ','15',15,'client','2025-10-09 07:22:36','2025-10-09 07:23:06','2025-10-09 07:23:06',30,'2025-10-09 07:22:36','2025-10-09 07:26:00'),
+(73,27,'room_3a8ce434-e47c-41d6-b395-1e2e1081af28','PA_bam8etPdUMUA','15',15,'client','2025-10-09 07:23:20','2025-10-09 07:50:51','2025-10-09 07:50:51',1651,'2025-10-09 07:23:20','2025-10-09 07:53:00'),
+(74,27,'room_3a8ce434-e47c-41d6-b395-1e2e1081af28','PA_snaNCqNrTM4g','15',15,'client','2025-10-09 08:51:38','2025-10-09 11:07:49','2025-10-09 11:07:49',8171,'2025-10-09 08:51:38','2025-10-09 11:10:00'),
+(76,27,'room_3a8ce434-e47c-41d6-b395-1e2e1081af28','PA_pHPMfuQw8oBz','15',15,'client','2025-10-09 09:49:20','2025-10-09 10:19:51','2025-10-09 10:19:51',1831,'2025-10-09 09:49:20','2025-10-09 10:22:00'),
+(77,27,'room_3a8ce434-e47c-41d6-b395-1e2e1081af28','PA_eSqACubxfHxj','15',15,'client','2025-10-09 11:07:48','2025-10-09 11:07:48','2025-10-09 11:07:48',0,'2025-10-09 11:07:48','2025-10-09 11:10:00'),
+(78,27,'room_3a8ce434-e47c-41d6-b395-1e2e1081af28','PA_FXSrGTUDhNj9','15',15,'client','2025-10-09 11:08:21','2025-10-09 11:12:21','2025-10-09 11:12:21',240,'2025-10-09 11:08:21','2025-10-09 11:15:00'),
+(79,27,'room_3a8ce434-e47c-41d6-b395-1e2e1081af28','PA_RbnpgRaWjmtd','15',15,'client','2025-10-09 11:12:51','2025-10-09 11:12:51','2025-10-09 11:12:51',0,'2025-10-09 11:12:51','2025-10-09 11:15:00'),
+(80,27,'room_3a8ce434-e47c-41d6-b395-1e2e1081af28','PA_fQdK48hYJnpA','15',15,'client','2025-10-09 11:13:12','2025-10-09 11:16:42','2025-10-09 11:16:42',210,'2025-10-09 11:13:12','2025-10-09 11:19:00'),
+(81,27,'room_3a8ce434-e47c-41d6-b395-1e2e1081af28','PA_22zs3tdmVGpV','15',15,'client','2025-10-09 11:17:04','2025-10-09 12:01:05','2025-10-09 12:01:05',2641,'2025-10-09 11:17:04','2025-10-09 12:04:00'),
+(82,27,'room_3a8ce434-e47c-41d6-b395-1e2e1081af28','PA_yuWG4pFL3ajt','15',15,'client','2025-10-09 12:01:13','2025-10-09 12:01:45','2025-10-09 12:01:45',32,'2025-10-09 12:01:13','2025-10-09 12:04:00'),
+(83,27,'room_3a8ce434-e47c-41d6-b395-1e2e1081af28','PA_zN9ZxYE56U4H','15',15,'client','2025-10-09 12:01:54','2025-10-09 12:02:24','2025-10-09 12:02:24',30,'2025-10-09 12:01:54','2025-10-09 12:05:00'),
+(84,27,'room_3a8ce434-e47c-41d6-b395-1e2e1081af28','PA_4woNnjxgU8a8','6',6,'expert','2025-10-09 23:18:44','2025-10-09 23:18:44','2025-10-09 23:18:44',0,'2025-10-09 23:18:44','2025-10-09 23:21:00'),
+(85,27,'room_3a8ce434-e47c-41d6-b395-1e2e1081af28','PA_AZaW3gzMPhjP','6',6,'expert','2025-10-10 12:16:34','2025-10-10 12:16:34','2025-10-10 12:16:34',0,'2025-10-10 12:16:34','2025-10-10 12:19:00'),
+(86,27,'room_3a8ce434-e47c-41d6-b395-1e2e1081af28','PA_oh43C8qX6eXf','6',6,'expert','2025-10-10 12:17:08','2025-10-10 12:17:08','2025-10-10 12:17:08',0,'2025-10-10 12:17:08','2025-10-10 12:20:00'),
+(87,27,'room_3a8ce434-e47c-41d6-b395-1e2e1081af28','PA_ftxZUkrtKVjv','6',6,'expert','2025-10-11 15:32:53','2025-10-11 15:34:23','2025-10-11 15:34:23',90,'2025-10-11 15:32:53','2025-10-11 15:37:00'),
+(88,28,'room_7536ad2e-67b2-4929-bc61-7fb5ca86e0fc','PA_CexMQkZvG6af','6',6,'expert','2025-10-12 18:38:09','2025-10-12 19:05:09','2025-10-12 19:05:09',1620,'2025-10-12 18:38:09','2025-10-12 19:08:00'),
+(89,28,'room_7536ad2e-67b2-4929-bc61-7fb5ca86e0fc','PA_uTsFSzByTPuf','18',18,'client','2025-10-12 18:39:45','2025-10-12 19:04:45','2025-10-12 19:04:45',1500,'2025-10-12 18:39:45','2025-10-12 19:07:00'),
+(90,32,'room_7fde0de6-9d44-4853-b7eb-c6cfd40902df','PA_w5VvYUq2jMeT','18',18,'client','2025-10-17 01:09:50','2025-10-17 02:10:50','2025-10-17 02:10:50',3660,'2025-10-17 01:09:50','2025-10-17 02:13:00'),
+(91,34,'room_d980e556-381b-4fda-8780-7c9d3555033c','PA_Yu5WyZxxrPRL','6',6,'expert','2025-10-17 01:10:12','2025-10-17 01:10:12','2025-10-17 01:10:12',0,'2025-10-17 01:10:12','2025-10-17 01:13:00'),
+(92,34,'room_d980e556-381b-4fda-8780-7c9d3555033c','PA_eYhex4VkMT5Z','6',6,'expert','2025-10-17 01:10:43','2025-10-17 01:11:13','2025-10-17 01:11:13',30,'2025-10-17 01:10:43','2025-10-17 01:14:00'),
+(93,34,'room_d980e556-381b-4fda-8780-7c9d3555033c','PA_YbEr2cbAg45h','6',6,'expert','2025-10-17 01:13:29','2025-10-17 01:13:29','2025-10-17 01:13:29',0,'2025-10-17 01:13:29','2025-10-17 01:16:00'),
+(94,30,'room_587386c1-6778-41c1-a380-7c304da53c95','PA_t3ygHoMwJoKA','6',6,'expert','2025-10-18 14:17:24','2025-10-18 14:17:24','2025-10-18 14:17:24',0,'2025-10-18 14:17:24','2025-10-18 14:20:00'),
+(95,30,'room_587386c1-6778-41c1-a380-7c304da53c95','PA_Y9iJuUAUozz2','17',17,'client','2025-10-18 14:57:30','2025-10-18 14:57:30','2025-10-18 14:57:30',0,'2025-10-18 14:57:30','2025-10-18 15:00:00'),
+(96,30,'room_587386c1-6778-41c1-a380-7c304da53c95','PA_mSrkCx5DxQjo','6',6,'expert','2025-10-18 15:27:14','2025-10-18 15:27:14','2025-10-18 15:27:14',0,'2025-10-18 15:27:14','2025-10-18 15:30:00'),
+(97,30,'room_587386c1-6778-41c1-a380-7c304da53c95','PA_xDwQxfc5An9q','6',6,'expert','2025-10-18 15:28:37','2025-10-18 15:33:37','2025-10-18 15:33:37',300,'2025-10-18 15:28:37','2025-10-18 15:36:00'),
+(98,30,'room_587386c1-6778-41c1-a380-7c304da53c95','PA_89cEx7cWxgVd','17',17,'client','2025-10-18 15:30:09','2025-10-18 15:32:09','2025-10-18 15:32:09',120,'2025-10-18 15:30:09','2025-10-18 15:35:00'),
+(99,31,'room_01d1cf60-1541-42fa-8b7f-3d4dd6374e50','PA_Jy2QEGEatwVk','6',6,'expert','2025-10-20 21:55:21','2025-10-20 21:55:21','2025-10-20 21:55:21',0,'2025-10-20 21:55:21','2025-10-20 21:58:00'),
+(100,71,'room_cb1332b0-7924-4893-ad4d-9dc4acc7b70a','PA_3CwqNVawyDxb','2',2,NULL,'2025-11-11 09:56:44','2025-11-11 09:59:44','2025-11-11 10:00:08',204,'2025-11-11 09:56:44','2025-11-11 10:00:08'),
+(102,71,'room_cb1332b0-7924-4893-ad4d-9dc4acc7b70a','PA_ZbrUnmi4myLE','2',2,NULL,'2025-11-11 10:00:16','2025-11-11 14:55:12','2025-11-11 10:05:54',338,'2025-11-11 10:00:16','2025-11-11 14:55:12'),
+(104,73,'room_d55dec91-efb2-45b3-9ff6-1a6117d8223e','PA_Mv5dJf5bRo4k','2',2,NULL,'2025-11-12 15:08:46','2025-11-12 16:06:18','2025-11-12 15:09:13',27,'2025-11-12 15:08:46','2025-11-12 16:06:18'),
+(106,73,'room_d55dec91-efb2-45b3-9ff6-1a6117d8223e','PA_dRVy3EmBcJNv','2',2,NULL,'2025-11-12 16:07:05','2025-11-12 17:21:06','2025-11-12 16:07:43',38,'2025-11-12 16:07:05','2025-11-12 17:21:06'),
+(108,75,'room_8d496759-2439-477a-a5e9-466e6e0111ee','PA_vvv4phi6jPbV','17',17,NULL,'2025-11-13 03:20:47','2025-11-13 03:22:50','2025-11-13 03:22:50',123,'2025-11-13 03:20:47','2025-11-13 03:22:50'),
+(109,75,'room_8d496759-2439-477a-a5e9-466e6e0111ee','PA_Cx4DTk67JwKR','6',6,NULL,'2025-11-13 03:21:19','2025-11-13 03:23:20','2025-11-13 03:21:58',39,'2025-11-13 03:21:19','2025-11-13 03:23:20'),
+(110,75,'room_8d496759-2439-477a-a5e9-466e6e0111ee','PA_Ffzk7t4kMfdZ','6',6,NULL,'2025-11-13 03:21:58','2025-11-13 03:22:58','2025-11-13 03:23:21',83,'2025-11-13 03:21:58','2025-11-13 03:23:21'),
+(111,75,'room_8d496759-2439-477a-a5e9-466e6e0111ee','PA_dwyevhjDYsq4','17',17,NULL,'2025-11-13 03:22:51','2025-11-13 03:23:11','2025-11-13 03:23:11',20,'2025-11-13 03:22:51','2025-11-13 03:23:11'),
+(112,73,'room_d55dec91-efb2-45b3-9ff6-1a6117d8223e','PA_ZXuLScgW47tN','2',2,NULL,'2025-11-13 14:14:32','2025-11-13 14:20:03','2025-11-13 14:15:10',38,'2025-11-13 14:14:32','2025-11-13 14:20:03'),
+(113,76,'room_8f545304-ecee-4f63-b634-8e07d4dde5b8','PA_AJWKssqQAfoi','6',6,NULL,'2025-11-13 21:50:55','2025-11-13 21:51:25','2025-11-13 21:51:26',31,'2025-11-13 21:50:55','2025-11-13 21:51:26'),
+(114,77,'room_d2b1947d-7f1e-4bc5-b128-8383ee4fd463','PA_pRziAinp9e6M','2',2,NULL,'2025-11-16 09:04:35','2025-11-16 09:46:48','2025-11-16 09:05:51',76,'2025-11-16 09:04:35','2025-11-16 09:46:48'),
+(115,77,'room_d2b1947d-7f1e-4bc5-b128-8383ee4fd463','PA_DhM7zrhwkGNb','2',2,NULL,'2025-11-16 09:46:50','2025-11-16 09:47:22','2025-11-16 09:46:56',6,'2025-11-16 09:46:50','2025-11-16 09:47:22'),
+(116,77,'room_d2b1947d-7f1e-4bc5-b128-8383ee4fd463','PA_EW97dHbhNxbz','2',2,NULL,'2025-11-16 09:47:42','2025-11-16 09:51:18','2025-11-16 09:47:53',11,'2025-11-16 09:47:42','2025-11-16 09:51:18'),
+(117,77,'room_d2b1947d-7f1e-4bc5-b128-8383ee4fd463','PA_fGbVNYcQRi8D','2',2,NULL,'2025-11-16 09:51:29','2025-11-16 09:57:49','2025-11-16 09:52:09',40,'2025-11-16 09:51:29','2025-11-16 09:57:49'),
+(118,77,'room_d2b1947d-7f1e-4bc5-b128-8383ee4fd463','PA_tNDUUxm3SYxE','2',2,NULL,'2025-11-16 09:57:57','2025-11-16 10:20:16','2025-11-16 09:58:39',42,'2025-11-16 09:57:57','2025-11-16 10:20:16'),
+(119,77,'room_d2b1947d-7f1e-4bc5-b128-8383ee4fd463','PA_nnxrS7NXVhfZ','3',3,NULL,'2025-11-16 10:01:08','2025-11-16 10:02:09','2025-11-16 10:01:43',35,'2025-11-16 10:01:08','2025-11-16 10:02:09'),
+(120,77,'room_d2b1947d-7f1e-4bc5-b128-8383ee4fd463','PA_DECsqNmM83kY','3',3,NULL,'2025-11-16 10:01:47','2025-11-16 10:03:18','2025-11-16 10:02:10',23,'2025-11-16 10:01:47','2025-11-16 10:03:18'),
+(121,77,'room_d2b1947d-7f1e-4bc5-b128-8383ee4fd463','PA_WHrdoPSuwjck','3',3,NULL,'2025-11-16 10:03:49','2025-11-16 11:18:32','2025-11-16 10:04:37',48,'2025-11-16 10:03:49','2025-11-16 11:18:32'),
+(122,77,'room_d2b1947d-7f1e-4bc5-b128-8383ee4fd463','PA_PJNLP2W5tNkH','2',2,NULL,'2025-11-16 10:19:53','2025-11-16 11:40:14','2025-11-16 10:21:20',87,'2025-11-16 10:19:53','2025-11-16 11:40:14'),
+(123,77,'room_d2b1947d-7f1e-4bc5-b128-8383ee4fd463','PA_7iu2qRYSUZzc','3',3,NULL,'2025-11-16 10:20:19','2025-11-16 10:26:21','2025-11-16 10:20:47',28,'2025-11-16 10:20:19','2025-11-16 10:26:21'),
+(124,77,'room_d2b1947d-7f1e-4bc5-b128-8383ee4fd463','PA_8MogYcDmwYZz','3',3,NULL,'2025-11-16 10:21:15','2025-11-16 10:26:52','2025-11-16 10:24:54',219,'2025-11-16 10:21:15','2025-11-16 10:26:52'),
+(125,77,'room_d2b1947d-7f1e-4bc5-b128-8383ee4fd463','PA_tXT7ayZAb6BC','3',3,NULL,'2025-11-16 10:24:21','2025-11-16 10:34:27','2025-11-16 10:27:04',163,'2025-11-16 10:24:21','2025-11-16 10:34:27'),
+(126,77,'room_d2b1947d-7f1e-4bc5-b128-8383ee4fd463','PA_iFMw2ZD8CmXL','2',2,NULL,'2025-11-16 10:25:50','2025-11-16 11:40:14','2025-11-16 10:26:59',69,'2025-11-16 10:25:50','2025-11-16 11:40:14'),
+(127,77,'room_d2b1947d-7f1e-4bc5-b128-8383ee4fd463','PA_P7kxn9HRSiEh','3',3,NULL,'2025-11-16 10:26:32','2025-11-16 10:26:32','2025-11-16 10:26:37',5,'2025-11-16 10:26:32','2025-11-16 10:26:37'),
+(128,77,'room_d2b1947d-7f1e-4bc5-b128-8383ee4fd463','PA_pmtDtDVzzZWs','3',3,NULL,'2025-11-16 10:26:39','2025-11-16 10:26:48','2025-11-16 10:26:48',9,'2025-11-16 10:26:39','2025-11-16 10:26:48'),
+(129,77,'room_d2b1947d-7f1e-4bc5-b128-8383ee4fd463','PA_kaGDXDZPU8rM','3',3,NULL,'2025-11-16 10:26:50','2025-11-16 10:26:58','2025-11-16 10:26:57',7,'2025-11-16 10:26:50','2025-11-16 10:26:58'),
+(130,77,'room_d2b1947d-7f1e-4bc5-b128-8383ee4fd463','PA_tywkZr9Ebo9H','3',3,NULL,'2025-11-16 10:27:06','2025-11-16 10:30:06','2025-11-16 10:30:20',194,'2025-11-16 10:27:06','2025-11-16 10:30:20'),
+(131,77,'room_d2b1947d-7f1e-4bc5-b128-8383ee4fd463','PA_2SY8ctNTTeSb','2',2,NULL,'2025-11-16 10:27:14','2025-11-16 10:29:03','2025-11-16 10:29:02',108,'2025-11-16 10:27:14','2025-11-16 10:29:03'),
+(132,77,'room_d2b1947d-7f1e-4bc5-b128-8383ee4fd463','PA_gg3AR7i2Qj3v','2',2,NULL,'2025-11-16 10:29:06','2025-11-16 15:00:37','2025-11-16 10:31:30',144,'2025-11-16 10:29:06','2025-11-16 15:00:37'),
+(133,78,'room_3a5bf03b-c60c-4142-a5ba-03b38d21551d','PA_CX4zSJkXzB4W','2',2,NULL,'2025-11-17 12:07:04','2025-11-17 12:10:05','2025-11-17 12:09:30',146,'2025-11-17 12:07:04','2025-11-17 12:10:05'),
+(134,78,'room_3a5bf03b-c60c-4142-a5ba-03b38d21551d','PA_jKyzoZqu92MC','6',6,NULL,'2025-11-17 12:07:55','2025-11-17 12:09:55','2025-11-17 12:08:01',6,'2025-11-17 12:07:55','2025-11-17 12:09:55'),
+(135,78,'room_3a5bf03b-c60c-4142-a5ba-03b38d21551d','PA_fyR7yEj3SGvS','6',6,NULL,'2025-11-17 12:09:58','2025-11-17 12:43:28','2025-11-17 12:43:50',2032,'2025-11-17 12:09:58','2025-11-17 12:43:50'),
+(136,78,'room_3a5bf03b-c60c-4142-a5ba-03b38d21551d','PA_rn2VUPtZhUE3','2',2,NULL,'2025-11-17 12:11:12','2025-11-17 12:12:19','2025-11-17 12:11:50',38,'2025-11-17 12:11:12','2025-11-17 12:12:19'),
+(137,78,'room_3a5bf03b-c60c-4142-a5ba-03b38d21551d','PA_sjUD9noARgUD','2',2,NULL,'2025-11-17 12:12:26','2025-11-17 17:20:27','2025-11-17 12:16:52',266,'2025-11-17 12:12:26','2025-11-17 17:20:27'),
+(138,79,'room_b476fba5-2096-437b-8f26-955789899d59','PA_b2vJK3fSNLPb','6',6,NULL,'2025-11-22 23:05:13','2025-11-22 23:53:28','2025-11-22 23:53:28',2895,'2025-11-22 23:05:13','2025-11-22 23:53:28');
+/*!40000 ALTER TABLE `meeting_attendance_sessions` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `meeting_messages`
+--
+
+DROP TABLE IF EXISTS `meeting_messages`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `meeting_messages` (
+  `id` bigint(20) unsigned NOT NULL,
+  `meeting_id` bigint(20) unsigned NOT NULL,
+  `room_name` varchar(191) NOT NULL,
+  `sender_user_id` bigint(20) unsigned DEFAULT NULL,
+  `sender_identity` varchar(191) NOT NULL,
+  `text` text NOT NULL,
+  `msg_ts` bigint(20) unsigned NOT NULL,
+  `text_hash` char(64) NOT NULL,
+  `raw` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`raw`)),
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `meeting_messages`
+--
+
+LOCK TABLES `meeting_messages` WRITE;
+/*!40000 ALTER TABLE `meeting_messages` DISABLE KEYS */;
+INSERT INTO `meeting_messages` VALUES
+(1,27,'room_3a8ce434-e47c-41d6-b395-1e2e1081af28',15,'unknown','hi',1759993899074,'8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4',NULL,'2025-10-09 07:11:42'),
+(2,27,'room_3a8ce434-e47c-41d6-b395-1e2e1081af28',15,'unknown','how are you?',1759994534748,'f0b380c58db9fc81026fadc1877e1ef163e6ee63ddad60fe4acf54f45ab37318',NULL,'2025-10-09 07:22:17'),
+(3,27,'room_3a8ce434-e47c-41d6-b395-1e2e1081af28',15,'15','how are you?',1759994534747,'f0b380c58db9fc81026fadc1877e1ef163e6ee63ddad60fe4acf54f45ab37318',NULL,'2025-10-09 07:22:17'),
+(5,27,'room_3a8ce434-e47c-41d6-b395-1e2e1081af28',15,'unknown','when',1759994564923,'15eaa75240aed625be3e142205df3adbbb7051802b32f450e40276be8582b6d8',NULL,'2025-10-09 07:22:47'),
+(6,27,'room_3a8ce434-e47c-41d6-b395-1e2e1081af28',15,'15','when',1759994564922,'15eaa75240aed625be3e142205df3adbbb7051802b32f450e40276be8582b6d8',NULL,'2025-10-09 07:22:47'),
+(7,27,'room_3a8ce434-e47c-41d6-b395-1e2e1081af28',15,'15','how are you?',1760008092381,'f0b380c58db9fc81026fadc1877e1ef163e6ee63ddad60fe4acf54f45ab37318',NULL,'2025-10-09 11:08:13'),
+(8,27,'room_3a8ce434-e47c-41d6-b395-1e2e1081af28',15,'15','how are you?',1760008092375,'f0b380c58db9fc81026fadc1877e1ef163e6ee63ddad60fe4acf54f45ab37318',NULL,'2025-10-09 11:08:13'),
+(9,27,'room_3a8ce434-e47c-41d6-b395-1e2e1081af28',15,'15','koi tumi?',1760008383035,'16c5e9382e9ada712a28d0e082c33750546669c14f005542c5e660708446d90b',NULL,'2025-10-09 11:13:03'),
+(10,28,'room_7536ad2e-67b2-4929-bc61-7fb5ca86e0fc',6,'6','norman@prosfata.com',1760294624027,'d4eeb6678a0fafb09fce7375493680013be0a3f33599b324339490b258cf8e50',NULL,'2025-10-12 18:43:43'),
+(11,28,'room_7536ad2e-67b2-4929-bc61-7fb5ca86e0fc',6,'6','https://blitzy.com/',1760295030969,'011225f6771faade431aed842edb68abd58643aa7c6510519c8fe215bee6f0e7',NULL,'2025-10-12 18:50:30'),
+(12,71,'room_cb1332b0-7924-4893-ad4d-9dc4acc7b70a',2,'unknown','hi',1762855167335,'8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4',NULL,'2025-11-11 09:59:29'),
+(13,71,'room_cb1332b0-7924-4893-ad4d-9dc4acc7b70a',2,'unknown','how are you?',1762855189067,'f0b380c58db9fc81026fadc1877e1ef163e6ee63ddad60fe4acf54f45ab37318',NULL,'2025-11-11 09:59:51'),
+(14,77,'room_d2b1947d-7f1e-4bc5-b128-8383ee4fd463',3,'unknown','hi',1763288493588,'8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4',NULL,'2025-11-16 10:21:35'),
+(15,77,'room_d2b1947d-7f1e-4bc5-b128-8383ee4fd463',3,'unknown','hello',1763288533543,'2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824',NULL,'2025-11-16 10:22:14'),
+(16,77,'room_d2b1947d-7f1e-4bc5-b128-8383ee4fd463',2,'unknown','how are you?',1763288886690,'f0b380c58db9fc81026fadc1877e1ef163e6ee63ddad60fe4acf54f45ab37318',NULL,'2025-11-16 10:28:09'),
+(17,77,'room_d2b1947d-7f1e-4bc5-b128-8383ee4fd463',3,'unknown','hi',1763288888280,'8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4',NULL,'2025-11-16 10:28:09'),
+(18,77,'room_d2b1947d-7f1e-4bc5-b128-8383ee4fd463',3,'unknown','hello',1763288893598,'2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824',NULL,'2025-11-16 10:28:14'),
+(19,77,'room_d2b1947d-7f1e-4bc5-b128-8383ee4fd463',3,'unknown','hello',1763288917342,'2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824',NULL,'2025-11-16 10:28:38'),
+(20,77,'room_d2b1947d-7f1e-4bc5-b128-8383ee4fd463',3,'unknown','hi prosfata',1763288924606,'976d0c0759dcca324a849f66365b130a74069c8accb38c32a1f14daaeb5a8e0d',NULL,'2025-11-16 10:28:45'),
+(21,77,'room_d2b1947d-7f1e-4bc5-b128-8383ee4fd463',2,'unknown','got',1763288929382,'0497db517ef058cb6d3672d5ffe8f062fddabc4bf56aa1d254b7f078e9a79e49',NULL,'2025-11-16 10:28:51'),
+(22,78,'room_3a5bf03b-c60c-4142-a5ba-03b38d21551d',6,'unknown','I am here',1763381292526,'916448fc97c1f61ba4f42a06ca78af84383e11c37b8e3f57c85a747f06b08ae8',NULL,'2025-11-17 12:08:11'),
+(23,78,'room_3a5bf03b-c60c-4142-a5ba-03b38d21551d',6,'unknown','Abu',1763381356865,'83f712e8989c710903e7d32d0ce19222c1c8fb72597e07472992cfad31864ec2',NULL,'2025-11-17 12:09:15'),
+(24,78,'room_3a5bf03b-c60c-4142-a5ba-03b38d21551d',6,'unknown','Can you hear me?',1763381362844,'37e79c35d4fee75c4b225c6b8caa30481e72868356f37bd2f53c43aac43e9a29',NULL,'2025-11-17 12:09:21'),
+(25,78,'room_3a5bf03b-c60c-4142-a5ba-03b38d21551d',6,'unknown','Experts | Consultants | Coaches | Professionals | Subject Matter Experts',1763382261304,'e1775ffa0573a2e288dd4a637f1f4e86a9ce81ab59ea63b0d85d7467ada6dcd8',NULL,'2025-11-17 12:24:19'),
+(26,78,'room_3a5bf03b-c60c-4142-a5ba-03b38d21551d',2,'unknown','Hello',1763382312992,'185f8db32271fe25f561a6fc938b2e264306ec304eda518007d1764826381969',NULL,'2025-11-17 12:25:22');
+/*!40000 ALTER TABLE `meeting_messages` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `meeting_participants`
+--
+
+DROP TABLE IF EXISTS `meeting_participants`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `meeting_participants` (
+  `id` int(11) NOT NULL,
+  `meeting_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `role` enum('host','participant') DEFAULT 'participant',
+  `status` enum('invited','accepted','declined','left') DEFAULT 'accepted',
+  `reminder_sent` tinyint(1) DEFAULT 0,
+  `joined_at` datetime DEFAULT NULL,
+  `left_at` datetime DEFAULT NULL,
+  `invited_by` int(11) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `meeting_participants`
+--
+
+LOCK TABLES `meeting_participants` WRITE;
+/*!40000 ALTER TABLE `meeting_participants` DISABLE KEYS */;
+INSERT INTO `meeting_participants` VALUES
+(1,6,3,'host','accepted',0,NULL,NULL,NULL,'2025-08-15 17:50:00'),
+(2,6,4,'participant','accepted',0,NULL,NULL,NULL,'2025-08-15 17:50:00'),
+(3,7,3,'host','accepted',0,NULL,NULL,NULL,'2025-08-16 06:52:01'),
+(4,7,4,'participant','accepted',0,NULL,NULL,NULL,'2025-08-16 06:52:01'),
+(7,9,3,'host','accepted',0,NULL,NULL,NULL,'2025-08-19 14:29:59'),
+(8,9,5,'participant','accepted',0,NULL,NULL,NULL,'2025-08-19 14:29:59'),
+(9,10,3,'host','accepted',0,NULL,NULL,NULL,'2025-09-01 20:44:43'),
+(10,10,2,'participant','accepted',0,NULL,NULL,NULL,'2025-09-01 20:44:43'),
+(11,17,3,'host','accepted',0,NULL,NULL,NULL,'2025-09-07 10:47:18'),
+(12,17,2,'participant','accepted',0,NULL,NULL,NULL,'2025-09-07 10:47:18'),
+(13,18,2,'','accepted',0,NULL,NULL,NULL,'2025-09-07 12:24:13'),
+(14,18,3,'','accepted',0,NULL,NULL,NULL,'2025-09-07 12:24:13'),
+(15,24,6,'host','accepted',0,NULL,NULL,NULL,'2025-09-28 18:28:22'),
+(16,24,17,'participant','accepted',0,NULL,NULL,NULL,'2025-09-28 18:28:22'),
+(17,25,6,'host','accepted',0,NULL,NULL,NULL,'2025-09-28 18:37:40'),
+(18,25,16,'participant','accepted',0,NULL,NULL,NULL,'2025-09-28 18:37:40'),
+(19,27,6,'host','accepted',0,NULL,NULL,NULL,'2025-10-05 16:28:28'),
+(20,27,15,'participant','accepted',0,NULL,NULL,NULL,'2025-10-05 16:28:28'),
+(21,51,6,'host','accepted',0,NULL,NULL,NULL,'2025-10-27 05:52:28'),
+(22,51,2,'participant','accepted',0,NULL,NULL,NULL,'2025-10-27 05:52:28'),
+(23,58,3,'host','accepted',0,NULL,NULL,NULL,'2025-11-04 12:58:41'),
+(24,58,2,'participant','accepted',0,NULL,NULL,NULL,'2025-11-04 12:58:41'),
+(25,59,3,'host','accepted',0,NULL,NULL,NULL,'2025-11-04 13:25:49'),
+(26,59,2,'participant','accepted',0,NULL,NULL,NULL,'2025-11-04 13:25:49'),
+(27,71,3,'host','accepted',0,NULL,NULL,NULL,'2025-11-11 06:47:36'),
+(28,71,2,'participant','accepted',0,NULL,NULL,NULL,'2025-11-11 06:47:36'),
+(29,73,3,'host','accepted',0,NULL,NULL,NULL,'2025-11-12 15:08:10'),
+(30,73,2,'participant','accepted',0,NULL,NULL,NULL,'2025-11-12 15:08:10'),
+(31,77,3,'host','accepted',0,NULL,NULL,NULL,'2025-11-16 08:34:18'),
+(32,77,2,'participant','accepted',0,NULL,NULL,NULL,'2025-11-16 08:34:18'),
+(33,78,6,'host','accepted',0,NULL,NULL,NULL,'2025-11-17 12:06:46'),
+(34,78,2,'participant','accepted',0,NULL,NULL,NULL,'2025-11-17 12:06:46');
+/*!40000 ALTER TABLE `meeting_participants` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `meeting_reminders`
+--
+
+DROP TABLE IF EXISTS `meeting_reminders`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `meeting_reminders` (
+  `id` bigint(20) unsigned NOT NULL,
+  `meeting_id` bigint(20) unsigned NOT NULL,
+  `user_id` bigint(20) unsigned NOT NULL,
+  `kind` varchar(32) NOT NULL,
+  `status` varchar(16) NOT NULL,
+  `sent_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `error_text` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `meeting_reminders`
+--
+
+LOCK TABLES `meeting_reminders` WRITE;
+/*!40000 ALTER TABLE `meeting_reminders` DISABLE KEYS */;
+/*!40000 ALTER TABLE `meeting_reminders` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `meetings`
+--
+
+DROP TABLE IF EXISTS `meetings`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `meetings` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `order_id` int(11) NOT NULL,
+  `expert_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `slot_id` int(11) NOT NULL,
+  `start_time` datetime NOT NULL,
+  `end_time` datetime NOT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `provider` enum('livekit','zoom','meet') DEFAULT 'livekit',
+  `room_name` varchar(128) NOT NULL,
+  `join_url_user` varchar(255) DEFAULT NULL,
+  `join_url_expert` varchar(255) DEFAULT NULL,
+  `status` enum('upcoming','ongoing','completed','cancelled','expired') NOT NULL DEFAULT 'upcoming',
+  `started_at` datetime DEFAULT NULL,
+  `ended_at` datetime DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `meeting_type` enum('one-on-one','group') NOT NULL DEFAULT 'one-on-one',
+  `video_tool` enum('jitsi','webrtc','livekit') NOT NULL DEFAULT 'livekit',
+  `meet_type` enum('audio','video') NOT NULL DEFAULT 'video',
+  `timezone` varchar(100) NOT NULL DEFAULT 'UTC',
+  `live_room_name` varchar(255) DEFAULT NULL,
+  `is_live` tinyint(1) NOT NULL DEFAULT 0,
+  `reminder_sent` tinyint(1) NOT NULL DEFAULT 0,
+  `reminder_30_sent` tinyint(1) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=83 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `meetings`
+--
+
+LOCK TABLES `meetings` WRITE;
+/*!40000 ALTER TABLE `meetings` DISABLE KEYS */;
+INSERT INTO `meetings` VALUES
+(1,1,3,3,6,'2025-08-18 09:00:00','2025-08-18 10:00:00',NULL,'livekit','room_2a118618-89e4-4bc9-bc0f-8aff03eda2fc','/meet/join/room_2a118618-89e4-4bc9-bc0f-8aff03eda2fc?as=user','/meet/join/room_2a118618-89e4-4bc9-bc0f-8aff03eda2fc?as=expert','expired',NULL,NULL,'2025-08-10 07:47:52','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(2,3,3,3,7,'2025-08-18 10:00:00','2025-08-18 11:00:00',NULL,'livekit','room_6b304630-692a-49a5-8cec-e5d96e9835f5','/meet/join/room_6b304630-692a-49a5-8cec-e5d96e9835f5?as=user','/meet/join/room_6b304630-692a-49a5-8cec-e5d96e9835f5?as=expert','expired',NULL,NULL,'2025-08-10 07:50:26','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(3,5,3,4,8,'2025-08-18 11:00:00','2025-08-18 12:00:00',NULL,'livekit','room_56dbff05-1a15-416c-9577-ad04d2851035','/meet/join/room_56dbff05-1a15-416c-9577-ad04d2851035?as=user','/meet/join/room_56dbff05-1a15-416c-9577-ad04d2851035?as=expert','completed',NULL,NULL,'2025-08-11 19:21:19','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(4,6,3,4,30,'2025-08-15 11:00:00','2025-08-15 12:00:00',NULL,'livekit','room_915e28fc-6b01-4470-b983-0ea9f59d54ab','/meet/join/room_915e28fc-6b01-4470-b983-0ea9f59d54ab?as=user','/meet/join/room_915e28fc-6b01-4470-b983-0ea9f59d54ab?as=expert','expired',NULL,NULL,'2025-08-14 19:44:30','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(5,36,3,4,32,'2025-08-15 13:00:00','2025-08-15 14:00:00',NULL,'livekit','room_79c13df8-f57a-44ed-96d3-fe860a2e0e55','/meet/join/room_79c13df8-f57a-44ed-96d3-fe860a2e0e55?as=user','/meet/join/room_79c13df8-f57a-44ed-96d3-fe860a2e0e55?as=expert','completed',NULL,NULL,'2025-08-16 06:52:01','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(6,39,3,3,33,'2025-08-15 14:00:00','2025-08-15 15:00:00',NULL,'livekit','room_bfe280da-3afd-4c47-9df4-a5c9fa7eb8db','/meet/join/room_bfe280da-3afd-4c47-9df4-a5c9fa7eb8db?as=user','/meet/join/room_bfe280da-3afd-4c47-9df4-a5c9fa7eb8db?as=expert','completed',NULL,NULL,'2025-08-16 07:40:16','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(7,41,3,5,25,'2025-08-20 10:00:00','2025-08-20 11:00:00',NULL,'livekit','room_5e4b73d9-5c8e-40b4-8629-e799524dc106','/meet/join/room_5e4b73d9-5c8e-40b4-8629-e799524dc106?as=user','/meet/join/room_5e4b73d9-5c8e-40b4-8629-e799524dc106?as=expert','expired',NULL,NULL,'2025-08-19 14:29:59','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(8,50,3,2,130,'2025-09-03 10:00:00','2025-09-03 11:00:00',NULL,'livekit','room_4148e394-59a2-499c-9e9b-894dd0127564','/meet/join/room_4148e394-59a2-499c-9e9b-894dd0127564?as=user','/meet/join/room_4148e394-59a2-499c-9e9b-894dd0127564?as=expert','expired',NULL,NULL,'2025-09-01 20:44:43','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(9,13,3,2,138,'2025-09-05 09:00:00','2025-09-05 10:00:00',NULL,'livekit','room_c1ca031b-3fb5-426f-8bf0-8688dca16dc3','/meet/join/room_c1ca031b-3fb5-426f-8bf0-8688dca16dc3?as=user','/meet/join/room_c1ca031b-3fb5-426f-8bf0-8688dca16dc3?as=expert','expired',NULL,NULL,'2025-09-02 14:59:54','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(10,9,3,2,109,'2025-09-08 09:00:00','2025-09-08 10:00:00',NULL,'livekit','room_fcd6a159-c228-4fb8-812c-ae7865e8ef91','/meet/join/room_fcd6a159-c228-4fb8-812c-ae7865e8ef91?as=user','/meet/join/room_fcd6a159-c228-4fb8-812c-ae7865e8ef91?as=expert','expired',NULL,NULL,'2025-09-06 17:46:18','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(11,15,3,2,110,'2025-09-08 10:00:00','2025-09-08 11:00:00',NULL,'livekit','room_aea058dc-a77c-4af4-b568-4cccce150d7d','/meet/join/room_aea058dc-a77c-4af4-b568-4cccce150d7d?as=user','/meet/join/room_aea058dc-a77c-4af4-b568-4cccce150d7d?as=expert','expired',NULL,NULL,'2025-09-07 09:13:15','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(12,15,3,2,111,'2025-09-08 11:00:00','2025-09-08 12:00:00',NULL,'livekit','room_6ab22115-e257-4141-af89-0c36b3c90d95','/meet/join/room_6ab22115-e257-4141-af89-0c36b3c90d95?as=user','/meet/join/room_6ab22115-e257-4141-af89-0c36b3c90d95?as=expert','expired',NULL,NULL,'2025-09-07 09:36:13','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(13,53,3,2,112,'2025-09-08 12:00:00','2025-09-08 13:00:00',NULL,'livekit','room_562d638d-1830-4e33-89c0-c6f9f95f7f42','/meet/join/room_562d638d-1830-4e33-89c0-c6f9f95f7f42?as=user','/meet/join/room_562d638d-1830-4e33-89c0-c6f9f95f7f42?as=expert','expired',NULL,NULL,'2025-09-07 10:47:18','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(14,55,3,2,132,'2025-09-10 10:00:00','2025-09-10 11:00:00',NULL,'livekit','room_a1ef1f78-1243-4e28-aed8-c69e3bd26c11','/meet/join/room_a1ef1f78-1243-4e28-aed8-c69e3bd26c11/55?as=user','/meet/join/room_a1ef1f78-1243-4e28-aed8-c69e3bd26c11/55?as=expert','expired',NULL,NULL,'2025-09-07 12:24:13','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(15,56,3,2,133,'2025-09-10 11:00:00','2025-09-10 12:00:00',NULL,'livekit','room_cdbafb4a-ace6-42f5-a2f2-d94d4a2c3930','/meet/join/room_cdbafb4a-ace6-42f5-a2f2-d94d4a2c3930/56?as=user','/meet/join/room_cdbafb4a-ace6-42f5-a2f2-d94d4a2c3930/56?as=expert','expired',NULL,NULL,'2025-09-07 13:50:09','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(16,58,3,13,114,'2025-09-15 10:00:00','2025-09-15 11:00:00',NULL,'livekit','room_a20cc180-5e96-4c0e-84bc-3f857b94eeed','/meet/join/room_a20cc180-5e96-4c0e-84bc-3f857b94eeed/58?as=user','/meet/join/room_a20cc180-5e96-4c0e-84bc-3f857b94eeed/58?as=expert','expired',NULL,NULL,'2025-09-13 08:03:53','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(17,59,6,2,199,'2025-09-21 14:00:00','2025-09-21 15:00:00',NULL,'livekit','room_c9ad3f77-0bc9-43a2-9a8d-610873a3c146','/meet/join/room_c9ad3f77-0bc9-43a2-9a8d-610873a3c146/59?as=user','/meet/join/room_c9ad3f77-0bc9-43a2-9a8d-610873a3c146/59?as=expert','expired',NULL,NULL,'2025-09-14 07:25:22','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(18,60,6,2,198,'2025-09-14 14:00:00','2025-09-14 15:00:00',NULL,'livekit','room_5713be9f-fc30-4b62-a29a-fd5a26b9f02a','/meet/join/room_5713be9f-fc30-4b62-a29a-fd5a26b9f02a/60?as=user','/meet/join/room_5713be9f-fc30-4b62-a29a-fd5a26b9f02a/60?as=expert','expired',NULL,NULL,'2025-09-14 07:38:06','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(19,63,3,4,121,'2025-09-29 09:00:00','2025-09-29 10:00:00',NULL,'livekit','room_d3ed6d6f-feec-4914-9453-e28a3f73c11c','/meet/join/room_d3ed6d6f-feec-4914-9453-e28a3f73c11c/63?as=user','/meet/join/room_d3ed6d6f-feec-4914-9453-e28a3f73c11c/63?as=expert','expired',NULL,NULL,'2025-09-27 09:21:29','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(20,67,6,17,300,'2025-09-28 19:00:00','2025-09-28 20:00:00',NULL,'livekit','room_d4c5526c-b07b-4178-bba0-37aa56640f11','/meet/join/room_d4c5526c-b07b-4178-bba0-37aa56640f11?as=user','/meet/join/room_d4c5526c-b07b-4178-bba0-37aa56640f11?as=expert','expired',NULL,NULL,'2025-09-28 18:28:22','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(21,68,6,16,301,'2025-09-28 20:00:00','2025-09-28 21:00:00',NULL,'livekit','room_97161108-c747-4b31-97a0-39a6bb896be8','/meet/join/room_97161108-c747-4b31-97a0-39a6bb896be8?as=user','/meet/join/room_97161108-c747-4b31-97a0-39a6bb896be8?as=expert','expired',NULL,NULL,'2025-09-28 18:37:40','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(22,31,6,17,302,'2025-09-28 22:00:00','2025-09-28 23:00:00',NULL,'livekit','room_06fd2152-1aeb-448b-9c62-276096cc8a40','/meet/join/room_06fd2152-1aeb-448b-9c62-276096cc8a40?as=user','/meet/join/room_06fd2152-1aeb-448b-9c62-276096cc8a40?as=expert','expired',NULL,NULL,'2025-09-28 20:24:25','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(23,70,6,15,303,'2025-10-12 10:00:00','2025-10-12 11:00:00',NULL,'livekit','room_3a8ce434-e47c-41d6-b395-1e2e1081af28','/meet/join/room_3a8ce434-e47c-41d6-b395-1e2e1081af28?as=user','/meet/join/room_3a8ce434-e47c-41d6-b395-1e2e1081af28?as=expert','expired',NULL,NULL,'2025-10-05 16:28:28','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(24,35,6,18,326,'2025-10-12 19:00:00','2025-10-12 20:00:00',NULL,'livekit','room_7536ad2e-67b2-4929-bc61-7fb5ca86e0fc','/meet/join/room_7536ad2e-67b2-4929-bc61-7fb5ca86e0fc?as=user','/meet/join/room_7536ad2e-67b2-4929-bc61-7fb5ca86e0fc?as=expert','expired',NULL,NULL,'2025-10-12 18:33:01','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(25,36,6,17,325,'2025-10-13 18:30:00','2025-10-13 19:00:00',NULL,'livekit','room_57a146c7-e421-4ab5-916c-c7918132c9c0','/meet/join/room_57a146c7-e421-4ab5-916c-c7918132c9c0?as=user','/meet/join/room_57a146c7-e421-4ab5-916c-c7918132c9c0?as=expert','expired',NULL,NULL,'2025-10-12 18:33:33','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(26,36,6,17,316,'2025-10-18 15:00:00','2025-10-18 16:00:00',NULL,'livekit','room_587386c1-6778-41c1-a380-7c304da53c95','/meet/join/room_587386c1-6778-41c1-a380-7c304da53c95?as=user','/meet/join/room_587386c1-6778-41c1-a380-7c304da53c95?as=expert','expired',NULL,NULL,'2025-10-12 18:33:42','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(27,36,6,17,315,'2025-10-26 16:00:00','2025-10-26 17:00:00',NULL,'livekit','room_01d1cf60-1541-42fa-8b7f-3d4dd6374e50','/meet/join/room_01d1cf60-1541-42fa-8b7f-3d4dd6374e50?as=user','/meet/join/room_01d1cf60-1541-42fa-8b7f-3d4dd6374e50?as=expert','expired',NULL,NULL,'2025-10-12 18:33:49','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(28,35,6,18,304,'2025-10-19 10:00:00','2025-10-19 11:00:00',NULL,'livekit','room_7fde0de6-9d44-4853-b7eb-c6cfd40902df','/meet/join/room_7fde0de6-9d44-4853-b7eb-c6cfd40902df?as=user','/meet/join/room_7fde0de6-9d44-4853-b7eb-c6cfd40902df?as=expert','expired',NULL,NULL,'2025-10-12 18:34:06','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(29,35,6,18,308,'2025-10-26 14:00:00','2025-10-26 15:00:00',NULL,'livekit','room_3189f480-21db-49f8-8766-b8bccb55d1a0','/meet/join/room_3189f480-21db-49f8-8766-b8bccb55d1a0?as=user','/meet/join/room_3189f480-21db-49f8-8766-b8bccb55d1a0?as=expert','expired',NULL,NULL,'2025-10-12 18:34:10','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(30,40,6,18,335,'2025-10-17 01:00:00','2025-10-17 02:00:00',NULL,'livekit','room_d980e556-381b-4fda-8780-7c9d3555033c','/meet/join/room_d980e556-381b-4fda-8780-7c9d3555033c?as=user','/meet/join/room_d980e556-381b-4fda-8780-7c9d3555033c?as=expert','expired',NULL,NULL,'2025-10-16 22:58:34','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(31,40,6,18,310,'2025-10-19 15:00:00','2025-10-19 16:00:00',NULL,'livekit','room_bb9b5e79-53c4-4a02-bdcb-b1d8d66eb64d','/meet/join/room_bb9b5e79-53c4-4a02-bdcb-b1d8d66eb64d?as=user','/meet/join/room_bb9b5e79-53c4-4a02-bdcb-b1d8d66eb64d?as=expert','expired',NULL,NULL,'2025-10-16 22:58:40','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(32,40,6,18,307,'2025-10-19 14:00:00','2025-10-19 15:00:00',NULL,'livekit','room_544430e5-14c7-42fb-a9f4-39cb5ea3ec51','/meet/join/room_544430e5-14c7-42fb-a9f4-39cb5ea3ec51?as=user','/meet/join/room_544430e5-14c7-42fb-a9f4-39cb5ea3ec51?as=expert','expired',NULL,NULL,'2025-10-16 22:58:43','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(33,41,3,2,228,'2025-10-20 09:00:00','2025-10-20 10:00:00',NULL,'livekit','room_dad467e4-29f1-4f01-9341-e543ecfef901','/meet/join/room_dad467e4-29f1-4f01-9341-e543ecfef901?as=user','/meet/join/room_dad467e4-29f1-4f01-9341-e543ecfef901?as=expert','expired',NULL,NULL,'2025-10-17 16:38:04','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(34,41,3,2,282,'2025-10-24 11:00:00','2025-10-24 12:00:00',NULL,'livekit','room_ef215039-4bab-49fa-9c7f-3963af3b4b08','/meet/join/room_ef215039-4bab-49fa-9c7f-3963af3b4b08?as=user','/meet/join/room_ef215039-4bab-49fa-9c7f-3963af3b4b08?as=expert','expired',NULL,NULL,'2025-10-17 16:38:15','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(35,42,6,17,339,'2025-10-19 18:00:00','2025-10-19 19:00:00',NULL,'livekit','room_fe997036-23b4-4e10-8d95-a862197c95a1','/meet/join/room_fe997036-23b4-4e10-8d95-a862197c95a1?as=user','/meet/join/room_fe997036-23b4-4e10-8d95-a862197c95a1?as=expert','expired',NULL,NULL,'2025-10-19 17:38:21','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(36,42,6,17,340,'2025-10-19 19:00:00','2025-10-19 21:00:00',NULL,'livekit','room_1201efdb-3ef1-4bc5-aa1a-ed232059eb99','/meet/join/room_1201efdb-3ef1-4bc5-aa1a-ed232059eb99?as=user','/meet/join/room_1201efdb-3ef1-4bc5-aa1a-ed232059eb99?as=expert','expired',NULL,NULL,'2025-10-19 17:38:26','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(37,42,6,17,336,'2025-10-23 21:00:00','2025-10-23 22:00:00',NULL,'livekit','room_e1f32fe2-6a0f-41f8-94cc-7881454aebd0','/meet/join/room_e1f32fe2-6a0f-41f8-94cc-7881454aebd0?as=user','/meet/join/room_e1f32fe2-6a0f-41f8-94cc-7881454aebd0?as=expert','expired',NULL,NULL,'2025-10-19 17:38:32','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(38,12,3,2,280,'2025-10-24 09:00:00','2025-10-24 10:00:00',NULL,'livekit','room_e2d83e27-d430-4749-9ff8-5583f6c15061','/meet/join/room_e2d83e27-d430-4749-9ff8-5583f6c15061?as=user','/meet/join/room_e2d83e27-d430-4749-9ff8-5583f6c15061?as=expert','expired',NULL,NULL,'2025-10-20 16:34:19','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(39,31,6,17,343,'2025-10-20 22:00:00','2025-10-20 23:00:00',NULL,'livekit','room_00e633e6-aeea-4aef-bc59-e765afa40541','/meet/join/room_00e633e6-aeea-4aef-bc59-e765afa40541?as=user','/meet/join/room_00e633e6-aeea-4aef-bc59-e765afa40541?as=expert','expired',NULL,NULL,'2025-10-20 21:53:32','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(40,31,6,17,344,'2025-10-21 00:00:00','2025-10-21 01:00:00',NULL,'livekit','room_51b882ca-353d-44e5-aaaa-6aa079fb6cd5','/meet/join/room_51b882ca-353d-44e5-aaaa-6aa079fb6cd5?as=user','/meet/join/room_51b882ca-353d-44e5-aaaa-6aa079fb6cd5?as=expert','expired',NULL,NULL,'2025-10-20 21:53:52','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(41,31,6,17,345,'2025-10-21 01:00:00','2025-10-21 02:00:00',NULL,'livekit','room_d78fd01b-3af6-455f-a26d-e74bac9b279a','/meet/join/room_d78fd01b-3af6-455f-a26d-e74bac9b279a?as=user','/meet/join/room_d78fd01b-3af6-455f-a26d-e74bac9b279a?as=expert','expired',NULL,NULL,'2025-10-20 21:53:58','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(42,43,6,17,358,'2025-10-21 19:00:00','2025-10-21 20:00:00',NULL,'livekit','room_75fcf8ca-ac11-49db-989a-731750429274','/meet/join/room_75fcf8ca-ac11-49db-989a-731750429274?as=user','/meet/join/room_75fcf8ca-ac11-49db-989a-731750429274?as=expert','expired',NULL,NULL,'2025-10-21 11:02:48','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(43,43,6,17,311,'2025-10-26 15:00:00','2025-10-26 16:00:00',NULL,'livekit','room_e66477e2-d78a-4642-935b-e81ddc71dc8a','/meet/join/room_e66477e2-d78a-4642-935b-e81ddc71dc8a?as=user','/meet/join/room_e66477e2-d78a-4642-935b-e81ddc71dc8a?as=expert','expired',NULL,NULL,'2025-10-26 14:55:47','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(44,43,6,17,352,'2025-10-26 17:00:00','2025-10-26 18:00:00',NULL,'livekit','room_7ffc016b-5f97-4f70-9c62-f15ad999dce5','/meet/join/room_7ffc016b-5f97-4f70-9c62-f15ad999dce5?as=user','/meet/join/room_7ffc016b-5f97-4f70-9c62-f15ad999dce5?as=expert','expired',NULL,NULL,'2025-10-26 15:02:36','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(45,36,6,17,355,'2025-10-27 19:00:00','2025-10-27 20:00:00',NULL,'livekit','room_515b6b16-13e1-4d6b-ae57-3f8f892d6231','/meet/join/room_515b6b16-13e1-4d6b-ae57-3f8f892d6231?as=user','/meet/join/room_515b6b16-13e1-4d6b-ae57-3f8f892d6231?as=expert','expired',NULL,NULL,'2025-10-26 15:03:34','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(46,59,6,17,356,'2025-10-27 20:00:00','2025-10-27 21:00:00',NULL,'livekit','room_9019f5c2-74df-479e-9988-6d44dd63b0ae','/meet/join/room_9019f5c2-74df-479e-9988-6d44dd63b0ae?as=user','/meet/join/room_9019f5c2-74df-479e-9988-6d44dd63b0ae?as=expert','expired',NULL,NULL,'2025-10-26 20:46:11','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(47,71,6,2,359,'2025-10-28 19:00:00','2025-10-28 20:00:00',NULL,'livekit','room_1c73d34c-670b-41b6-801b-abf58a2ffc88','/meet/join/room_1c73d34c-670b-41b6-801b-abf58a2ffc88?as=user','/meet/join/room_1c73d34c-670b-41b6-801b-abf58a2ffc88?as=expert','expired',NULL,NULL,'2025-10-27 05:52:28','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(48,63,6,2,361,'2025-10-28 21:00:00','2025-10-28 22:00:00',NULL,'livekit','room_e609368a-6c27-4848-8783-e8b645d0ed51','/meet/join/room_e609368a-6c27-4848-8783-e8b645d0ed51?as=user','/meet/join/room_e609368a-6c27-4848-8783-e8b645d0ed51?as=expert','expired',NULL,NULL,'2025-10-27 06:15:18','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(49,63,6,2,369,'2025-10-30 19:00:00','2025-10-30 20:00:00',NULL,'livekit','room_b61c92bc-e8ab-41c9-ae76-6dcf5c53caa2','/meet/join/room_b61c92bc-e8ab-41c9-ae76-6dcf5c53caa2?as=user','/meet/join/room_b61c92bc-e8ab-41c9-ae76-6dcf5c53caa2?as=expert','expired',NULL,NULL,'2025-10-27 06:15:29','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(50,63,6,2,373,'2025-10-31 20:00:00','2025-10-31 21:00:00',NULL,'livekit','room_3b0c9652-4d41-48b0-8dad-b7df821b165c','/meet/join/room_3b0c9652-4d41-48b0-8dad-b7df821b165c?as=user','/meet/join/room_3b0c9652-4d41-48b0-8dad-b7df821b165c?as=expert','expired',NULL,NULL,'2025-10-27 06:15:35','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(51,55,6,2,365,'2025-10-29 20:00:00','2025-10-29 21:00:00',NULL,'livekit','room_eae2ce10-452a-4a88-afa9-560009dd8527','/meet/join/room_eae2ce10-452a-4a88-afa9-560009dd8527?as=user','/meet/join/room_eae2ce10-452a-4a88-afa9-560009dd8527?as=expert','expired',NULL,NULL,'2025-10-27 07:00:37','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(52,45,6,18,505,'2025-11-02 22:00:00','2025-11-02 23:00:00',NULL,'livekit','room_dc9c4c9f-105e-48d6-8267-4461bdb932f9','/meet/join/room_dc9c4c9f-105e-48d6-8267-4461bdb932f9?as=user','/meet/join/room_dc9c4c9f-105e-48d6-8267-4461bdb932f9?as=expert','expired',NULL,NULL,'2025-11-02 21:44:30','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(53,64,3,2,510,'2025-11-03 10:00:00','2025-11-03 11:00:00',NULL,'livekit','room_38199419-e5fa-4fbc-8b70-0b46a99d32fb','/meet/join/room_38199419-e5fa-4fbc-8b70-0b46a99d32fb?as=user','/meet/join/room_38199419-e5fa-4fbc-8b70-0b46a99d32fb?as=expert','expired',NULL,NULL,'2025-11-03 09:17:55','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(54,72,3,2,526,'2025-11-05 10:00:00','2025-11-05 11:00:00',NULL,'livekit','room_dd93cc70-7cd0-4312-935b-95aafa03667b','/meet/join/room_dd93cc70-7cd0-4312-935b-95aafa03667b?as=user','/meet/join/room_dd93cc70-7cd0-4312-935b-95aafa03667b?as=expert','expired',NULL,NULL,'2025-11-04 12:58:41','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(55,73,3,2,527,'2025-11-05 11:00:00','2025-11-05 12:00:00',NULL,'livekit','room_f315abb1-b409-409b-898d-aaaf9d4ea94f','/meet/join/room_f315abb1-b409-409b-898d-aaaf9d4ea94f?as=user','/meet/join/room_f315abb1-b409-409b-898d-aaaf9d4ea94f?as=expert','expired',NULL,NULL,'2025-11-04 13:25:49','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(56,52,6,17,569,'2025-11-05 14:00:00','2025-11-05 15:00:00',NULL,'livekit','room_85963be0-107b-45a0-80c2-e17ed9b95476','/meet/join/room_85963be0-107b-45a0-80c2-e17ed9b95476?as=user','/meet/join/room_85963be0-107b-45a0-80c2-e17ed9b95476?as=expert','expired',NULL,NULL,'2025-11-05 12:23:00','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(57,52,6,17,439,'2025-11-05 19:00:00','2025-11-05 20:00:00',NULL,'livekit','room_7d06a861-07d3-4bd3-8e24-74513f67b5b9','/meet/join/room_7d06a861-07d3-4bd3-8e24-74513f67b5b9?as=user','/meet/join/room_7d06a861-07d3-4bd3-8e24-74513f67b5b9?as=expert','expired',NULL,NULL,'2025-11-05 14:20:40','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(58,52,6,17,443,'2025-11-05 20:00:00','2025-11-05 21:00:00',NULL,'livekit','room_5586dfec-ff20-45e1-b20b-ee187597a5ce','/meet/join/room_5586dfec-ff20-45e1-b20b-ee187597a5ce?as=user','/meet/join/room_5586dfec-ff20-45e1-b20b-ee187597a5ce?as=expert','expired',NULL,NULL,'2025-11-05 14:26:34','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(59,52,6,17,571,'2025-11-06 01:00:00','2025-11-06 02:00:00',NULL,'livekit','room_e3ea89a7-aa04-4779-8455-9cd94add5339','/meet/join/room_e3ea89a7-aa04-4779-8455-9cd94add5339?as=user','/meet/join/room_e3ea89a7-aa04-4779-8455-9cd94add5339?as=expert','expired',NULL,NULL,'2025-11-06 00:53:35','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(60,52,6,17,451,'2025-11-06 19:00:00','2025-11-06 20:00:00',NULL,'livekit','room_f3625662-18a9-480b-9385-23d919d92a33','/meet/join/room_f3625662-18a9-480b-9385-23d919d92a33?as=user','/meet/join/room_f3625662-18a9-480b-9385-23d919d92a33?as=expert','expired',NULL,NULL,'2025-11-06 12:18:16','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(61,52,6,17,574,'2025-11-06 14:00:00','2025-11-06 15:00:00',NULL,'livekit','room_232908f6-7449-4ae8-9739-b8f1df582127','/meet/join/room_232908f6-7449-4ae8-9739-b8f1df582127?as=user','/meet/join/room_232908f6-7449-4ae8-9739-b8f1df582127?as=expert','expired',NULL,NULL,'2025-11-06 12:20:25','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(62,52,6,17,575,'2025-11-06 22:00:00','2025-11-06 23:00:00',NULL,'livekit','room_6549240c-4732-4afe-b171-eeda18589851','/meet/join/room_6549240c-4732-4afe-b171-eeda18589851?as=user','/meet/join/room_6549240c-4732-4afe-b171-eeda18589851?as=expert','expired',NULL,NULL,'2025-11-06 21:50:04','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(63,52,6,17,576,'2025-11-07 16:30:00','2025-11-07 17:00:00',NULL,'livekit','room_918f0ec8-e4a0-4ab0-b92a-4d9ff703aa26','/meet/join/room_918f0ec8-e4a0-4ab0-b92a-4d9ff703aa26?as=user','/meet/join/room_918f0ec8-e4a0-4ab0-b92a-4d9ff703aa26?as=expert','expired',NULL,NULL,'2025-11-07 16:05:26','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(64,52,6,17,385,'2025-11-09 13:00:00','2025-11-09 14:00:00',NULL,'livekit','room_f9fd69c6-320a-432e-a4ab-ad719701a1e3','/meet/join/room_f9fd69c6-320a-432e-a4ab-ad719701a1e3?as=user','/meet/join/room_f9fd69c6-320a-432e-a4ab-ad719701a1e3?as=expert','expired',NULL,NULL,'2025-11-08 20:32:45','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(65,59,6,17,577,'2025-11-09 23:45:00','2025-11-10 01:00:00',NULL,'livekit','room_e6715edb-f89c-475d-bea4-35298e12fdd5','/meet/join/room_e6715edb-f89c-475d-bea4-35298e12fdd5?as=user','/meet/join/room_e6715edb-f89c-475d-bea4-35298e12fdd5?as=expert','expired',NULL,NULL,'2025-11-09 23:13:40','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(66,59,6,17,428,'2025-11-10 21:00:00','2025-11-10 22:00:00',NULL,'livekit','room_8e1f8d3e-3e36-4452-a769-5a3a4639f4f5','/meet/join/room_8e1f8d3e-3e36-4452-a769-5a3a4639f4f5?as=user','/meet/join/room_8e1f8d3e-3e36-4452-a769-5a3a4639f4f5?as=expert','expired',NULL,NULL,'2025-11-10 20:10:24','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(67,74,3,2,528,'2025-11-12 10:00:00','2025-11-12 11:00:00',NULL,'livekit','room_cb1332b0-7924-4893-ad4d-9dc4acc7b70a','/meet/join/room_cb1332b0-7924-4893-ad4d-9dc4acc7b70a?as=user','/meet/join/room_cb1332b0-7924-4893-ad4d-9dc4acc7b70a?as=expert','expired',NULL,NULL,'2025-11-11 06:47:36','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(68,65,6,17,440,'2025-11-12 12:45:00','2025-11-12 13:05:00',NULL,'livekit','room_68a3ad82-9494-43d3-9eda-8ed14d2e9c24','/meet/join/room_68a3ad82-9494-43d3-9eda-8ed14d2e9c24?as=user','/meet/join/room_68a3ad82-9494-43d3-9eda-8ed14d2e9c24?as=expert','expired',NULL,NULL,'2025-11-12 12:38:43','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(69,76,3,2,542,'2025-11-14 09:00:00','2025-11-14 10:00:00',NULL,'livekit','room_d55dec91-efb2-45b3-9ff6-1a6117d8223e','/meet/join/room_d55dec91-efb2-45b3-9ff6-1a6117d8223e?as=user','/meet/join/room_d55dec91-efb2-45b3-9ff6-1a6117d8223e?as=expert','expired',NULL,NULL,'2025-11-12 15:08:10','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(70,65,6,17,578,'2025-11-12 16:50:00','2025-11-12 17:00:00',NULL,'livekit','room_1beb6e8d-dfe5-4fba-a11c-a8812f67308d','/meet/join/room_1beb6e8d-dfe5-4fba-a11c-a8812f67308d?as=user','/meet/join/room_1beb6e8d-dfe5-4fba-a11c-a8812f67308d?as=expert','expired',NULL,NULL,'2025-11-12 16:38:41','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(71,65,6,17,579,'2025-11-13 03:30:00','2025-11-13 04:00:00',NULL,'livekit','room_8d496759-2439-477a-a5e9-466e6e0111ee','/meet/join/room_8d496759-2439-477a-a5e9-466e6e0111ee?as=user','/meet/join/room_8d496759-2439-477a-a5e9-466e6e0111ee?as=expert','expired',NULL,NULL,'2025-11-13 03:20:33','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(72,65,6,17,580,'2025-11-13 22:00:00','2025-11-13 22:35:00',NULL,'livekit','room_8f545304-ecee-4f63-b634-8e07d4dde5b8','/meet/join/room_8f545304-ecee-4f63-b634-8e07d4dde5b8?as=user','/meet/join/room_8f545304-ecee-4f63-b634-8e07d4dde5b8?as=expert','expired',NULL,NULL,'2025-11-13 21:44:17','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(73,77,3,2,508,'2025-11-17 09:00:00','2025-11-17 10:00:00',NULL,'livekit','room_d2b1947d-7f1e-4bc5-b128-8383ee4fd463','/meet/join/room_d2b1947d-7f1e-4bc5-b128-8383ee4fd463?as=user','/meet/join/room_d2b1947d-7f1e-4bc5-b128-8383ee4fd463?as=expert','expired',NULL,NULL,'2025-11-16 08:34:18','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(74,78,6,2,421,'2025-11-17 19:00:00','2025-11-17 20:00:00',NULL,'livekit','room_3a5bf03b-c60c-4142-a5ba-03b38d21551d','/meet/join/room_3a5bf03b-c60c-4142-a5ba-03b38d21551d?as=user','/meet/join/room_3a5bf03b-c60c-4142-a5ba-03b38d21551d?as=expert','expired',NULL,NULL,'2025-11-17 12:06:46','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(75,43,6,17,581,'2025-11-22 23:15:00','2025-11-23 00:00:00',NULL,'livekit','room_b476fba5-2096-437b-8f26-955789899d59','/meet/join/room_b476fba5-2096-437b-8f26-955789899d59?as=user','/meet/join/room_b476fba5-2096-437b-8f26-955789899d59?as=expert','expired',NULL,NULL,'2025-11-22 23:00:53','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(76,81,3,2,635,'2025-12-31 21:00:00','2025-12-31 22:00:00',NULL,'livekit','room_45a9fba8-294d-45d7-a2a5-e9ccec36ada9','/meet/join/room_45a9fba8-294d-45d7-a2a5-e9ccec36ada9?as=user','/meet/join/room_45a9fba8-294d-45d7-a2a5-e9ccec36ada9?as=expert','expired',NULL,NULL,'2025-12-31 16:58:53','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(77,82,3,2,639,'2025-12-31 21:00:00','2025-12-31 22:00:00',NULL,'livekit','room_8c993479-459f-4b95-a806-6f46281a9f0b','/meet/join/room_8c993479-459f-4b95-a806-6f46281a9f0b?as=user','/meet/join/room_8c993479-459f-4b95-a806-6f46281a9f0b?as=expert','expired',NULL,NULL,'2025-12-31 17:07:22','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(78,83,3,28,595,'2026-01-02 15:00:00','2026-01-02 16:00:00',NULL,'livekit','room_7a9dc09f-c0cc-42df-84e4-2cd49c26f0a2','/meet/join/room_7a9dc09f-c0cc-42df-84e4-2cd49c26f0a2?as=user','/meet/join/room_7a9dc09f-c0cc-42df-84e4-2cd49c26f0a2?as=expert','expired',NULL,NULL,'2026-01-02 14:24:08','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(79,84,3,29,561,'2026-01-05 09:00:00','2026-01-05 10:00:00',NULL,'livekit','room_6663a6e4-9268-4f9f-88bc-7ce76a54d101','/meet/join/room_6663a6e4-9268-4f9f-88bc-7ce76a54d101?as=user','/meet/join/room_6663a6e4-9268-4f9f-88bc-7ce76a54d101?as=expert','upcoming',NULL,NULL,'2026-01-02 16:17:36','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(80,85,3,32,629,'2026-01-05 09:00:00','2026-01-05 10:00:00',NULL,'livekit','room_c54e0346-d4ef-473e-8610-f61f9b83804d','/meet/join/room_c54e0346-d4ef-473e-8610-f61f9b83804d?as=user','/meet/join/room_c54e0346-d4ef-473e-8610-f61f9b83804d?as=expert','upcoming',NULL,NULL,'2026-01-02 18:17:37','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(81,86,3,33,562,'2026-01-05 10:00:00','2026-01-05 11:00:00',NULL,'livekit','room_c815a945-bc0c-4089-adf4-cd89753919dc','/meet/join/room_c815a945-bc0c-4089-adf4-cd89753919dc?as=user','/meet/join/room_c815a945-bc0c-4089-adf4-cd89753919dc?as=expert','upcoming',NULL,NULL,'2026-01-02 19:02:38','one-on-one','livekit','video','UTC',NULL,0,0,0),
+(82,92,3,35,563,'2026-01-05 11:00:00','2026-01-05 12:00:00',NULL,'livekit','room_72ce8c2a-74a8-4a7a-afc9-f1b2dcde44c1','/meet/join/room_72ce8c2a-74a8-4a7a-afc9-f1b2dcde44c1?as=user','/meet/join/room_72ce8c2a-74a8-4a7a-afc9-f1b2dcde44c1?as=expert','upcoming',NULL,NULL,'2026-01-03 11:12:50','one-on-one','livekit','video','UTC',NULL,0,0,0);
+/*!40000 ALTER TABLE `meetings` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `message_reads`
+--
+
+DROP TABLE IF EXISTS `message_reads`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `message_reads` (
+  `message_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `read_at` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `message_reads`
+--
+
+LOCK TABLES `message_reads` WRITE;
+/*!40000 ALTER TABLE `message_reads` DISABLE KEYS */;
+INSERT INTO `message_reads` VALUES
+(1,2,'2025-09-25 10:19:57'),
+(1,4,'2025-09-25 10:31:06'),
+(2,2,'2025-09-25 10:19:57'),
+(2,4,'2025-09-25 10:31:06'),
+(3,2,'2025-09-25 10:19:57'),
+(3,4,'2025-09-25 10:31:06'),
+(4,2,'2025-09-25 10:19:57'),
+(4,4,'2025-09-25 10:31:06'),
+(5,3,'2025-08-17 19:13:16'),
+(5,4,'2025-08-17 19:13:42'),
+(6,2,'2025-09-25 10:19:57'),
+(6,4,'2025-09-25 10:31:06'),
+(7,2,'2025-09-25 10:19:57'),
+(7,4,'2025-09-25 10:31:06'),
+(8,2,'2025-09-25 10:19:57'),
+(8,4,'2025-09-25 10:31:06'),
+(9,3,'2025-08-17 19:14:05'),
+(9,4,'2025-08-17 19:13:42'),
+(10,3,'2025-08-17 19:14:05'),
+(10,4,'2025-08-17 21:13:03'),
+(11,3,'2025-08-20 06:16:51'),
+(11,4,'2025-08-17 21:13:03'),
+(12,3,'2025-08-20 06:16:51'),
+(12,4,'2025-08-17 22:21:48'),
+(13,1,'2025-08-18 00:34:50'),
+(13,3,'2025-08-18 00:34:43'),
+(14,1,'2025-08-18 00:34:50'),
+(14,3,'2025-08-18 00:42:42'),
+(15,1,'2025-08-18 00:42:16'),
+(15,3,'2025-08-18 00:42:42'),
+(16,1,'2025-08-18 00:42:23'),
+(16,3,'2025-08-18 00:42:42'),
+(17,1,'2025-08-18 00:42:54'),
+(17,3,'2025-08-18 00:42:42'),
+(18,1,'2025-08-18 00:42:54'),
+(19,3,'2025-08-20 06:16:51'),
+(19,4,'2025-08-20 06:16:45'),
+(20,1,'2025-08-18 00:51:38'),
+(21,1,'2025-08-18 01:00:39'),
+(22,1,'2025-08-18 01:05:26'),
+(23,1,'2025-08-20 10:11:27'),
+(24,3,'2025-08-20 06:16:51'),
+(24,4,'2025-08-20 06:16:45'),
+(25,3,'2025-08-20 06:16:51'),
+(25,4,'2025-08-20 06:16:45'),
+(26,3,'2025-08-20 06:16:51'),
+(26,4,'2025-08-20 13:24:13'),
+(27,3,'2025-08-20 13:24:23'),
+(27,4,'2025-08-20 13:24:13'),
+(28,2,'2025-09-25 10:19:57'),
+(28,4,'2025-09-25 10:31:06'),
+(29,3,'2025-08-20 13:24:23'),
+(29,4,'2025-08-20 13:24:13'),
+(30,3,'2025-08-20 13:24:23'),
+(30,4,'2025-08-20 13:24:13'),
+(31,3,'2025-08-20 13:24:23'),
+(31,4,'2025-08-20 13:24:13'),
+(35,3,'2025-08-20 13:24:23'),
+(35,4,'2025-08-20 13:24:56'),
+(36,3,'2025-09-14 11:57:22'),
+(36,4,'2025-08-20 13:24:56'),
+(37,3,'2025-09-14 11:57:22'),
+(37,4,'2025-08-20 13:29:14'),
+(38,3,'2025-09-14 11:57:27'),
+(39,3,'2025-09-14 11:57:27'),
+(40,3,'2025-09-14 11:57:27'),
+(43,3,'2025-09-14 11:57:25'),
+(44,3,'2025-09-14 11:57:22'),
+(44,4,'2025-10-11 12:44:40'),
+(48,3,'2025-09-20 04:45:30'),
+(48,6,'2025-09-25 11:39:14'),
+(49,6,'2025-09-25 11:39:14'),
+(50,6,'2025-09-25 11:39:14'),
+(51,2,'2025-09-28 07:09:34'),
+(51,4,'2025-09-25 10:31:06'),
+(52,2,'2025-09-28 07:09:34'),
+(52,4,'2025-09-25 10:31:06'),
+(53,2,'2025-09-28 07:09:36'),
+(53,3,'2025-09-25 10:46:37'),
+(54,2,'2025-09-28 07:09:36'),
+(54,3,'2025-10-05 05:09:24'),
+(55,6,'2025-09-25 11:39:14'),
+(56,2,'2025-09-28 07:09:34'),
+(57,3,'2025-10-05 05:09:29'),
+(57,4,'2025-10-11 12:44:40'),
+(58,3,'2025-10-05 05:09:24'),
+(60,4,'2025-10-11 12:44:40'),
+(61,6,'2025-10-13 18:07:50'),
+(62,4,'2025-10-11 12:44:40'),
+(63,4,'2025-10-11 12:44:40'),
+(5,3,'2025-12-16 06:01:27'),
+(9,3,'2025-12-16 06:01:27'),
+(10,3,'2025-12-16 06:01:27'),
+(11,3,'2025-12-16 06:01:27'),
+(12,3,'2025-12-16 06:01:27'),
+(19,3,'2025-12-16 06:01:27'),
+(24,3,'2025-12-16 06:01:27'),
+(25,3,'2025-12-16 06:01:27'),
+(26,3,'2025-12-16 06:01:27'),
+(27,3,'2025-12-16 06:01:27'),
+(29,3,'2025-12-16 06:01:27'),
+(30,3,'2025-12-16 06:01:27'),
+(31,3,'2025-12-16 06:01:27'),
+(35,3,'2025-12-16 06:01:27'),
+(36,3,'2025-12-16 06:01:27'),
+(37,3,'2025-12-16 06:01:27'),
+(44,3,'2025-12-16 06:01:27'),
+(57,3,'2025-12-16 06:01:27'),
+(60,3,'2025-12-16 06:01:27'),
+(62,3,'2025-12-16 06:01:27'),
+(63,3,'2025-12-16 06:01:27'),
+(64,3,'2025-12-16 06:01:27'),
+(5,3,'2025-12-16 06:01:53'),
+(9,3,'2025-12-16 06:01:53'),
+(10,3,'2025-12-16 06:01:53'),
+(11,3,'2025-12-16 06:01:53'),
+(12,3,'2025-12-16 06:01:53'),
+(19,3,'2025-12-16 06:01:53'),
+(24,3,'2025-12-16 06:01:53'),
+(25,3,'2025-12-16 06:01:53'),
+(26,3,'2025-12-16 06:01:53'),
+(27,3,'2025-12-16 06:01:53'),
+(29,3,'2025-12-16 06:01:53'),
+(30,3,'2025-12-16 06:01:53'),
+(31,3,'2025-12-16 06:01:53'),
+(35,3,'2025-12-16 06:01:53'),
+(36,3,'2025-12-16 06:01:53'),
+(37,3,'2025-12-16 06:01:53'),
+(44,3,'2025-12-16 06:01:53'),
+(57,3,'2025-12-16 06:01:53'),
+(60,3,'2025-12-16 06:01:53'),
+(62,3,'2025-12-16 06:01:53'),
+(63,3,'2025-12-16 06:01:53'),
+(64,3,'2025-12-16 06:01:53'),
+(5,3,'2025-12-31 09:31:57'),
+(9,3,'2025-12-31 09:31:57'),
+(10,3,'2025-12-31 09:31:57'),
+(11,3,'2025-12-31 09:31:57'),
+(12,3,'2025-12-31 09:31:57'),
+(19,3,'2025-12-31 09:31:57'),
+(24,3,'2025-12-31 09:31:57'),
+(25,3,'2025-12-31 09:31:57'),
+(26,3,'2025-12-31 09:31:57'),
+(27,3,'2025-12-31 09:31:57'),
+(29,3,'2025-12-31 09:31:57'),
+(30,3,'2025-12-31 09:31:57'),
+(31,3,'2025-12-31 09:31:57'),
+(35,3,'2025-12-31 09:31:57'),
+(36,3,'2025-12-31 09:31:57'),
+(37,3,'2025-12-31 09:31:57'),
+(44,3,'2025-12-31 09:31:57'),
+(57,3,'2025-12-31 09:31:57'),
+(60,3,'2025-12-31 09:31:57'),
+(62,3,'2025-12-31 09:31:57'),
+(63,3,'2025-12-31 09:31:57'),
+(64,3,'2025-12-31 09:31:57');
+/*!40000 ALTER TABLE `message_reads` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `messages`
+--
+
+DROP TABLE IF EXISTS `messages`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `messages` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `chat_id` int(11) NOT NULL,
+  `sender_id` int(11) NOT NULL,
+  `content` text DEFAULT NULL,
+  `attachment` varchar(255) DEFAULT NULL,
+  `file_url` text DEFAULT NULL,
+  `is_read` tinyint(1) NOT NULL DEFAULT 0,
+  `is_deleted` tinyint(1) NOT NULL DEFAULT 0,
+  `edited_at` datetime DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=68 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `messages`
+--
+
+LOCK TABLES `messages` WRITE;
+/*!40000 ALTER TABLE `messages` DISABLE KEYS */;
+INSERT INTO `messages` VALUES
+(1,1,4,'hi',NULL,NULL,0,0,NULL,NULL,'2025-08-12 09:51:36'),
+(2,1,4,'how are yuo?',NULL,NULL,0,0,NULL,NULL,'2025-08-12 09:51:47'),
+(3,1,4,'where are you?',NULL,NULL,0,0,NULL,NULL,'2025-08-12 10:35:41'),
+(4,1,4,'tui koi',NULL,NULL,0,0,NULL,NULL,'2025-08-12 10:39:02'),
+(5,2,4,'hi',NULL,NULL,0,0,NULL,NULL,'2025-08-17 11:39:23'),
+(6,1,4,'hgf',NULL,NULL,0,0,NULL,NULL,'2025-08-17 11:59:52'),
+(7,1,4,'dsgdg',NULL,NULL,0,0,NULL,NULL,'2025-08-17 12:08:32'),
+(8,1,4,'how are you?',NULL,NULL,0,0,NULL,NULL,'2025-08-17 12:21:33'),
+(9,2,3,'how are you?',NULL,NULL,0,0,NULL,NULL,'2025-08-17 13:13:24'),
+(10,2,4,'I\'m fine',NULL,NULL,0,0,NULL,NULL,'2025-08-17 13:14:05'),
+(11,2,3,'Hi',NULL,NULL,0,0,NULL,NULL,'2025-08-17 15:13:03'),
+(12,2,3,'helodsgsfd',NULL,NULL,0,0,NULL,NULL,'2025-08-17 15:13:15'),
+(14,3,3,'How ae you?',NULL,NULL,0,0,NULL,NULL,'2025-08-17 18:34:50'),
+(15,3,3,'hi',NULL,NULL,0,0,NULL,NULL,'2025-08-17 18:42:16'),
+(16,3,3,'How are you?',NULL,NULL,0,0,NULL,NULL,'2025-08-17 18:42:23'),
+(18,3,3,'hhh',NULL,NULL,0,0,NULL,NULL,'2025-08-17 18:42:54'),
+(19,2,3,'hhi',NULL,NULL,0,0,NULL,NULL,'2025-08-17 18:43:31'),
+(20,3,3,'okay',NULL,NULL,0,0,NULL,NULL,'2025-08-17 18:51:38'),
+(21,3,3,NULL,NULL,'http://localhost:5000/uploads/chat/130c4306cecd275d5d891dbf2c42425c.png',0,0,NULL,NULL,'2025-08-17 18:57:40'),
+(22,3,3,'See the attachment',NULL,'http://localhost:5000/uploads/chat/113485e437eedfdc19935256f19b6558.pdf',0,0,NULL,NULL,'2025-08-17 19:05:26'),
+(23,3,3,'Please knock me when available ',NULL,NULL,0,0,NULL,NULL,'2025-08-18 06:14:50'),
+(24,2,3,'Hey',NULL,NULL,0,0,NULL,NULL,'2025-08-20 06:13:23'),
+(25,2,3,'are you there?',NULL,NULL,0,0,NULL,NULL,'2025-08-20 06:13:31'),
+(26,2,4,'yes',NULL,NULL,0,0,NULL,NULL,'2025-08-20 06:16:50'),
+(27,2,3,'what are you doing now?',NULL,NULL,0,0,NULL,NULL,'2025-08-20 06:53:11'),
+(28,1,4,'Hello from Insomnia',NULL,NULL,0,0,NULL,NULL,'2025-08-20 08:42:54'),
+(29,2,3,'hi',NULL,NULL,0,0,NULL,NULL,'2025-08-20 12:07:59'),
+(30,2,3,'munsi',NULL,NULL,0,0,NULL,NULL,'2025-08-20 12:08:06'),
+(31,2,3,'how are you',NULL,NULL,0,0,NULL,NULL,'2025-08-20 12:08:19'),
+(32,4,3,'hi',NULL,NULL,0,0,NULL,NULL,'2025-08-20 13:22:42'),
+(33,4,3,NULL,NULL,'http://api.prosfata.space/uploads/chat/4d4fb65f074194381b8fe10a8ef89b94.png',0,0,NULL,NULL,'2025-08-20 13:23:02'),
+(34,4,3,'Are are you?',NULL,NULL,0,0,NULL,NULL,'2025-08-20 13:23:17'),
+(35,2,4,'hey',NULL,NULL,0,0,NULL,NULL,'2025-08-20 13:24:16'),
+(36,2,3,'ab ku kkhk ',NULL,NULL,0,0,NULL,NULL,'2025-08-20 13:24:56'),
+(37,2,3,NULL,NULL,'http://api.prosfata.space/uploads/chat/982ac7165f31f43a2da7e4223c929cb1.png',0,0,NULL,NULL,'2025-08-20 13:29:14'),
+(38,5,9,'hi',NULL,NULL,0,0,NULL,NULL,'2025-09-13 07:43:10'),
+(39,5,9,'hello',NULL,NULL,0,0,NULL,NULL,'2025-09-13 07:43:13'),
+(40,5,9,'my name is munsi imran hossen',NULL,NULL,0,0,NULL,NULL,'2025-09-13 07:43:25'),
+(41,6,9,'hi',NULL,NULL,0,0,NULL,NULL,'2025-09-13 07:44:39'),
+(42,7,9,'hi',NULL,NULL,0,0,NULL,NULL,'2025-09-13 07:46:27'),
+(43,9,13,'Hi',NULL,NULL,0,0,NULL,NULL,'2025-09-13 07:58:58'),
+(44,2,4,'hi imran',NULL,NULL,0,0,NULL,NULL,'2025-09-14 06:00:32'),
+(45,8,10,'Hello!!',NULL,NULL,0,0,NULL,NULL,'2025-09-14 06:36:10'),
+(46,5,3,'okay',NULL,NULL,0,0,NULL,NULL,'2025-09-14 11:57:37'),
+(47,5,3,'why you are reach out? 👹 ',NULL,NULL,0,0,NULL,NULL,'2025-09-14 11:57:58'),
+(48,10,6,'Hi there?',NULL,NULL,0,0,NULL,NULL,'2025-09-16 01:01:01'),
+(49,10,3,'hello norman',NULL,NULL,0,0,NULL,NULL,'2025-09-20 04:45:36'),
+(50,10,3,'Hi Prosfata International',NULL,NULL,0,0,NULL,NULL,'2025-09-25 06:42:52'),
+(51,1,2,'hello david',NULL,NULL,0,0,NULL,NULL,'2025-09-25 10:20:04'),
+(52,1,2,'how are you',NULL,NULL,0,0,NULL,NULL,'2025-09-25 10:20:08'),
+(53,12,2,'hi imran',NULL,NULL,0,0,NULL,NULL,'2025-09-25 10:27:40'),
+(54,12,3,'hello',NULL,NULL,0,0,NULL,NULL,'2025-09-25 10:46:43'),
+(55,10,3,'hi norman',NULL,NULL,0,0,NULL,NULL,'2025-09-25 10:46:53'),
+(56,1,4,'hello bro',NULL,NULL,0,0,NULL,NULL,'2025-09-27 11:11:35'),
+(57,2,4,'hello',NULL,NULL,0,0,NULL,NULL,'2025-09-27 11:11:50'),
+(58,12,2,'Hi Imran',NULL,NULL,0,0,NULL,NULL,'2025-09-28 07:09:48'),
+(59,1,2,'Hi Abu',NULL,NULL,0,0,NULL,NULL,'2025-09-28 07:09:59'),
+(60,2,3,'hi',NULL,NULL,0,0,NULL,NULL,'2025-10-05 05:09:33'),
+(61,10,3,'Hello Norman',NULL,NULL,0,0,NULL,NULL,'2025-10-05 05:09:45'),
+(62,2,3,'hi\\',NULL,NULL,0,0,NULL,NULL,'2025-10-05 05:13:55'),
+(63,2,3,'Hello',NULL,NULL,0,0,NULL,NULL,'2025-10-05 05:13:59'),
+(64,2,4,'Hi',NULL,NULL,0,0,NULL,NULL,'2025-10-11 12:44:46'),
+(65,16,6,'Hi Joshua, can you check this document I used Claude Sonnet to research and see if it aligns with your thinking? ',NULL,'http://api.prosfata.space/uploads/chat/71a6b9dd845b5e495e328a0a904d69e7.pdf',0,0,NULL,NULL,'2025-10-13 18:07:20'),
+(66,2,3,'hi',NULL,NULL,0,0,NULL,NULL,'2025-12-31 09:32:00'),
+(67,2,3,'read',NULL,NULL,0,0,NULL,NULL,'2025-12-31 09:32:45');
+/*!40000 ALTER TABLE `messages` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `newsletter_subscribers`
+--
+
+DROP TABLE IF EXISTS `newsletter_subscribers`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `newsletter_subscribers` (
+  `id` bigint(20) unsigned NOT NULL,
+  `email` varchar(255) NOT NULL,
+  `status` enum('subscribed','unsubscribed','bounced') NOT NULL DEFAULT 'subscribed',
+  `source` varchar(100) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `newsletter_subscribers`
+--
+
+LOCK TABLES `newsletter_subscribers` WRITE;
+/*!40000 ALTER TABLE `newsletter_subscribers` DISABLE KEYS */;
+INSERT INTO `newsletter_subscribers` VALUES
+(1,'imranhossen1119999@gmail.com','subscribed','footer','2025-09-28 10:06:33','2025-09-28 10:06:33'),
+(2,'norman@prosfata.com','subscribed','footer','2025-10-14 22:35:46','2025-10-14 22:35:46');
+/*!40000 ALTER TABLE `newsletter_subscribers` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `notification_queue`
+--
+
+DROP TABLE IF EXISTS `notification_queue`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `notification_queue` (
+  `id` bigint(20) NOT NULL,
+  `user_id` bigint(20) NOT NULL,
+  `type` varchar(64) NOT NULL,
+  `due_at` datetime NOT NULL,
+  `status` enum('queued','sending','sent','canceled','error') NOT NULL DEFAULT 'queued',
+  `attempts` int(11) NOT NULL DEFAULT 0,
+  `max_attempts` int(11) NOT NULL DEFAULT 5,
+  `title` varchar(255) NOT NULL,
+  `body` text DEFAULT NULL,
+  `link` varchar(1024) DEFAULT NULL,
+  `meta` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`meta`)),
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `notification_queue`
+--
+
+LOCK TABLES `notification_queue` WRITE;
+/*!40000 ALTER TABLE `notification_queue` DISABLE KEYS */;
+/*!40000 ALTER TABLE `notification_queue` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `notification_settings`
+--
+
+DROP TABLE IF EXISTS `notification_settings`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `notification_settings` (
+  `user_id` int(11) NOT NULL,
+  `push_enabled` tinyint(1) NOT NULL DEFAULT 1,
+  `email_enabled` tinyint(1) NOT NULL DEFAULT 1,
+  `message_mentions` tinyint(1) NOT NULL DEFAULT 1,
+  `meeting_reminders` tinyint(1) NOT NULL DEFAULT 1,
+  `course_payments` tinyint(1) NOT NULL DEFAULT 1,
+  `service_suggestions` tinyint(1) NOT NULL DEFAULT 0,
+  `promotions` tinyint(1) NOT NULL DEFAULT 0,
+  `service_updates` tinyint(1) NOT NULL DEFAULT 1,
+  `subscription_renewals` tinyint(1) NOT NULL DEFAULT 1,
+  `feedback_requests` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `notification_settings`
+--
+
+LOCK TABLES `notification_settings` WRITE;
+/*!40000 ALTER TABLE `notification_settings` DISABLE KEYS */;
+INSERT INTO `notification_settings` VALUES
+(1,1,1,1,1,1,0,0,1,1,1,'2025-08-20 18:53:52','2025-08-20 18:53:52'),
+(2,1,1,1,1,1,0,0,1,1,1,'2025-09-25 10:30:07','2025-09-25 10:30:07'),
+(3,1,1,1,1,1,0,0,1,1,1,'2025-09-12 16:50:57','2025-09-12 16:50:57'),
+(4,1,1,1,1,1,0,1,1,1,1,'2025-08-20 19:02:35','2025-08-20 19:37:48'),
+(6,1,1,1,1,1,0,0,1,1,1,'2025-09-13 15:04:17','2025-09-13 15:04:17'),
+(7,1,1,1,1,1,0,0,1,1,1,'2025-09-13 07:22:27','2025-09-13 07:22:27'),
+(8,1,1,1,1,1,0,0,1,1,1,'2025-09-13 07:32:52','2025-09-13 07:32:52'),
+(9,1,1,1,1,1,0,0,1,1,1,'2025-09-13 07:34:19','2025-09-13 07:34:19'),
+(10,1,1,1,1,1,0,0,1,1,1,'2025-09-13 07:35:21','2025-09-13 07:35:21'),
+(11,1,1,1,1,1,0,0,1,1,1,'2025-09-13 07:39:48','2025-09-13 07:39:48'),
+(12,1,1,1,1,1,0,0,1,1,1,'2025-09-13 07:56:53','2025-09-13 07:56:53'),
+(13,1,1,1,1,1,0,0,1,1,1,'2025-09-13 07:57:47','2025-09-13 07:57:47'),
+(14,1,1,1,1,1,0,0,1,1,1,'2025-09-13 08:19:39','2025-09-13 08:19:39'),
+(15,1,1,1,1,1,0,0,1,1,1,'2025-09-28 14:56:10','2025-09-28 14:56:10'),
+(16,1,1,1,1,1,0,0,1,1,1,'2025-09-28 15:25:15','2025-09-28 15:25:15'),
+(17,1,1,1,1,1,0,0,1,1,1,'2025-09-28 17:26:47','2025-09-28 17:26:47'),
+(18,1,1,1,1,1,0,0,1,1,1,'2025-10-12 18:03:30','2025-10-12 18:03:30'),
+(19,1,1,1,1,1,0,0,1,1,1,'2025-10-20 06:15:32','2025-10-20 06:15:32'),
+(20,1,1,1,1,1,0,0,1,1,1,'2025-10-20 06:35:28','2025-10-20 06:35:28'),
+(21,1,1,1,1,1,0,0,1,1,1,'2025-10-20 12:30:43','2025-10-20 12:30:43'),
+(22,1,1,1,1,1,0,0,1,1,1,'2025-10-20 17:03:59','2025-10-20 17:03:59'),
+(23,1,1,1,1,1,0,0,1,1,1,'2025-10-20 17:27:29','2025-10-20 17:27:29'),
+(24,1,1,1,1,1,0,0,1,1,1,'2025-10-20 17:57:57','2025-10-20 17:57:57'),
+(25,1,1,1,1,1,0,0,1,1,1,'2025-10-20 18:20:56','2025-10-20 18:20:56'),
+(26,1,1,1,1,1,0,0,1,1,1,'2025-10-21 21:37:43','2025-10-21 21:37:43'),
+(30,1,1,1,1,1,0,0,1,1,1,'2026-01-02 17:00:07','2026-01-02 17:00:07'),
+(31,1,1,1,1,1,0,0,1,1,1,'2026-01-02 17:00:55','2026-01-02 17:00:55');
+/*!40000 ALTER TABLE `notification_settings` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `notifications`
+--
+
+DROP TABLE IF EXISTS `notifications`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `notifications` (
+  `id` bigint(20) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `type` varchar(50) NOT NULL,
+  `title` varchar(180) NOT NULL,
+  `body` text DEFAULT NULL,
+  `link` varchar(255) DEFAULT NULL,
+  `is_read` tinyint(1) NOT NULL DEFAULT 0,
+  `read_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `meta` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`meta`))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `notifications`
+--
+
+LOCK TABLES `notifications` WRITE;
+/*!40000 ALTER TABLE `notifications` DISABLE KEYS */;
+INSERT INTO `notifications` VALUES
+(1,1,'meeting_reminder','Your meeting starts soon','Join the call in 15 minutes','http://localhost:5173/meetings/123',0,NULL,'2025-08-20 18:53:52',NULL),
+(2,4,'meeting_reminder','Your meeting starts soon','Join the call in 15 minutes','http://localhost:5173/meetings/123',1,'2025-08-20 19:42:01','2025-08-20 19:02:35',NULL),
+(3,4,'meeting_reminder','Your meeting starts soon','Join the call in 15 minutes','http://localhost:5173/meetings/123',1,'2025-09-25 10:31:26','2025-08-20 19:42:28',NULL),
+(4,4,'meeting_reminder','Your meeting starts soon','Join the call in 15 minutes','http://localhost:5173/meetings/123',1,'2025-09-25 10:31:20','2025-08-20 19:42:44',NULL),
+(5,2,'task.review.approved','Assignment approved','Great news! Your assignment #10 was approved.\n\nFeedback: Great Work. please be continue','https://prosfata.space/coaching/enrollments/6/assignments/10',1,'2025-10-24 04:59:06','2025-10-24 04:57:43','{\"enrollment_id\":6,\"assignment_id\":10,\"version_id\":18,\"decision\":\"approved\",\"score\":null}'),
+(6,3,'task.submitted','New assignment submitted','Mustafizur Rahman submitted assignment #23 (v1) for review.','https://prosfata.space/coaching/review',1,'2025-11-03 08:49:18','2025-10-25 09:04:18','{\"enrollment_id\":23,\"assignment_id\":23,\"version_id\":19,\"seq\":1}'),
+(7,2,'task.submit.confirmation','Assignment submitted','Your assignment #23 (v1) was submitted successfully.','https://prosfata.space/coaching/review',0,NULL,'2025-10-25 09:04:20','{\"enrollment_id\":23,\"assignment_id\":23,\"version_id\":19,\"seq\":1}'),
+(8,2,'task.review.approved','Assignment approved','Great news! Your assignment #23 was approved.','https://prosfata.space/coaching/enrollments/23/assignments/23',0,NULL,'2025-10-25 16:14:21','{\"enrollment_id\":23,\"assignment_id\":23,\"version_id\":19,\"decision\":\"approved\",\"score\":null}'),
+(9,2,'task.review.rejected','Assignment rejected','Your assignment #23 was rejected. Please review the feedback.','https://prosfata.space/coaching/enrollments/23/assignments/23',0,NULL,'2025-10-25 16:19:29','{\"enrollment_id\":23,\"assignment_id\":23,\"version_id\":19,\"decision\":\"rejected\",\"score\":null}'),
+(10,3,'task.submitted','New assignment submitted','Mustafizur Rahman submitted assignment #22 (v1) for review.','https://prosfata.space/coaching/review',1,'2025-11-03 08:49:15','2025-10-25 16:20:06','{\"enrollment_id\":23,\"assignment_id\":22,\"version_id\":20,\"seq\":1}'),
+(11,2,'task.submit.confirmation','Assignment submitted','Your assignment #22 (v1) was submitted successfully.','https://prosfata.space/coaching/review',0,NULL,'2025-10-25 16:20:07','{\"enrollment_id\":23,\"assignment_id\":22,\"version_id\":20,\"seq\":1}'),
+(12,2,'task.review.approved','Assignment approved','Great news! Your assignment #22 was approved.\n\nFeedback: approved','https://prosfata.space/coaching/enrollments/23/assignments/22',0,NULL,'2025-10-25 16:20:45','{\"enrollment_id\":23,\"assignment_id\":22,\"version_id\":20,\"decision\":\"approved\",\"score\":null}'),
+(13,6,'payment.program.paid','Program booking payment confirmed','Mustafizur Rahman purchased Program: Program #20.','https://prosfata.space/coaching/enrollments/27',1,'2025-10-25 21:48:10','2025-10-25 18:27:12','{\"order_id\":49,\"type\":\"program\",\"enrollment_id\":27,\"amount\":\"1599.00\",\"currency\":\"USD\"}'),
+(14,2,'payment.program.confirmed','Program booking payment confirmed','Your payment is confirmed for Program: Program #20.','https://prosfata.space/coaching/enrollments/27',0,NULL,'2025-10-25 18:27:13','{\"order_id\":49,\"type\":\"program\",\"enrollment_id\":27,\"amount\":\"1599.00\",\"currency\":\"USD\"}'),
+(15,6,'payment.program.paid','Program booking payment confirmed','Mustafizur Rahman purchased Program: Program #20.','https://prosfata.space/coaching/enrollments/28',1,'2025-10-26 20:28:08','2025-10-26 18:18:15','{\"order_id\":55,\"type\":\"program\",\"enrollment_id\":28,\"amount\":\"1599.00\",\"currency\":\"USD\"}'),
+(16,2,'payment.program.confirmed','Program booking payment confirmed','Your payment is confirmed for Program: Program #20.','https://prosfata.space/coaching/enrollments/28',0,NULL,'2025-10-26 18:18:17','{\"order_id\":55,\"type\":\"program\",\"enrollment_id\":28,\"amount\":\"1599.00\",\"currency\":\"USD\"}'),
+(17,6,'task.submitted','New assignment submitted','Normando Musa submitted assignment #27 (v1) for review.','https://prosfata.space/coaching/review',1,'2025-10-31 00:35:32','2025-10-26 20:38:16','{\"enrollment_id\":25,\"assignment_id\":27,\"version_id\":21,\"seq\":1}'),
+(18,6,'task.submitted','New assignment submitted','Normando Musa submitted assignment #27 (v2) for review.','https://prosfata.space/coaching/review',1,'2025-10-31 00:35:32','2025-10-26 20:38:18','{\"enrollment_id\":25,\"assignment_id\":27,\"version_id\":22,\"seq\":2}'),
+(19,17,'task.submit.confirmation','Assignment submitted','Your assignment #27 (v1) was submitted successfully.','https://prosfata.space/coaching/review',1,'2025-10-28 11:34:20','2025-10-26 20:38:18','{\"enrollment_id\":25,\"assignment_id\":27,\"version_id\":21,\"seq\":1}'),
+(20,17,'task.submit.confirmation','Assignment submitted','Your assignment #27 (v2) was submitted successfully.','https://prosfata.space/coaching/review',1,'2025-10-28 11:34:20','2025-10-26 20:38:19','{\"enrollment_id\":25,\"assignment_id\":27,\"version_id\":22,\"seq\":2}'),
+(21,6,'payment.program.paid','Program booking payment confirmed','Normando Musa purchased Program: Program #9.','https://prosfata.space/coaching/enrollments/12',1,'2025-10-31 00:35:32','2025-10-26 20:42:35','{\"order_id\":58,\"type\":\"program\",\"enrollment_id\":12,\"amount\":\"300.00\",\"currency\":\"USD\"}'),
+(22,17,'payment.program.confirmed','Program booking payment confirmed','Your payment is confirmed for Program: Program #9.','https://prosfata.space/coaching/enrollments/12',1,'2025-10-28 11:34:20','2025-10-26 20:42:36','{\"order_id\":58,\"type\":\"program\",\"enrollment_id\":12,\"amount\":\"300.00\",\"currency\":\"USD\"}'),
+(23,6,'payment.program.paid','Program booking payment confirmed','Normando Musa purchased Program: Program #10.','https://prosfata.space/coaching/enrollments/29',1,'2025-10-31 00:35:32','2025-10-26 20:44:21','{\"order_id\":59,\"type\":\"program\",\"enrollment_id\":29,\"amount\":\"399.00\",\"currency\":\"USD\"}'),
+(24,17,'payment.program.confirmed','Program booking payment confirmed','Your payment is confirmed for Program: Program #10.','https://prosfata.space/coaching/enrollments/29',1,'2025-10-28 11:34:20','2025-10-26 20:44:22','{\"order_id\":59,\"type\":\"program\",\"enrollment_id\":29,\"amount\":\"399.00\",\"currency\":\"USD\"}'),
+(25,6,'task.submitted','New assignment submitted','Normando Musa submitted assignment #29 (v1) for review.','https://prosfata.space/coaching/review',1,'2025-10-31 00:35:32','2025-10-26 20:45:17','{\"enrollment_id\":29,\"assignment_id\":29,\"version_id\":23,\"seq\":1}'),
+(26,17,'task.submit.confirmation','Assignment submitted','Your assignment #29 (v1) was submitted successfully.','https://prosfata.space/coaching/review',1,'2025-10-28 11:34:20','2025-10-26 20:45:19','{\"enrollment_id\":29,\"assignment_id\":29,\"version_id\":23,\"seq\":1}'),
+(27,17,'task.review.approved','Assignment approved','Great news! Your assignment #29 was approved.','https://prosfata.space/coaching/enrollments/29/assignments/29',1,'2025-10-28 11:34:20','2025-10-26 20:47:39','{\"enrollment_id\":29,\"assignment_id\":29,\"version_id\":23,\"decision\":\"approved\",\"score\":null}'),
+(28,17,'task.review.approved','Assignment approved','Great news! Your assignment #27 was approved.','https://prosfata.space/coaching/enrollments/25/assignments/27',1,'2025-10-28 11:34:20','2025-10-26 20:47:46','{\"enrollment_id\":25,\"assignment_id\":27,\"version_id\":22,\"decision\":\"approved\",\"score\":null}'),
+(29,6,'payment.program.paid','Program booking payment confirmed','Joshua Wanyonyi purchased Program: Program #13.','https://prosfata.space/coaching/enrollments/26',1,'2025-10-31 00:35:32','2025-10-26 21:13:58','{\"order_id\":60,\"type\":\"program\",\"enrollment_id\":26,\"amount\":\"900.00\",\"currency\":\"USD\"}'),
+(30,18,'payment.program.confirmed','Program booking payment confirmed','Your payment is confirmed for Program: Program #13.','https://prosfata.space/coaching/enrollments/26',0,NULL,'2025-10-26 21:14:00','{\"order_id\":60,\"type\":\"program\",\"enrollment_id\":26,\"amount\":\"900.00\",\"currency\":\"USD\"}'),
+(31,6,'payment.program.paid','Program booking payment confirmed','Joshua Wanyonyi purchased Program: Program #13.','https://prosfata.space/coaching/enrollments/26',1,'2025-10-31 00:35:32','2025-10-26 21:20:24','{\"order_id\":61,\"type\":\"program\",\"enrollment_id\":26,\"amount\":\"900.00\",\"currency\":\"USD\"}'),
+(32,18,'payment.program.confirmed','Program booking payment confirmed','Your payment is confirmed for Program: Program #13.','https://prosfata.space/coaching/enrollments/26',0,NULL,'2025-10-26 21:20:26','{\"order_id\":61,\"type\":\"program\",\"enrollment_id\":26,\"amount\":\"900.00\",\"currency\":\"USD\"}'),
+(33,6,'payment.program.paid','Program booking payment confirmed','Joshua Wanyonyi purchased Program: Program #20.','https://prosfata.space/coaching/enrollments/30',1,'2025-10-31 00:35:32','2025-10-26 21:22:23','{\"order_id\":62,\"type\":\"program\",\"enrollment_id\":30,\"amount\":\"1599.00\",\"currency\":\"USD\"}'),
+(34,18,'payment.program.confirmed','Program booking payment confirmed','Your payment is confirmed for Program: Program #20.','https://prosfata.space/coaching/enrollments/30',1,'2025-11-02 22:02:25','2025-10-26 21:22:24','{\"order_id\":62,\"type\":\"program\",\"enrollment_id\":30,\"amount\":\"1599.00\",\"currency\":\"USD\"}'),
+(35,2,'payment','Coaching enrollment confirmed',NULL,'https://prosfata.space/coaching/success?order_id=56&enrollment_id=31',0,NULL,'2025-10-27 05:37:51',NULL),
+(36,25,'payment','New coaching enrollment',NULL,'https://prosfata.space/coaching/success?order_id=56&enrollment_id=31',0,NULL,'2025-10-27 05:37:51',NULL),
+(37,2,'payment','Coaching enrollment confirmed',NULL,'https://prosfata.space/coaching/success?order_id=63',0,NULL,'2025-10-27 05:42:02',NULL),
+(38,6,'payment','New coaching enrollment',NULL,'https://prosfata.space/coaching/success?order_id=63',1,'2025-10-31 00:35:32','2025-10-27 05:42:02',NULL),
+(39,2,'payment','Course purchase confirmed',NULL,'https://prosfata.space/courses/18/success?order_id=31',0,NULL,'2025-10-27 05:51:16',NULL),
+(40,2,'payment','Service booking confirmed',NULL,'https://prosfata.space/billing/success?order_id=71',0,NULL,'2025-10-27 05:52:28',NULL),
+(41,2,'payment','Course purchase confirmed',NULL,'https://prosfata.space/courses/25/success?order_id=34',0,NULL,'2025-10-27 05:54:38',NULL),
+(42,6,'task.submitted','New assignment submitted','Mustafizur Rahman submitted assignment #33 (v1) for review.','https://prosfata.space/coaching/review',1,'2025-10-31 00:35:32','2025-10-27 16:02:22','{\"enrollment_id\":32,\"assignment_id\":33,\"version_id\":24,\"seq\":1}'),
+(43,2,'task.submit.confirmation','Assignment submitted','Your assignment #33 (v1) was submitted successfully.','https://prosfata.space/coaching/review',0,NULL,'2025-10-27 16:02:23','{\"enrollment_id\":32,\"assignment_id\":33,\"version_id\":24,\"seq\":1}'),
+(44,6,'task.submitted','New assignment submitted','Mustafizur Rahman submitted assignment #33 (v2) for review.','https://prosfata.space/coaching/review',1,'2025-10-31 00:35:32','2025-10-27 16:02:24','{\"enrollment_id\":32,\"assignment_id\":33,\"version_id\":25,\"seq\":2}'),
+(45,2,'task.submit.confirmation','Assignment submitted','Your assignment #33 (v2) was submitted successfully.','https://prosfata.space/coaching/review',0,NULL,'2025-10-27 16:02:26','{\"enrollment_id\":32,\"assignment_id\":33,\"version_id\":25,\"seq\":2}'),
+(46,6,'task.submitted','New assignment submitted','Normando Musa submitted assignment #34 (v1) for review.','https://prosfata.space/coaching/review',1,'2025-10-31 00:35:32','2025-10-28 00:39:56','{\"enrollment_id\":25,\"assignment_id\":34,\"version_id\":26,\"seq\":1}'),
+(47,17,'task.submit.confirmation','Assignment submitted','Your assignment #34 (v1) was submitted successfully.','https://prosfata.space/coaching/review',1,'2025-10-28 11:34:20','2025-10-28 00:39:58','{\"enrollment_id\":25,\"assignment_id\":34,\"version_id\":26,\"seq\":1}'),
+(48,6,'task.submitted','New assignment submitted','Normando Musa submitted assignment #32 (v1) for review.','https://prosfata.space/coaching/review',1,'2025-10-31 00:35:32','2025-10-28 00:40:24','{\"enrollment_id\":25,\"assignment_id\":32,\"version_id\":27,\"seq\":1}'),
+(49,17,'task.submit.confirmation','Assignment submitted','Your assignment #32 (v1) was submitted successfully.','https://prosfata.space/coaching/review',1,'2025-10-28 11:34:20','2025-10-28 00:40:26','{\"enrollment_id\":25,\"assignment_id\":32,\"version_id\":27,\"seq\":1}'),
+(50,6,'task.submitted','New assignment submitted','Normando Musa submitted assignment #36 (v1) for review.','https://prosfata.space/coaching/review',1,'2025-10-31 00:35:32','2025-10-28 14:17:54','{\"enrollment_id\":25,\"assignment_id\":36,\"version_id\":28,\"seq\":1}'),
+(51,6,'task.submitted','New assignment submitted','Normando Musa submitted assignment #36 (v2) for review.','https://prosfata.space/coaching/review',1,'2025-10-31 00:35:32','2025-10-28 14:18:02','{\"enrollment_id\":25,\"assignment_id\":36,\"version_id\":29,\"seq\":2}'),
+(52,17,'task.submit.confirmation','Assignment submitted','Your assignment #36 (v2) was submitted successfully.','https://prosfata.space/coaching/review',1,'2025-10-29 02:52:41','2025-10-28 14:18:03','{\"enrollment_id\":25,\"assignment_id\":36,\"version_id\":29,\"seq\":2}'),
+(53,6,'task.submitted','New assignment submitted','Normando Musa submitted assignment #36 (v3) for review.','https://prosfata.space/coaching/review',1,'2025-10-31 00:35:32','2025-10-28 14:18:04','{\"enrollment_id\":25,\"assignment_id\":36,\"version_id\":30,\"seq\":3}'),
+(54,17,'task.submit.confirmation','Assignment submitted','Your assignment #36 (v3) was submitted successfully.','https://prosfata.space/coaching/review',1,'2025-10-29 02:52:41','2025-10-28 14:18:05','{\"enrollment_id\":25,\"assignment_id\":36,\"version_id\":30,\"seq\":3}'),
+(55,17,'task.submit.confirmation','Assignment submitted','Your assignment #36 (v1) was submitted successfully.','https://prosfata.space/coaching/review',1,'2025-10-29 02:52:41','2025-10-28 14:18:15','{\"enrollment_id\":25,\"assignment_id\":36,\"version_id\":28,\"seq\":1}'),
+(56,17,'task.review.approved','Assignment approved','Great news! Your assignment #36 was approved.','https://prosfata.space/coaching/enrollments/25/assignments/36',1,'2025-10-29 02:52:41','2025-10-28 14:18:45','{\"enrollment_id\":25,\"assignment_id\":36,\"version_id\":30,\"decision\":\"approved\",\"score\":null}'),
+(57,6,'task.submitted','New assignment submitted','Normando Musa submitted assignment #37 (v1) for review.','https://prosfata.space/coaching/review',1,'2025-10-31 00:35:04','2025-10-31 00:34:15','{\"enrollment_id\":25,\"assignment_id\":37,\"version_id\":31,\"seq\":1}'),
+(58,17,'task.submit.confirmation','Assignment submitted','Your assignment #37 (v1) was submitted successfully.','https://prosfata.space/coaching/review',1,'2025-10-31 00:36:41','2025-10-31 00:34:17','{\"enrollment_id\":25,\"assignment_id\":37,\"version_id\":31,\"seq\":1}'),
+(59,17,'task.review.approved','Assignment approved','Great news! Your assignment #37 was approved.','https://prosfata.space/coaching/enrollments/25/assignments/37',1,'2025-10-31 00:36:46','2025-10-31 00:35:15','{\"enrollment_id\":25,\"assignment_id\":37,\"version_id\":31,\"decision\":\"approved\",\"score\":null}'),
+(60,6,'task.submitted','New assignment submitted','Normando Musa submitted assignment #38 (v1) for review.','https://prosfata.space/coaching/review',1,'2025-11-02 21:18:15','2025-11-01 16:13:27','{\"enrollment_id\":29,\"assignment_id\":38,\"version_id\":32,\"seq\":1}'),
+(61,17,'task.submit.confirmation','Assignment submitted','Your assignment #38 (v1) was submitted successfully.','https://prosfata.space/coaching/review',1,'2025-11-03 00:12:43','2025-11-01 16:13:29','{\"enrollment_id\":29,\"assignment_id\":38,\"version_id\":32,\"seq\":1}'),
+(62,17,'task.review.approved','Assignment approved','Great news! Your assignment #38 was approved.\n\nFeedback: well done','https://prosfata.space/coaching/enrollments/29/assignments/38',1,'2025-11-03 00:12:43','2025-11-01 16:14:09','{\"enrollment_id\":29,\"assignment_id\":38,\"version_id\":32,\"decision\":\"approved\",\"score\":null}'),
+(63,17,'payment','Coaching enrollment confirmed',NULL,'https://prosfata.space/coaching/success?order_id=52&enrollment_id=33',1,'2025-11-03 00:12:43','2025-11-02 23:59:49',NULL),
+(64,6,'payment','New coaching enrollment',NULL,'https://prosfata.space/coaching/success?order_id=52&enrollment_id=33',1,'2025-11-03 00:08:18','2025-11-02 23:59:49',NULL),
+(65,2,'payment','Coaching enrollment confirmed',NULL,'https://prosfata.space/coaching/success?order_id=64&enrollment_id=34',0,NULL,'2025-11-03 09:17:26',NULL),
+(66,3,'payment','New coaching enrollment',NULL,'https://prosfata.space/coaching/success?order_id=64&enrollment_id=34',1,'2025-11-04 19:23:17','2025-11-03 09:17:26',NULL),
+(67,6,'task.submitted','New assignment submitted','Normando Musa submitted assignment #39 (v1) for review.','https://prosfata.space/coaching/review',1,'2025-11-04 02:24:04','2025-11-03 13:59:04','{\"enrollment_id\":33,\"assignment_id\":39,\"version_id\":33,\"seq\":1}'),
+(68,17,'task.submit.confirmation','Assignment submitted','Your assignment #39 (v1) was submitted successfully.','https://prosfata.space/coaching/review',1,'2025-11-07 16:16:41','2025-11-03 13:59:05','{\"enrollment_id\":33,\"assignment_id\":39,\"version_id\":33,\"seq\":1}'),
+(69,2,'payment','Service booking confirmed',NULL,'https://prosfata.space/billing/success?order_id=72',0,NULL,'2025-11-04 12:58:41',NULL),
+(70,2,'payment','Service booking confirmed',NULL,'https://prosfata.space/billing/success?order_id=73',0,NULL,'2025-11-04 13:25:49',NULL),
+(71,6,'task.submitted','New assignment submitted','Normando Musa submitted assignment #41 (v1) for review.','https://prosfata.space/coaching/review',1,'2025-11-10 20:16:28','2025-11-10 20:16:08','{\"enrollment_id\":29,\"assignment_id\":41,\"version_id\":34,\"seq\":1}'),
+(72,17,'task.submit.confirmation','Assignment submitted','Your assignment #41 (v1) was submitted successfully.','https://prosfata.space/coaching/review',1,'2025-11-13 03:22:27','2025-11-10 20:16:11','{\"enrollment_id\":29,\"assignment_id\":41,\"version_id\":34,\"seq\":1}'),
+(73,17,'task.review.approved','Assignment approved','Great news! Your assignment #41 was approved.\n\nFeedback: Not good enough chnage abc before we meet','https://prosfata.space/coaching/enrollments/29/assignments/41',1,'2025-11-13 03:22:27','2025-11-10 20:17:17','{\"enrollment_id\":29,\"assignment_id\":41,\"version_id\":34,\"decision\":\"approved\",\"score\":null}'),
+(74,2,'payment','Service booking confirmed',NULL,'https://prosfata.space/billing/success?order_id=74',0,NULL,'2025-11-11 06:47:36',NULL),
+(75,17,'payment','Coaching enrollment confirmed',NULL,'https://prosfata.space/coaching/success?order_id=65&enrollment_id=35',1,'2025-11-13 03:22:27','2025-11-12 12:38:29',NULL),
+(76,6,'payment','New coaching enrollment',NULL,'https://prosfata.space/coaching/success?order_id=65&enrollment_id=35',1,'2025-11-13 03:22:24','2025-11-12 12:38:29',NULL),
+(77,2,'payment','Service booking confirmed',NULL,'https://prosfata.space/billing/success?order_id=76',0,NULL,'2025-11-12 15:08:10',NULL),
+(78,6,'task.submitted','New assignment submitted','Normando Musa submitted assignment #42 (v1) for review.','https://prosfata.space/coaching/review',1,'2025-11-14 20:16:53','2025-11-14 20:13:52','{\"enrollment_id\":33,\"assignment_id\":42,\"version_id\":35,\"seq\":1}'),
+(79,17,'task.submit.confirmation','Assignment submitted','Your assignment #42 (v1) was submitted successfully.','https://prosfata.space/coaching/review',1,'2025-11-22 22:54:44','2025-11-14 20:13:54','{\"enrollment_id\":33,\"assignment_id\":42,\"version_id\":35,\"seq\":1}'),
+(80,17,'task.review.approved','Assignment approved','Great news! Your assignment #42 was approved.','https://prosfata.space/coaching/enrollments/33/assignments/42',1,'2025-11-22 22:54:44','2025-11-14 20:17:04','{\"enrollment_id\":33,\"assignment_id\":42,\"version_id\":35,\"decision\":\"approved\",\"score\":null}'),
+(81,2,'payment','Service booking confirmed',NULL,'https://prosfata.space/billing/success?order_id=77',0,NULL,'2025-11-16 08:34:18',NULL),
+(82,2,'payment','Service booking confirmed',NULL,'https://prosfata.space/billing/success?order_id=78',0,NULL,'2025-11-17 12:06:46',NULL),
+(83,17,'task.review.approved','Assignment approved','Great news! Your assignment #39 was approved.','https://prosfata.space/coaching/enrollments/33/assignments/39',1,'2025-11-22 22:54:44','2025-11-17 12:12:06','{\"enrollment_id\":33,\"assignment_id\":39,\"version_id\":33,\"decision\":\"approved\",\"score\":null}'),
+(0,3,'payment','Coaching enrollment confirmed',NULL,'https://prosfata.space/coaching/success?order_id=70&enrollment_id=37',1,'2025-12-31 09:33:03','2025-12-31 06:45:59',NULL),
+(0,6,'payment','New coaching enrollment',NULL,'https://prosfata.space/coaching/success?order_id=70&enrollment_id=37',0,NULL,'2025-12-31 06:45:59',NULL);
+/*!40000 ALTER TABLE `notifications` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `order_earnings`
+--
+
+DROP TABLE IF EXISTS `order_earnings`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `order_earnings` (
+  `id` int(11) NOT NULL,
+  `order_id` int(11) NOT NULL,
+  `expert_id` int(11) NOT NULL,
+  `gross_amount` decimal(12,2) NOT NULL,
+  `platform_fee` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `processing_fee` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `net_amount` decimal(12,2) NOT NULL,
+  `currency` char(3) NOT NULL DEFAULT 'USD',
+  `captured_at` datetime DEFAULT NULL,
+  `delivered_at` datetime DEFAULT NULL,
+  `hold_until` datetime DEFAULT NULL,
+  `released_at` datetime DEFAULT NULL,
+  `status` enum('PENDING','HELD','AVAILABLE','PAID','REFUNDED','CANCELED') NOT NULL DEFAULT 'PENDING',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `order_earnings`
+--
+
+LOCK TABLES `order_earnings` WRITE;
+/*!40000 ALTER TABLE `order_earnings` DISABLE KEYS */;
+/*!40000 ALTER TABLE `order_earnings` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `order_payments`
+--
+
+DROP TABLE IF EXISTS `order_payments`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `order_payments` (
+  `id` int(11) NOT NULL,
+  `order_id` int(11) NOT NULL,
+  `payment_intent_id` varchar(191) NOT NULL,
+  `status` varchar(64) NOT NULL,
+  `amount_cents` int(11) NOT NULL,
+  `currency` char(3) NOT NULL,
+  `receipt_url` varchar(512) DEFAULT NULL,
+  `payment_method_brand` varchar(64) DEFAULT NULL,
+  `payment_method_last4` varchar(8) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `order_payments`
+--
+
+LOCK TABLES `order_payments` WRITE;
+/*!40000 ALTER TABLE `order_payments` DISABLE KEYS */;
+/*!40000 ALTER TABLE `order_payments` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `orders`
+--
+
+DROP TABLE IF EXISTS `orders`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `orders` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `kind` enum('service','course','coaching') NOT NULL,
+  `ref_id` int(11) NOT NULL,
+  `amount_cents` int(11) NOT NULL,
+  `currency` char(3) NOT NULL DEFAULT 'usd',
+  `status` enum('draft','requires_payment','processing','paid','failed','refunded','canceled') NOT NULL DEFAULT 'draft',
+  `description` varchar(255) DEFAULT NULL,
+  `stripe_customer_id` varchar(191) DEFAULT NULL,
+  `payment_intent_id` varchar(191) DEFAULT NULL,
+  `payment_method_id` varchar(191) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `orders`
+--
+
+LOCK TABLES `orders` WRITE;
+/*!40000 ALTER TABLE `orders` DISABLE KEYS */;
+/*!40000 ALTER TABLE `orders` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `pages`
+--
+
+DROP TABLE IF EXISTS `pages`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `pages` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(120) NOT NULL,
+  `path` varchar(255) DEFAULT NULL,
+  `icon` varchar(64) DEFAULT NULL,
+  `order_num` int(11) NOT NULL DEFAULT 999,
+  `is_menu` tinyint(1) NOT NULL DEFAULT 1,
+  `parent_id` int(11) DEFAULT NULL,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=59 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `pages`
+--
+
+LOCK TABLES `pages` WRITE;
+/*!40000 ALTER TABLE `pages` DISABLE KEYS */;
+INSERT INTO `pages` VALUES
+(1,'Dashboard','/dashboard','layout-dashboard',1,1,NULL,1,'2025-08-13 08:39:39','2025-08-13 08:39:39'),
+(2,'Expert Dashboard','/expert/dashboard','layout-dashboard',2,1,NULL,1,'2025-08-13 08:39:39','2025-08-13 20:14:52'),
+(3,'Resume Review','/resume','file-check',3,1,NULL,1,'2025-08-13 08:39:39','2025-08-13 08:39:39'),
+(4,'Courses & Events','/course-events','monitor-play',4,1,NULL,1,'2025-08-13 08:39:39','2025-08-14 03:29:46'),
+(5,'Service Hub','/services','briefcase',5,1,NULL,1,'2025-08-13 08:39:39','2025-08-13 08:39:39'),
+(6,'Find an Expert','/find-an-expert','graduation-cap',6,1,NULL,1,'2025-08-13 08:39:39','2025-08-14 03:33:09'),
+(7,'My Network','/my-network','earth',7,1,NULL,1,'2025-08-13 08:39:39','2025-08-14 03:34:20'),
+(8,'Messages','/messages','messages-square',2,1,NULL,1,'2025-08-13 08:39:39','2025-09-13 17:21:29'),
+(9,'My Calendar','/my-calendar','calendar-days',3,1,NULL,1,'2025-08-13 08:39:39','2025-10-11 17:14:49'),
+(10,'Job Board','/jobs','list',10,1,NULL,1,'2025-08-13 08:39:39','2025-08-13 08:39:39'),
+(11,'Orders','/payments','credit-card',11,1,NULL,1,'2025-08-13 08:39:39','2025-09-13 15:02:37'),
+(12,'Settings','/settings','settings',12,1,NULL,1,'2025-08-13 08:39:39','2025-08-13 08:39:39'),
+(16,'Admin Setting','/admin-setting','calendar-cog',16,1,NULL,1,'2025-08-13 19:40:46','2025-08-13 20:49:31'),
+(17,'Page List','/menu-page-list','layout-panel-top',1,1,16,1,'2025-08-13 19:44:02','2025-08-13 20:47:41'),
+(18,'Role List','/user-role-list','globe-lock',2,1,16,1,'2025-08-13 19:45:14','2025-08-13 20:47:12'),
+(19,'Role Permission','/role-page-access','shield-alert',2,1,16,1,'2025-08-13 19:46:08','2025-08-13 20:48:13'),
+(20,'Category List','/category-list','clipboard-list',6,1,16,1,'2025-08-13 20:44:05','2025-08-13 20:44:05'),
+(21,'My Availability','/my-availability','timer-reset',999,1,6,1,'2025-08-15 06:34:08','2025-08-15 06:34:08'),
+(22,'Create Services','/services/create','package-plus',999,1,5,1,'2025-08-15 13:17:22','2025-08-15 13:17:22'),
+(23,'My Services','/my-services','shopping-cart',1,1,5,1,'2025-08-15 13:19:45','2025-08-15 13:22:21'),
+(24,'All Experts','/find-an-expert','book-open-text',1,1,6,1,'2025-08-15 15:04:15','2025-08-15 15:04:15'),
+(25,'All Services','/services','gift',1,1,5,1,'2025-08-15 16:37:45','2025-08-15 16:37:45'),
+(26,'All Courses & Events','/course-events','calendar-sync',1,1,4,1,'2025-08-16 06:51:35','2025-08-16 06:51:35'),
+(27,'Create New Course','/course-events/create','diamond-plus',3,1,4,1,'2025-08-16 07:15:04','2025-08-16 07:15:04'),
+(28,'My Courses','/my-courses','school',2,1,4,1,'2025-08-16 07:15:58','2025-08-16 07:15:58'),
+(29,'My Courses','/learning','book-open-check',3,1,30,1,'2025-08-17 05:08:25','2025-08-19 08:53:29'),
+(30,'My Accounts','/','baggage-claim',9,1,NULL,1,'2025-08-19 08:52:24','2025-08-19 13:38:17'),
+(31,'My Meeting History','/meetings/history/my','calendar-days',3,1,30,1,'2025-08-19 08:55:31','2025-08-19 13:39:51'),
+(32,'Services Meeting History','/meetings/history/expert','calendar-clock',6,1,30,1,'2025-08-19 13:41:27','2025-08-19 13:41:27'),
+(33,'Experts Meeting History','/meetings/history/admin','calendar-search',7,1,30,1,'2025-08-19 13:42:09','2025-08-19 13:42:09'),
+(34,'Programs & Coaching','/coaching/catalog','book-open-check',4,1,NULL,1,'2025-08-23 14:05:45','2025-12-13 22:14:48'),
+(35,'All Coaching Programs','/coaching/catalog','notebook-text',1,1,34,1,'2025-08-23 14:07:02','2025-08-23 20:41:51'),
+(36,'My Programs','/coaching/my-programs','list-ordered',2,1,34,1,'2025-08-23 14:08:51','2025-08-23 20:42:34'),
+(37,'Create Program','/coaching/programs/new','plus-circle',3,1,34,1,'2025-08-23 20:43:29','2025-08-23 20:43:29'),
+(38,'My Availability','/my-availability','calendar-clock',3,1,NULL,1,'2025-08-23 20:44:56','2025-09-13 17:22:22'),
+(39,'Reviews (Tasks)','/coaching/review','clipboard-list',5,1,34,1,'2025-08-23 20:45:59','2025-10-20 09:20:02'),
+(40,'Meetings (Expert)','/meetings/history/expert','clock',6,1,34,1,'2025-08-23 20:46:52','2025-08-23 20:46:52'),
+(41,'Browse Programs','/coaching/catalog','notebook-text',7,1,34,1,'2025-08-23 20:48:35','2025-08-23 20:48:35'),
+(42,'My Enrollments','/coaching/enrollments','user-round',8,1,34,1,'2025-08-23 20:49:25','2025-08-23 20:49:25'),
+(44,'Roadmap & Tasks','/coaching/assignments','list-ordered',10,1,34,1,'2025-08-23 20:51:33','2025-10-20 09:19:51'),
+(45,'My Meetings','/meetings/history/my','clock',11,1,34,1,'2025-08-23 20:52:36','2025-08-23 20:52:36'),
+(46,'User Management','/admin/users','user-round-cog',3,1,16,1,'2025-08-24 07:50:39','2025-08-24 07:50:39'),
+(47,'Payout','/payout/wallet','landmark',10,1,NULL,1,'2025-09-07 19:03:50','2025-09-07 19:17:09'),
+(48,'Overview','/payout/overview','folder-kanban',1,1,47,1,'2025-09-07 19:04:54','2025-09-07 19:04:54'),
+(49,'Payouts Settings','/admin/payouts-settings','settings-2',3,1,47,1,'2025-09-07 19:07:14','2025-09-07 19:17:47'),
+(50,'Expert Payouts','/admin/payouts','banknote',2,1,47,1,'2025-09-07 19:08:08','2025-09-07 19:18:51'),
+(51,'My Blogs','/blogs/my','blocks',10,1,NULL,1,'2025-09-26 21:14:05','2025-09-26 21:14:05'),
+(52,'Own Blogs Post','/blogs/my','notebook',1,1,51,1,'2025-09-26 21:14:34','2025-09-26 21:14:34'),
+(53,'Post Moderation','/blogs/moderation','file-sliders',2,1,51,1,'2025-09-26 21:15:05','2025-09-26 21:15:05'),
+(54,'Categories','/blogs/categories','boxes',3,1,51,1,'2025-09-26 21:15:47','2025-09-26 21:15:47'),
+(55,'Comments Moderation','/blogs/comments-moderation','messages-square',4,1,51,1,'2025-09-27 08:37:49','2025-09-27 08:37:49'),
+(56,'Learner Progress','/coaching/mine/template-metrics','loader',5,1,34,1,'2025-10-25 14:21:14','2025-10-25 14:21:14'),
+(57,'Deleted User','/deleted-users','UserX',4,1,16,1,'2026-01-01 17:39:45','2026-01-01 17:39:45'),
+(58,'Audit Logs','/users-audit-logs','ChartArea',5,1,16,1,'2026-01-01 17:41:29','2026-01-01 17:41:29');
+/*!40000 ALTER TABLE `pages` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `password_reset_tokens`
+--
+
+DROP TABLE IF EXISTS `password_reset_tokens`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `password_reset_tokens` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `token_hash` char(64) NOT NULL,
+  `expires_at` datetime NOT NULL,
+  `used` tinyint(1) DEFAULT 0,
+  `used_at` datetime DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `password_reset_tokens`
+--
+
+LOCK TABLES `password_reset_tokens` WRITE;
+/*!40000 ALTER TABLE `password_reset_tokens` DISABLE KEYS */;
+INSERT INTO `password_reset_tokens` VALUES
+(1,3,'0991a70f7bab68a19f284834d7cb94525979f29becb22c472ec474035dd7593b','2025-08-10 15:54:30',0,NULL,'2025-08-10 08:54:30'),
+(3,7,'f60409607c35d9f80b109e29a4d11a697b2b03e3f86f1401a001b81c9209f3ef','2025-09-13 08:23:10',0,NULL,'2025-09-13 07:23:10'),
+(8,6,'012930abeb5ff7b2d8528e993df0d3c61257c59fda6e21efc4d14753b09d8f22','2025-09-20 16:48:05',1,'2025-09-20 15:55:46','2025-09-20 15:48:05'),
+(10,17,'d54cb073d4f9e6c594101e6b2bf7473b3d296daaafa5e47ef5e03ca861a2d5fc','2025-10-05 16:40:18',0,NULL,'2025-10-05 15:40:18'),
+(11,15,'a5ec7a7c3158b469e3fe3239a9af5e3d7cfc7090fbffb617f12de56d7dbab34e','2025-10-05 16:44:22',1,'2025-10-05 15:45:51','2025-10-05 15:44:22');
+/*!40000 ALTER TABLE `password_reset_tokens` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `payment_events`
+--
+
+DROP TABLE IF EXISTS `payment_events`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `payment_events` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `provider` varchar(30) NOT NULL DEFAULT 'stripe',
+  `stripe_event_id` varchar(255) DEFAULT NULL,
+  `event_type` varchar(255) DEFAULT NULL,
+  `kind` varchar(30) DEFAULT NULL,
+  `order_table` varchar(64) DEFAULT NULL,
+  `order_id` bigint(20) unsigned DEFAULT NULL,
+  `payment_intent_id` varchar(255) DEFAULT NULL,
+  `charge_id` varchar(255) DEFAULT NULL,
+  `session_id` varchar(255) DEFAULT NULL,
+  `status` varchar(30) NOT NULL DEFAULT 'received',
+  `error_message` text DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_stripe_event` (`stripe_event_id`),
+  KEY `idx_kind_order` (`kind`,`order_id`),
+  KEY `idx_pi` (`payment_intent_id`),
+  KEY `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `payment_events`
+--
+
+LOCK TABLES `payment_events` WRITE;
+/*!40000 ALTER TABLE `payment_events` DISABLE KEYS */;
+/*!40000 ALTER TABLE `payment_events` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `payment_logs`
+--
+
+DROP TABLE IF EXISTS `payment_logs`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `payment_logs` (
+  `id` int(11) NOT NULL,
+  `kind` enum('service','course','coaching') NOT NULL,
+  `order_id` int(11) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `stripe_event` varchar(64) DEFAULT NULL,
+  `payment_intent_id` varchar(64) DEFAULT NULL,
+  `amount` decimal(10,2) DEFAULT NULL,
+  `currency` varchar(10) DEFAULT NULL,
+  `payload` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`payload`)),
+  `created_at` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `payment_logs`
+--
+
+LOCK TABLES `payment_logs` WRITE;
+/*!40000 ALTER TABLE `payment_logs` DISABLE KEYS */;
+/*!40000 ALTER TABLE `payment_logs` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `payment_webhook_events`
+--
+
+DROP TABLE IF EXISTS `payment_webhook_events`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `payment_webhook_events` (
+  `id` varchar(191) NOT NULL,
+  `provider` enum('stripe') NOT NULL,
+  `received_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `payment_webhook_events`
+--
+
+LOCK TABLES `payment_webhook_events` WRITE;
+/*!40000 ALTER TABLE `payment_webhook_events` DISABLE KEYS */;
+/*!40000 ALTER TABLE `payment_webhook_events` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `payout_accounts`
+--
+
+DROP TABLE IF EXISTS `payout_accounts`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `payout_accounts` (
+  `id` bigint(20) NOT NULL,
+  `user_id` bigint(20) NOT NULL,
+  `method` enum('BANK','WISE','PAYONEER','BKASH','NAGAD','PAYPAL') NOT NULL,
+  `details` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`details`)),
+  `is_default` tinyint(1) NOT NULL DEFAULT 0,
+  `created_at` datetime DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `payout_accounts`
+--
+
+LOCK TABLES `payout_accounts` WRITE;
+/*!40000 ALTER TABLE `payout_accounts` DISABLE KEYS */;
+/*!40000 ALTER TABLE `payout_accounts` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `payout_methods`
+--
+
+DROP TABLE IF EXISTS `payout_methods`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `payout_methods` (
+  `id` bigint(20) unsigned NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `method` enum('BANK_TRANSFER','WISE','PAYONEER','BKASH','PAYPAL','MANUAL') NOT NULL,
+  `is_default` tinyint(1) NOT NULL DEFAULT 0,
+  `details_json` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`details_json`)),
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `deleted_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `payout_methods`
+--
+
+LOCK TABLES `payout_methods` WRITE;
+/*!40000 ALTER TABLE `payout_methods` DISABLE KEYS */;
+INSERT INTO `payout_methods` VALUES
+(1,4,'PAYPAL',0,'{\"email\": \"founder@example.com\"}','2025-09-11 20:23:59','2025-09-11 20:23:59',NULL),
+(2,3,'PAYPAL',0,'{\"email\": \"imranhossen1119999@gmail.com\\r\\n\"}','2025-09-11 20:25:08','2025-09-11 20:25:08',NULL),
+(3,3,'BKASH',0,'{\"account_holder_name\":\"\",\"bank_name\":\"\",\"bank_country\":\"US\",\"currency\":\"USD\",\"iban\":\"\",\"account_number\":\"\",\"routing_number\":\"\",\"swift_bic\":\"\",\"email\":\"\",\"recipient_id\":\"\",\"customer_id\":\"\",\"phone\":\"01925325050\",\"full_name\":\"ABU\",\"instructions\":\"\",\"note\":\"\"}','2025-09-11 20:34:00','2025-09-11 20:34:00',NULL),
+(4,3,'PAYONEER',0,'{\"account_holder_name\":\"\",\"bank_name\":\"\",\"bank_country\":\"US\",\"currency\":\"USD\",\"iban\":\"\",\"account_number\":\"\",\"routing_number\":\"\",\"swift_bic\":\"\",\"email\":\"abutaleb142@gmail.com\",\"recipient_id\":\"\",\"customer_id\":\"4\",\"phone\":\"\",\"full_name\":\"ABU\",\"instructions\":\"\",\"note\":\"3\"}','2025-09-13 14:28:34','2025-09-13 14:28:34',NULL);
+/*!40000 ALTER TABLE `payout_methods` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `payout_requests`
+--
+
+DROP TABLE IF EXISTS `payout_requests`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `payout_requests` (
+  `id` bigint(20) unsigned NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `amount` decimal(12,2) NOT NULL,
+  `currency` char(3) NOT NULL DEFAULT 'USD',
+  `status` enum('PENDING','APPROVED','PAID','REJECTED','CANCELED') NOT NULL DEFAULT 'PENDING',
+  `reason` varchar(255) DEFAULT NULL,
+  `method` enum('BANK','BKASH','NAGAD','PAYPAL','STRIPE_CONNECT','OTHER') NOT NULL DEFAULT 'BANK',
+  `details` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`details`)),
+  `requested_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `approved_at` datetime DEFAULT NULL,
+  `processed_at` datetime DEFAULT NULL,
+  `processed_by` int(11) DEFAULT NULL,
+  `reference` varchar(128) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `payout_requests`
+--
+
+LOCK TABLES `payout_requests` WRITE;
+/*!40000 ALTER TABLE `payout_requests` DISABLE KEYS */;
+INSERT INTO `payout_requests` VALUES
+(1,3,37.00,'USD','PAID',NULL,'BANK','{}','2025-09-07 20:23:22','2025-09-08 02:24:50','2025-09-08 02:24:55',4,'TXN_1757276695169','2025-09-07 20:50:08'),
+(2,3,20.00,'USD','REJECTED',NULL,'BKASH','{\"wallet_number\":\"Abu\",\"holder_name\":\"132442442\",\"note\":\"test\"}','2025-09-07 20:50:18',NULL,'2025-09-08 03:04:06',4,NULL,'2025-09-07 20:50:18'),
+(3,3,25.00,'USD','REJECTED',NULL,'NAGAD','{\"wallet_number\":\"Abu\",\"holder_name\":\"35436346\",\"note\":\"hi\"}','2025-09-07 20:51:17',NULL,'2025-09-08 03:04:05',4,NULL,'2025-09-07 20:51:17'),
+(6,3,25.00,'USD','PAID',NULL,'NAGAD','{}','2025-09-07 20:59:03','2025-09-08 03:03:57','2025-09-08 03:05:03',4,'TXN_1757279103793','2025-09-07 20:59:03'),
+(7,3,20.00,'USD','PAID',NULL,'NAGAD','{\"wallet_number\":\"3534643\",\"holder_name\":\"Abu\",\"note\":\"fhf\"}','2025-09-07 21:16:04',NULL,'2025-09-08 03:23:27',NULL,'TXN_1757280207059','2025-09-07 21:16:04'),
+(8,3,30.00,'USD','PAID',NULL,'PAYPAL','{\"email\":\"imranhossen1119999@gmail.com\",\"note\":\"hi\"}','2025-09-07 21:59:19',NULL,'2025-09-08 04:01:47',4,'TXN_1757282507722','2025-09-07 21:59:19'),
+(9,3,20.00,'USD','PAID',NULL,'PAYPAL','{\"email\":\"imranhossen1119999@gmail.com\\r\\n\"}','2025-09-12 05:37:01',NULL,'2025-09-12 12:56:40',NULL,'test','2025-09-12 05:37:01'),
+(10,3,50.00,'USD','PAID',NULL,'PAYPAL','{\"email\":\"i••••••••••••••••9@gmail.com\\r\\n\"}','2025-09-13 14:29:10',NULL,'2025-09-13 14:37:09',NULL,'56395923','2025-09-13 14:29:10'),
+(11,3,30.00,'USD','PAID',NULL,'PAYPAL','{\"email\":\"i••••••••••••••••9@gmail.com\\r\\n\"}','2025-10-05 07:34:09',NULL,'2025-10-26 07:19:41',NULL,'TXN_1761463180013','2025-10-05 07:34:09');
+/*!40000 ALTER TABLE `payout_requests` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `payouts`
+--
+
+DROP TABLE IF EXISTS `payouts`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `payouts` (
+  `id` bigint(20) unsigned NOT NULL,
+  `request_id` bigint(20) unsigned NOT NULL,
+  `user_id` bigint(20) unsigned NOT NULL,
+  `amount` decimal(12,2) NOT NULL,
+  `currency` char(3) NOT NULL DEFAULT 'USD',
+  `method` varchar(64) NOT NULL,
+  `reference` varchar(128) DEFAULT NULL,
+  `details` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`details`)),
+  `paid_at` datetime NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `payouts`
+--
+
+LOCK TABLES `payouts` WRITE;
+/*!40000 ALTER TABLE `payouts` DISABLE KEYS */;
+INSERT INTO `payouts` VALUES
+(1,7,3,20.00,'USD','NAGAD','TXN_1757280207059','{\"method_details\":{\"note\":\"\"},\"fees\":{\"currency\":\"USD\",\"gross\":20,\"fee_platform\":0,\"fee_processing_pct\":0.58,\"fee_processing_fixed\":0.3,\"fee_total\":0.88,\"net_to_expert\":19.12}}','2025-09-08 03:23:27','2025-09-07 21:23:27'),
+(2,8,3,30.00,'USD','PAYPAL','TXN_1757282507722','{\"method_details\":{\"note\":\"\"}}','2025-09-08 04:01:47','2025-09-07 22:01:47'),
+(3,9,3,20.00,'USD','PAYPAL','test','{\"method_details\":{\"note\":\"payout\",\"method\":\"PAYPAL\",\"saved_id\":2,\"details\":{\"email\":\"imranhossen1119999@gmail.com\\r\\n\"}},\"fees\":{\"currency\":\"USD\",\"gross\":20,\"fee_platform\":0,\"fee_processing_pct\":0.58,\"fee_processing_fixed\":0.4,\"fee_total\":0.98,\"net_to_expert\":19.02},\"stripe_transfer_id\":null,\"stripe_payout_id\":null}','2025-09-12 12:56:40','2025-09-12 06:56:40'),
+(4,10,3,50.00,'USD','PAYPAL','56395923','{\"method_details\":{\"note\":\"note\",\"method\":\"PAYPAL\",\"saved_id\":2,\"details\":{\"email\":\"imranhossen1119999@gmail.com\\r\\n\"}},\"fees\":{\"currency\":\"USD\",\"gross\":50,\"fee_platform\":0,\"fee_processing_pct\":0.95,\"fee_processing_fixed\":0.4,\"fee_total\":1.35,\"net_to_expert\":48.65},\"stripe_transfer_id\":null,\"stripe_payout_id\":null}','2025-09-13 14:37:09','2025-09-13 14:37:09'),
+(5,11,3,30.00,'USD','PAYPAL','TXN_1761463180013','{\"method_details\":{\"note\":\"\",\"method\":\"PAYPAL\",\"saved_id\":2,\"details\":{\"email\":\"imranhossen1119999@gmail.com\\r\\n\"}},\"fees\":{\"currency\":\"USD\",\"gross\":30,\"fee_platform\":0,\"fee_processing_pct\":0.57,\"fee_processing_fixed\":0.4,\"fee_total\":0.97,\"net_to_expert\":29.03},\"stripe_transfer_id\":null,\"stripe_payout_id\":null}','2025-10-26 07:19:41','2025-10-26 07:19:41');
+/*!40000 ALTER TABLE `payouts` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `platform_ledger`
+--
+
+DROP TABLE IF EXISTS `platform_ledger`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `platform_ledger` (
+  `id` bigint(20) unsigned NOT NULL,
+  `user_id` bigint(20) unsigned DEFAULT NULL,
+  `kind` varchar(32) NOT NULL,
+  `amount` decimal(12,2) NOT NULL,
+  `currency` char(3) NOT NULL DEFAULT 'USD',
+  `ref_table` varchar(64) DEFAULT NULL,
+  `ref_id` bigint(20) unsigned DEFAULT NULL,
+  `meta` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`meta`)),
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `platform_ledger`
+--
+
+LOCK TABLES `platform_ledger` WRITE;
+/*!40000 ALTER TABLE `platform_ledger` DISABLE KEYS */;
+INSERT INTO `platform_ledger` VALUES
+(1,NULL,'SALE_GROSS',19.99,'USD','service_orders',5,NULL,'2025-08-11 19:21:19'),
+(2,NULL,'FEE_PLATFORM',2.00,'USD','service_orders',5,NULL,'2025-08-11 19:21:19'),
+(3,NULL,'FEE_PROCESSING',0.88,'USD','service_orders',5,NULL,'2025-08-11 19:21:19'),
+(4,NULL,'SALE_GROSS',49.99,'USD','service_orders',6,NULL,'2025-08-14 19:44:31'),
+(5,NULL,'FEE_PLATFORM',5.00,'USD','service_orders',6,NULL,'2025-08-14 19:44:31'),
+(6,NULL,'FEE_PROCESSING',1.75,'USD','service_orders',6,NULL,'2025-08-14 19:44:31'),
+(7,NULL,'SALE_GROSS',19.99,'USD','service_orders',36,NULL,'2025-08-16 06:52:01'),
+(8,NULL,'FEE_PLATFORM',2.00,'USD','service_orders',36,NULL,'2025-08-16 06:52:01'),
+(9,NULL,'FEE_PROCESSING',0.88,'USD','service_orders',36,NULL,'2025-08-16 06:52:01'),
+(10,NULL,'SALE_GROSS',19.99,'USD','service_orders',39,NULL,'2025-08-16 07:40:17'),
+(11,NULL,'FEE_PLATFORM',2.00,'USD','service_orders',39,NULL,'2025-08-16 07:40:17'),
+(12,NULL,'FEE_PROCESSING',0.88,'USD','service_orders',39,NULL,'2025-08-16 07:40:17'),
+(13,NULL,'SALE_GROSS',10.00,'USD','service_orders',41,NULL,'2025-08-19 14:29:59'),
+(14,NULL,'FEE_PLATFORM',1.00,'USD','service_orders',41,NULL,'2025-08-19 14:29:59'),
+(15,NULL,'FEE_PROCESSING',0.59,'USD','service_orders',41,NULL,'2025-08-19 14:29:59'),
+(16,NULL,'SALE_GROSS',19.99,'USD','service_orders',50,NULL,'2025-09-01 20:44:43'),
+(17,NULL,'FEE_PLATFORM',2.00,'USD','service_orders',50,NULL,'2025-09-01 20:44:43'),
+(18,NULL,'FEE_PROCESSING',0.88,'USD','service_orders',50,NULL,'2025-09-01 20:44:43'),
+(19,NULL,'SALE_GROSS',10.00,'USD','service_orders',53,NULL,'2025-09-07 10:47:18'),
+(20,NULL,'FEE_PLATFORM',1.00,'USD','service_orders',53,NULL,'2025-09-07 10:47:18'),
+(21,NULL,'FEE_PROCESSING',0.59,'USD','service_orders',53,NULL,'2025-09-07 10:47:18'),
+(22,NULL,'SALE_GROSS',10.00,'USD','service_orders',55,NULL,'2025-09-07 12:24:13'),
+(23,NULL,'FEE_PLATFORM',1.00,'USD','service_orders',55,NULL,'2025-09-07 12:24:13'),
+(24,NULL,'FEE_PROCESSING',0.59,'USD','service_orders',55,NULL,'2025-09-07 12:24:13'),
+(25,NULL,'SALE_GROSS',29.00,'USD','service_orders',56,NULL,'2025-09-07 14:50:26'),
+(26,NULL,'FEE_PLATFORM',2.90,'USD','service_orders',56,NULL,'2025-09-07 14:50:26'),
+(27,NULL,'FEE_PROCESSING',1.14,'USD','service_orders',56,NULL,'2025-09-07 14:50:26'),
+(28,NULL,'SALE_GROSS',20.00,'USD','course_orders',1,NULL,'2025-08-19 12:21:16'),
+(29,NULL,'FEE_PLATFORM',2.00,'USD','course_orders',1,NULL,'2025-08-19 12:21:16'),
+(30,NULL,'FEE_PROCESSING',0.88,'USD','course_orders',1,NULL,'2025-08-19 12:21:16'),
+(31,NULL,'SALE_GROSS',20.00,'USD','course_orders',5,NULL,'2025-09-07 17:39:59'),
+(32,NULL,'FEE_PLATFORM',2.00,'USD','course_orders',5,NULL,'2025-09-07 17:39:59'),
+(33,NULL,'FEE_PROCESSING',0.88,'USD','course_orders',5,NULL,'2025-09-07 17:39:59'),
+(34,NULL,'SALE_GROSS',20.00,'USD','course_orders',7,NULL,'2025-09-07 16:38:50'),
+(35,NULL,'FEE_PLATFORM',2.00,'USD','course_orders',7,NULL,'2025-09-07 16:38:50'),
+(36,NULL,'FEE_PROCESSING',0.88,'USD','course_orders',7,NULL,'2025-09-07 16:38:50'),
+(37,NULL,'SALE_GROSS',49.00,'USD','course_orders',13,NULL,'2025-09-07 16:03:58'),
+(38,NULL,'FEE_PLATFORM',4.90,'USD','course_orders',13,NULL,'2025-09-07 16:03:58'),
+(39,NULL,'FEE_PROCESSING',1.72,'USD','course_orders',13,NULL,'2025-09-07 16:03:58'),
+(40,NULL,'SALE_GROSS',20.00,'USD','coaching_orders',6,NULL,'2025-09-01 07:35:08'),
+(41,NULL,'FEE_PLATFORM',2.00,'USD','coaching_orders',6,NULL,'2025-09-01 07:35:08'),
+(42,NULL,'FEE_PROCESSING',0.88,'USD','coaching_orders',6,NULL,'2025-09-01 07:35:08'),
+(43,NULL,'SALE_GROSS',20.00,'USD','coaching_orders',7,NULL,'2025-09-01 07:23:49'),
+(44,NULL,'FEE_PLATFORM',2.00,'USD','coaching_orders',7,NULL,'2025-09-01 07:23:49'),
+(45,NULL,'FEE_PROCESSING',0.88,'USD','coaching_orders',7,NULL,'2025-09-01 07:23:49'),
+(46,NULL,'SALE_GROSS',20.00,'USD','coaching_orders',9,NULL,'2025-09-01 18:50:48'),
+(47,NULL,'FEE_PLATFORM',2.00,'USD','coaching_orders',9,NULL,'2025-09-01 18:50:48'),
+(48,NULL,'FEE_PROCESSING',0.88,'USD','coaching_orders',9,NULL,'2025-09-01 18:50:48'),
+(49,NULL,'SALE_GROSS',20.00,'USD','coaching_orders',10,NULL,'2025-09-01 17:24:04'),
+(50,NULL,'FEE_PLATFORM',2.00,'USD','coaching_orders',10,NULL,'2025-09-01 17:24:04'),
+(51,NULL,'FEE_PROCESSING',0.88,'USD','coaching_orders',10,NULL,'2025-09-01 17:24:04'),
+(52,NULL,'SALE_GROSS',20.00,'USD','coaching_orders',11,NULL,'2025-09-01 16:01:42'),
+(53,NULL,'FEE_PLATFORM',2.00,'USD','coaching_orders',11,NULL,'2025-09-01 16:01:42'),
+(54,NULL,'FEE_PROCESSING',0.88,'USD','coaching_orders',11,NULL,'2025-09-01 16:01:42'),
+(55,NULL,'SALE_GROSS',20.00,'USD','coaching_orders',13,NULL,'2025-09-01 18:00:28'),
+(56,NULL,'FEE_PLATFORM',2.00,'USD','coaching_orders',13,NULL,'2025-09-01 18:00:28'),
+(57,NULL,'FEE_PROCESSING',0.88,'USD','coaching_orders',13,NULL,'2025-09-01 18:00:28'),
+(58,NULL,'SALE_GROSS',20.00,'USD','coaching_orders',15,NULL,'2025-09-07 08:45:16'),
+(59,NULL,'FEE_PLATFORM',2.00,'USD','coaching_orders',15,NULL,'2025-09-07 08:45:16'),
+(60,NULL,'FEE_PROCESSING',0.88,'USD','coaching_orders',15,NULL,'2025-09-07 08:45:16'),
+(61,3,'PAYOUT_OUT',30.00,'USD','payout_requests',8,NULL,'2025-09-07 22:01:47');
+/*!40000 ALTER TABLE `platform_ledger` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `role_page_permissions`
+--
+
+DROP TABLE IF EXISTS `role_page_permissions`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `role_page_permissions` (
+  `role_id` int(11) NOT NULL,
+  `page_id` int(11) NOT NULL,
+  `can_view` tinyint(1) NOT NULL DEFAULT 0,
+  `can_create` tinyint(1) NOT NULL DEFAULT 0,
+  `can_update` tinyint(1) NOT NULL DEFAULT 0,
+  `can_delete` tinyint(1) NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `role_page_permissions`
+--
+
+LOCK TABLES `role_page_permissions` WRITE;
+/*!40000 ALTER TABLE `role_page_permissions` DISABLE KEYS */;
+INSERT INTO `role_page_permissions` VALUES
+(1,1,1,1,0,0),
+(1,4,1,1,0,0),
+(1,5,1,1,0,0),
+(1,6,1,1,0,0),
+(1,7,1,0,0,0),
+(1,8,1,1,1,1),
+(1,11,1,1,1,0),
+(1,12,1,1,1,1),
+(1,16,1,1,1,1),
+(1,17,1,1,1,1),
+(1,18,1,1,1,1),
+(1,19,1,1,1,1),
+(1,20,1,1,1,1),
+(1,21,1,1,1,1),
+(1,22,1,1,1,1),
+(1,23,1,1,1,1),
+(1,24,1,1,1,1),
+(1,25,1,1,1,1),
+(1,26,1,1,0,0),
+(1,28,1,1,0,0),
+(1,29,1,1,1,1),
+(1,30,1,1,1,1),
+(1,31,1,1,1,1),
+(1,33,1,1,1,1),
+(1,34,1,0,0,0),
+(1,35,1,0,0,0),
+(1,36,1,0,0,0),
+(1,37,1,0,0,0),
+(1,39,1,0,0,0),
+(1,40,1,0,0,0),
+(1,41,1,0,0,0),
+(1,42,1,0,0,0),
+(1,44,1,0,0,0),
+(1,45,1,0,0,0),
+(1,46,1,1,1,1),
+(1,47,1,1,1,0),
+(1,48,1,1,1,0),
+(1,49,1,1,1,0),
+(1,50,1,1,1,0),
+(1,51,1,1,1,1),
+(1,52,1,1,1,1),
+(1,53,1,1,1,1),
+(1,54,1,1,1,1),
+(1,55,1,1,1,1),
+(2,1,1,0,0,0),
+(2,4,1,1,1,1),
+(2,5,1,1,1,1),
+(2,6,1,1,1,1),
+(2,7,1,1,1,1),
+(2,8,1,1,1,1),
+(2,9,1,1,1,1),
+(2,11,1,1,1,1),
+(2,12,1,1,1,1),
+(2,21,1,1,1,1),
+(2,22,1,1,1,1),
+(2,23,1,1,1,1),
+(2,24,1,1,1,1),
+(2,25,1,1,1,1),
+(2,26,1,1,0,0),
+(2,28,1,1,1,1),
+(2,29,1,1,1,1),
+(2,30,1,1,1,0),
+(2,31,1,1,1,1),
+(2,32,1,1,1,1),
+(2,34,1,1,1,1),
+(2,35,1,1,1,1),
+(2,36,1,1,1,1),
+(2,37,1,1,1,1),
+(2,39,1,1,1,1),
+(2,40,1,1,1,1),
+(2,47,1,1,1,1),
+(2,51,1,1,1,1),
+(2,56,1,1,1,1),
+(5,1,1,0,0,0),
+(5,4,1,0,0,0),
+(5,5,1,0,0,0),
+(5,6,1,0,0,0),
+(5,7,1,0,0,0),
+(5,8,1,0,0,0),
+(5,11,1,0,0,0),
+(5,12,1,0,0,0),
+(5,29,1,0,0,0),
+(5,30,1,1,1,1),
+(5,31,1,0,0,0),
+(5,34,1,1,1,1),
+(5,41,1,1,1,1),
+(5,42,1,1,1,1),
+(5,45,1,1,1,1),
+(1,1,1,1,0,0),
+(1,8,1,1,1,1),
+(1,4,1,1,0,0),
+(1,34,1,0,0,0),
+(1,5,1,1,0,0),
+(1,6,1,1,0,0),
+(1,7,1,0,0,0),
+(1,30,1,1,1,1),
+(1,51,1,1,1,1),
+(1,47,1,1,1,0),
+(1,11,1,1,1,0),
+(1,12,1,1,1,1),
+(1,16,1,1,1,1),
+(1,26,1,1,0,0),
+(1,28,1,1,0,0),
+(1,25,1,1,1,1),
+(1,23,1,1,1,1),
+(1,22,1,1,1,1),
+(1,24,1,1,1,1),
+(1,21,1,1,1,1),
+(1,17,1,1,1,1),
+(1,18,1,1,1,1),
+(1,19,1,1,1,1),
+(1,46,1,1,1,1),
+(1,57,1,1,1,1),
+(1,58,1,1,1,1),
+(1,20,1,1,1,1),
+(1,29,1,1,1,1),
+(1,31,1,1,1,1),
+(1,33,1,1,1,1),
+(1,35,1,0,0,0),
+(1,36,1,0,0,0),
+(1,37,1,0,0,0),
+(1,39,1,0,0,0),
+(1,40,1,0,0,0),
+(1,41,1,0,0,0),
+(1,42,1,0,0,0),
+(1,44,1,0,0,0),
+(1,45,1,0,0,0),
+(1,48,1,1,1,0),
+(1,50,1,1,1,0),
+(1,49,1,1,1,0),
+(1,52,1,1,1,1),
+(1,53,1,1,1,1),
+(1,54,1,1,1,1),
+(1,55,1,1,1,1);
+/*!40000 ALTER TABLE `role_page_permissions` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `roles`
+--
+
+DROP TABLE IF EXISTS `roles`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `roles` (
+  `id` int(11) NOT NULL,
+  `name` varchar(50) NOT NULL,
+  `slug` varchar(60) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `roles`
+--
+
+LOCK TABLES `roles` WRITE;
+/*!40000 ALTER TABLE `roles` DISABLE KEYS */;
+INSERT INTO `roles` VALUES
+(1,'Administrator','admin','2025-08-13 08:37:05','2025-08-13 08:39:13'),
+(2,'Expert','expert','2025-08-13 08:37:05','2025-08-13 08:38:20'),
+(4,'Reviewer','reviewer','2025-08-13 08:37:55','2025-08-13 08:37:55'),
+(5,'User','user','2025-08-13 08:37:55','2025-08-13 08:37:55');
+/*!40000 ALTER TABLE `roles` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `service_orders`
+--
+
+DROP TABLE IF EXISTS `service_orders`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `service_orders` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `expert_id` int(11) NOT NULL,
+  `service_id` int(11) NOT NULL,
+  `amount` decimal(10,2) NOT NULL,
+  `currency` varchar(10) DEFAULT 'USD',
+  `status` enum('pending','paid','cancelled','refunded') NOT NULL DEFAULT 'pending',
+  `cancelled_at` datetime DEFAULT NULL,
+  `cancelled_by` int(11) DEFAULT NULL,
+  `cancelled_reason` varchar(255) DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `payment_ref` varchar(100) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `slot_id` int(11) DEFAULT NULL,
+  `payment_status` enum('Pending','Paid','Failed') DEFAULT 'Pending',
+  `meeting_id` int(11) DEFAULT NULL,
+  `stripe_payment_intent_id` varchar(255) DEFAULT NULL,
+  `stripe_charge_id` varchar(255) DEFAULT NULL,
+  `stripe_invoice_id` varchar(255) DEFAULT NULL,
+  `payment_method_id` varchar(255) DEFAULT NULL,
+  `receipt_url` text DEFAULT NULL,
+  `hosted_invoice_url` text DEFAULT NULL,
+  `invoice_pdf_url` text DEFAULT NULL,
+  `card_brand` varchar(50) DEFAULT NULL,
+  `card_last4` varchar(10) DEFAULT NULL,
+  `is_pending` tinyint(1) GENERATED ALWAYS AS (`status` = 'pending') STORED,
+  `guest_email` varchar(255) DEFAULT NULL,
+  `provider_payment_intent_id` varchar(64) DEFAULT NULL,
+  `paid_at` datetime DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `provider_session_id` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=95 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `service_orders`
+--
+
+LOCK TABLES `service_orders` WRITE;
+/*!40000 ALTER TABLE `service_orders` DISABLE KEYS */;
+INSERT INTO `service_orders` VALUES
+(1,3,3,1,19.99,'USD','pending',NULL,NULL,NULL,NULL,NULL,'2025-08-09 19:46:16','2025-08-19 13:03:15',NULL,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,NULL,NULL,NULL,NULL,NULL),
+(2,3,3,1,19.99,'USD','cancelled',NULL,NULL,NULL,'Please prepare documents before meeting',NULL,'2025-08-09 21:00:15','2025-08-15 05:44:16',NULL,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(3,3,3,1,19.99,'USD','pending',NULL,NULL,NULL,'Please review my resume before call',NULL,'2025-08-10 07:49:06','2025-08-12 07:39:13',NULL,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,NULL,NULL,NULL,NULL,NULL),
+(4,4,3,1,19.99,'USD','pending',NULL,NULL,NULL,'Please review my resume before call',NULL,'2025-08-11 15:28:11','2025-08-11 15:28:11',NULL,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,NULL,NULL,NULL,NULL,NULL),
+(5,4,3,1,19.99,'USD','paid',NULL,NULL,NULL,'Please review my resume before call','manual-OK-123','2025-08-11 19:18:52','2025-08-11 19:21:19',8,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(6,4,3,2,49.99,'USD','paid',NULL,NULL,NULL,NULL,'cs_test_b1LoAVIvITXyG6V25dVzM3umMBp52sogmnb03z0E4rTFOmR37d2FDXPbjU','2025-08-14 19:43:49','2025-08-14 19:44:31',30,'Paid',6,'pi_3Rw74X3RqEMUJuhk0anuzhlI','ch_3Rw74X3RqEMUJuhk01SLvTEy','in_1Rw74Z3RqEMUJuhkQLBAVt8v','pm_1Rw74W3RqEMUJuhkJyT3K4ug','https://pay.stripe.com/receipts/invoices/CAcaFwoVYWNjdF8xUnZ6bW0zUnFFTVVKdWhrKJ_5-MQGMgZICvWPGLU6LBYcH4C7KtuUlx8ao70PpsJsm_cqARnHUbhflXr_0R88izE56N_v7j_DoWpX?s=ap','https://invoice.stripe.com/i/acct_1Rvzmm3RqEMUJuhk/test_YWNjdF8xUnZ6bW0zUnFFTVVKdWhrLF9TcnFtellRZkRZN1BaRjUwbURoSXVrS2hzZXRvcWFxLDE0NTc0MTQ3MQ0200Lr0j6PZH?s=ap','https://pay.stripe.com/invoice/acct_1Rvzmm3RqEMUJuhk/test_YWNjdF8xUnZ6bW0zUnFFTVVKdWhrLF9TcnFtellRZkRZN1BaRjUwbURoSXVrS2hzZXRvcWFxLDE0NTc0MTQ3MQ0200Lr0j6PZH/pdf?s=ap','visa','4242',0,NULL,NULL,NULL,NULL,NULL),
+(7,4,3,2,49.99,'USD','cancelled',NULL,NULL,NULL,NULL,NULL,'2025-08-14 20:50:02','2025-08-15 05:44:16',1,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(8,4,3,2,49.99,'USD','cancelled',NULL,NULL,NULL,NULL,NULL,'2025-08-14 20:50:02','2025-08-15 05:44:16',1,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(9,4,3,2,49.99,'USD','cancelled',NULL,NULL,NULL,NULL,NULL,'2025-08-14 20:54:03','2025-08-15 05:44:16',1,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(10,4,3,2,49.99,'USD','cancelled',NULL,NULL,NULL,NULL,NULL,'2025-08-14 20:54:03','2025-08-15 05:44:16',1,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(11,4,3,2,49.99,'USD','pending',NULL,NULL,NULL,NULL,NULL,'2025-08-14 20:58:04','2025-08-14 20:58:04',1,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,NULL,NULL,NULL,NULL,NULL),
+(12,4,3,1,19.99,'USD','cancelled',NULL,NULL,NULL,NULL,NULL,'2025-08-15 05:08:53','2025-08-15 05:44:16',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(13,4,3,1,19.99,'USD','cancelled',NULL,NULL,NULL,NULL,NULL,'2025-08-15 05:08:53','2025-08-15 05:44:16',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(14,4,3,1,19.99,'USD','cancelled',NULL,NULL,NULL,NULL,NULL,'2025-08-15 05:09:17','2025-08-15 05:44:16',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(15,4,3,1,19.99,'USD','cancelled',NULL,NULL,NULL,NULL,NULL,'2025-08-15 05:09:17','2025-08-15 05:44:16',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(16,4,3,1,19.99,'USD','cancelled',NULL,NULL,NULL,NULL,NULL,'2025-08-15 05:11:04','2025-08-15 05:44:16',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(17,4,3,1,19.99,'USD','cancelled',NULL,NULL,NULL,NULL,NULL,'2025-08-15 05:11:20','2025-08-15 05:44:16',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(18,4,3,1,19.99,'USD','cancelled',NULL,NULL,NULL,NULL,NULL,'2025-08-15 05:11:20','2025-08-15 05:44:16',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(19,4,3,1,19.99,'USD','cancelled',NULL,NULL,NULL,NULL,NULL,'2025-08-15 05:11:50','2025-08-15 05:44:16',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(20,4,3,1,19.99,'USD','cancelled',NULL,NULL,NULL,NULL,NULL,'2025-08-15 05:11:50','2025-08-15 05:44:16',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(21,4,3,1,19.99,'USD','cancelled',NULL,NULL,NULL,NULL,NULL,'2025-08-15 05:14:16','2025-08-15 05:44:16',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(22,4,3,1,19.99,'USD','cancelled',NULL,NULL,NULL,NULL,NULL,'2025-08-15 05:14:23','2025-08-15 05:44:16',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(23,4,3,1,19.99,'USD','cancelled',NULL,NULL,NULL,NULL,NULL,'2025-08-15 05:14:23','2025-08-15 05:44:16',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(24,4,3,1,19.99,'USD','cancelled',NULL,NULL,NULL,NULL,NULL,'2025-08-15 05:15:18','2025-08-15 05:44:16',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(25,4,3,1,19.99,'USD','cancelled',NULL,NULL,NULL,NULL,NULL,'2025-08-15 05:15:25','2025-08-15 05:44:16',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(26,4,3,1,19.99,'USD','cancelled',NULL,NULL,NULL,NULL,NULL,'2025-08-15 05:15:25','2025-08-15 05:44:16',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(27,4,3,1,19.99,'USD','cancelled',NULL,NULL,NULL,NULL,NULL,'2025-08-15 05:16:24','2025-08-15 05:44:16',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(28,4,3,1,19.99,'USD','cancelled',NULL,NULL,NULL,NULL,NULL,'2025-08-15 05:16:32','2025-08-15 05:44:16',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(29,4,3,1,19.99,'USD','cancelled',NULL,NULL,NULL,NULL,NULL,'2025-08-15 05:16:32','2025-08-15 05:44:16',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(30,4,3,1,19.99,'USD','cancelled',NULL,NULL,NULL,NULL,NULL,'2025-08-15 05:17:28','2025-08-15 05:44:16',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(31,4,3,1,19.99,'USD','cancelled',NULL,NULL,NULL,NULL,NULL,'2025-08-15 05:18:07','2025-08-15 05:44:16',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(32,4,3,1,19.99,'USD','cancelled',NULL,NULL,NULL,NULL,NULL,'2025-08-15 05:20:22','2025-08-15 05:44:16',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(33,4,3,1,19.99,'USD','cancelled',NULL,NULL,NULL,NULL,NULL,'2025-08-15 05:20:47','2025-08-15 05:44:16',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(34,4,3,1,19.99,'USD','cancelled',NULL,NULL,NULL,NULL,NULL,'2025-08-15 05:22:37','2025-08-15 05:44:16',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(35,4,3,1,19.99,'USD','cancelled',NULL,NULL,NULL,NULL,NULL,'2025-08-15 05:22:56','2025-08-15 05:44:16',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(36,4,3,1,19.99,'USD','paid',NULL,NULL,NULL,NULL,'cs_test_b1BjCsbtM1eKde8bGgWzwjnzaVuTdIUNIvtrHsqb1ixFs7fmwClld3JFm2','2025-08-15 05:23:11','2025-08-16 06:52:01',32,'Paid',7,'pi_3Rwdxw3RqEMUJuhk16iUcsFO','ch_3Rwdxw3RqEMUJuhk1skTjrTj','in_1Rwdxy3RqEMUJuhk8wFdoR26','pm_1Rw8v33RqEMUJuhkSAN3rnay','https://pay.stripe.com/receipts/invoices/CAcaFwoVYWNjdF8xUnZ6bW0zUnFFTVVKdWhrKJHVgMUGMgY-mXdTyFg6LBbUju_CRnKhkFVpdmSmtfDftvzB_cnmcOmRND5HAKuaeESvVH3AJyJutevz?s=ap','https://invoice.stripe.com/i/acct_1Rvzmm3RqEMUJuhk/test_YWNjdF8xUnZ6bW0zUnFFTVVKdWhrLF9Tc09sWkYwbFd6bHBRZGc1dHlJa0FhQzhxbkt2U3c2LDE0NTg2NzkyMQ0200PyLgYrV9?s=ap','https://pay.stripe.com/invoice/acct_1Rvzmm3RqEMUJuhk/test_YWNjdF8xUnZ6bW0zUnFFTVVKdWhrLF9Tc09sWkYwbFd6bHBRZGc1dHlJa0FhQzhxbkt2U3c2LDE0NTg2NzkyMQ0200PyLgYrV9/pdf?s=ap','visa','4242',0,NULL,NULL,NULL,NULL,NULL),
+(37,4,3,1,19.99,'USD','pending',NULL,NULL,NULL,NULL,NULL,'2025-08-15 05:53:23','2025-08-15 05:53:23',1,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,NULL,NULL,NULL,NULL,NULL),
+(38,3,3,1,19.99,'USD','pending',NULL,NULL,NULL,NULL,NULL,'2025-08-15 10:41:09','2025-08-15 10:41:09',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,NULL,NULL,NULL,NULL,NULL),
+(39,3,3,1,19.99,'USD','paid',NULL,NULL,NULL,NULL,'cs_test_b1IfjVcKdWYKloyjDwmFJhkMU8PodwgYd5Z4xPVHctH1i39lbT587v0Z2p','2025-08-15 10:49:46','2025-08-16 07:40:17',33,'Paid',8,'pi_3Rweii3RqEMUJuhk1h6lUhVW','py_3Rweii3RqEMUJuhk10AMjbFM','in_1Rwein3RqEMUJuhkZXfYXxju','pm_1Rweih3RqEMUJuhk6S8OpnPk','https://pay.stripe.com/receipts/invoices/CAcaFwoVYWNjdF8xUnZ6bW0zUnFFTVVKdWhrKOHrgMUGMgYxprV3KCk6LBazZnimaArZJKcifiFYOWNGZzGCPFniVCKGn0dilPIHGQc1U0JlMlBoo8Ah?s=ap','https://invoice.stripe.com/i/acct_1Rvzmm3RqEMUJuhk/test_YWNjdF8xUnZ6bW0zUnFFTVVKdWhrLF9Tc1BYQ09rWlZsUDhhajRCTks0dzQyb2ZzTnV0U3FzLDE0NTg3MDgxNw0200aR5rRjxu?s=ap','https://pay.stripe.com/invoice/acct_1Rvzmm3RqEMUJuhk/test_YWNjdF8xUnZ6bW0zUnFFTVVKdWhrLF9Tc1BYQ09rWlZsUDhhajRCTks0dzQyb2ZzTnV0U3FzLDE0NTg3MDgxNw0200aR5rRjxu/pdf?s=ap',NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(41,5,3,5,10.00,'USD','paid',NULL,NULL,NULL,NULL,'cs_test_b1Shqp1eXsYWmqIH6jUbiivRrpfREcPwCkSKG67w7HXmJY98oe8qDHNxiS','2025-08-19 14:29:27','2025-08-19 14:29:59',25,'Paid',9,'pi_3RxqXu3RqEMUJuhk1oDIHDsE','ch_3RxqXu3RqEMUJuhk1yg0Bymq','in_1RxqXx3RqEMUJuhkiSq8kAJZ','pm_1RxqXt3RqEMUJuhkFNGx2BXH','https://pay.stripe.com/receipts/invoices/CAcaFwoVYWNjdF8xUnZ6bW0zUnFFTVVKdWhrKOeUksUGMgY0JGwVynQ6LBaZ0A4_dS77YzavX7_UKXW4vEC4EEWWnm6FKQ7zwrH_1yPnnHWQovX-SHdQ?s=ap','https://invoice.stripe.com/i/acct_1Rvzmm3RqEMUJuhk/test_YWNjdF8xUnZ6bW0zUnFFTVVKdWhrLF9TdGRwZXUxSEx3SUJhN3I4MEdic05uQm1maDVuQmRaLDE0NjE1NDU5OQ0200IubaNjyA?s=ap','https://pay.stripe.com/invoice/acct_1Rvzmm3RqEMUJuhk/test_YWNjdF8xUnZ6bW0zUnFFTVVKdWhrLF9TdGRwZXUxSEx3SUJhN3I4MEdic05uQm1maDVuQmRaLDE0NjE1NDU5OQ0200IubaNjyA/pdf?s=ap','visa','4242',0,NULL,NULL,NULL,NULL,NULL),
+(44,3,3,6,450.00,'USD','pending',NULL,NULL,NULL,NULL,NULL,'2025-08-20 11:22:24','2025-08-20 11:22:24',37,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,NULL,NULL,NULL,NULL,NULL),
+(45,3,3,6,450.00,'USD','pending',NULL,NULL,NULL,NULL,NULL,'2025-08-20 11:22:24','2025-08-20 11:22:24',37,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,NULL,NULL,NULL,NULL,NULL),
+(46,2,3,5,10.00,'USD','pending',NULL,NULL,NULL,NULL,NULL,'2025-09-01 19:25:51','2025-09-01 19:25:51',130,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,NULL,NULL,NULL,NULL,NULL),
+(47,2,3,5,10.00,'USD','pending',NULL,NULL,NULL,NULL,NULL,'2025-09-01 19:25:51','2025-09-01 19:25:51',130,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,NULL,NULL,NULL,NULL,NULL),
+(48,2,3,4,30.00,'USD','pending',NULL,NULL,NULL,NULL,NULL,'2025-09-01 20:28:26','2025-09-01 20:28:26',130,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,NULL,NULL,NULL,NULL,NULL),
+(49,2,3,4,30.00,'USD','pending',NULL,NULL,NULL,NULL,NULL,'2025-09-01 20:28:26','2025-09-01 20:28:26',130,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,NULL,NULL,NULL,NULL,NULL),
+(50,2,3,1,19.99,'USD','paid',NULL,NULL,NULL,NULL,'pi_3S2eal3RqEMUJuhk05JzFYuQ','2025-09-01 20:44:40','2025-09-01 20:44:43',130,'Paid',10,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(51,3,3,5,10.00,'USD','pending',NULL,NULL,NULL,NULL,NULL,'2025-09-07 10:41:40','2025-09-07 10:41:40',112,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,NULL,NULL,NULL,NULL,NULL),
+(52,3,3,5,10.00,'USD','pending',NULL,NULL,NULL,NULL,NULL,'2025-09-07 10:41:40','2025-09-07 10:41:40',112,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,NULL,NULL,NULL,NULL,NULL),
+(53,2,3,5,10.00,'USD','paid',NULL,NULL,NULL,NULL,'pi_3S4g7u3RqEMUJuhk13boTqgn','2025-09-07 10:47:13','2025-09-07 10:47:18',112,'Paid',17,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(54,2,3,5,10.00,'USD','pending',NULL,NULL,NULL,NULL,NULL,'2025-09-07 10:47:13','2025-09-07 10:47:13',112,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,NULL,NULL,NULL,NULL,NULL),
+(55,2,3,5,10.00,'USD','paid',NULL,NULL,NULL,NULL,NULL,'2025-09-07 12:16:28','2025-09-07 12:24:13',132,'Paid',18,NULL,NULL,NULL,NULL,NULL,'https://invoice.stripe.com/i/acct_1Rvzmm3RqEMUJuhk/test_YWNjdF8xUnZ6bW0zUnFFTVVKdWhrLF9UMGo1ZFREdlRoVkNVMEp4cjR3Qkd0aU1pR014SmVuLDE0Nzc4ODY1Mw0200yq5cuL4C?s=ap','https://pay.stripe.com/invoice/acct_1Rvzmm3RqEMUJuhk/test_YWNjdF8xUnZ6bW0zUnFFTVVKdWhrLF9UMGo1ZFREdlRoVkNVMEp4cjR3Qkd0aU1pR014SmVuLDE0Nzc4ODY1Mw0200yq5cuL4C/pdf?s=ap',NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(56,2,3,3,29.00,'USD','paid',NULL,NULL,NULL,NULL,NULL,'2025-09-07 13:49:29','2025-09-07 14:50:26',133,'Paid',19,NULL,NULL,NULL,NULL,'https://pay.stripe.com/receipts/payment/CAcaFwoVYWNjdF8xUnZ6bW0zUnFFTVVKdWhrKLK39sUGMgaLFy8s8nw6LBZtQj0Dskh23fbexHCo79c8VvT3Fu17_ajFyS_9lxpwQPlhGa2b1iVGWHWg',NULL,NULL,'visa','4242',0,NULL,NULL,NULL,NULL,NULL),
+(57,9,3,4,30.00,'USD','pending',NULL,NULL,NULL,NULL,NULL,'2025-09-13 07:47:26','2025-09-13 07:47:26',114,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,NULL,NULL,NULL,NULL,NULL),
+(58,13,3,5,10.00,'USD','paid',NULL,NULL,NULL,NULL,NULL,'2025-09-13 08:03:36','2025-09-13 08:03:53',114,'Paid',20,NULL,NULL,NULL,NULL,NULL,'https://invoice.stripe.com/i/acct_1Rvzmm3RqEMUJuhk/test_YWNjdF8xUnZ6bW0zUnFFTVVKdWhrLF9UMnVGMFZla2pvRWU2azMxSXVRRDIySG1BWjFmNlByLDE0ODI5MTQyNA0200RH2sc8FY?s=ap','https://pay.stripe.com/invoice/acct_1Rvzmm3RqEMUJuhk/test_YWNjdF8xUnZ6bW0zUnFFTVVKdWhrLF9UMnVGMFZla2pvRWU2azMxSXVRRDIySG1BWjFmNlByLDE0ODI5MTQyNA0200RH2sc8FY/pdf?s=ap',NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(59,2,6,7,125.00,'USD','paid',NULL,NULL,NULL,NULL,NULL,'2025-09-14 07:24:52','2025-09-14 07:25:22',199,'Paid',21,NULL,NULL,NULL,NULL,NULL,'https://invoice.stripe.com/i/acct_1Rvzmm3RqEMUJuhk/test_YWNjdF8xUnZ6bW0zUnFFTVVKdWhrLF9UM0dxUkVZVXp1SUMwZlhZY2dKTTJiOEZoSnF2OHY5LDE0ODM3NTQ5OA02001hIj3vTU?s=ap','https://pay.stripe.com/invoice/acct_1Rvzmm3RqEMUJuhk/test_YWNjdF8xUnZ6bW0zUnFFTVVKdWhrLF9UM0dxUkVZVXp1SUMwZlhZY2dKTTJiOEZoSnF2OHY5LDE0ODM3NTQ5OA02001hIj3vTU/pdf?s=ap',NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(60,2,6,7,125.00,'USD','paid',NULL,NULL,NULL,NULL,NULL,'2025-09-14 07:37:53','2025-09-14 07:38:06',198,'Paid',22,NULL,NULL,NULL,NULL,NULL,'https://invoice.stripe.com/i/acct_1Rvzmm3RqEMUJuhk/test_YWNjdF8xUnZ6bW0zUnFFTVVKdWhrLF9UM0gzclhxMnhnM1RpYzlKa3NZZVJqM1F3RTF1OWJLLDE0ODM3NjI3Nw0200QJtYk6EI?s=ap','https://pay.stripe.com/invoice/acct_1Rvzmm3RqEMUJuhk/test_YWNjdF8xUnZ6bW0zUnFFTVVKdWhrLF9UM0gzclhxMnhnM1RpYzlKa3NZZVJqM1F3RTF1OWJLLDE0ODM3NjI3Nw0200QJtYk6EI/pdf?s=ap',NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(61,3,6,7,125.00,'USD','pending',NULL,NULL,NULL,NULL,NULL,'2025-09-25 10:02:26','2025-09-25 10:02:26',206,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,NULL,NULL,NULL,NULL,NULL),
+(62,3,3,6,450.00,'USD','pending',NULL,NULL,NULL,NULL,NULL,'2025-09-25 10:03:55','2025-09-25 10:03:55',162,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,NULL,NULL,NULL,NULL,NULL),
+(63,4,3,8,500.00,'USD','paid',NULL,NULL,NULL,NULL,NULL,'2025-09-27 09:21:15','2025-09-27 09:21:29',121,'Paid',23,NULL,NULL,NULL,NULL,NULL,'https://invoice.stripe.com/i/acct_1Rvzmm3RqEMUJuhk/test_YWNjdF8xUnZ6bW0zUnFFTVVKdWhrLF9UOEFlcGx3TVQ2MEtBUG5BWjFmQzNYZ2VXMjBIV21xLDE0OTUwNTY4MA02007HL9g6ji?s=ap','https://pay.stripe.com/invoice/acct_1Rvzmm3RqEMUJuhk/test_YWNjdF8xUnZ6bW0zUnFFTVVKdWhrLF9UOEFlcGx3TVQ2MEtBUG5BWjFmQzNYZ2VXMjBIV21xLDE0OTUwNTY4MA02007HL9g6ji/pdf?s=ap',NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(64,3,6,7,125.00,'USD','pending',NULL,NULL,NULL,NULL,NULL,'2025-09-27 09:28:34','2025-09-27 09:28:34',200,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,NULL,NULL,NULL,NULL,NULL),
+(65,3,6,7,125.00,'USD','pending',NULL,NULL,NULL,NULL,NULL,'2025-09-28 10:08:22','2025-09-28 10:08:22',203,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,NULL,NULL,NULL,NULL,NULL),
+(66,6,6,7,0.01,'USD','pending',NULL,NULL,NULL,NULL,NULL,'2025-09-28 18:18:18','2025-09-28 18:18:18',300,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,NULL,NULL,NULL,NULL,NULL),
+(67,17,6,7,3.00,'USD','paid',NULL,NULL,NULL,NULL,'pi_3SCPDs3RqEMUJuhk00X6Qr4K','2025-09-28 18:19:56','2025-09-28 18:28:22',300,'Paid',24,'pi_3SCPDs3RqEMUJuhk00X6Qr4K',NULL,NULL,NULL,'https://pay.stripe.com/receipts/payment/CAcaFwoVYWNjdF8xUnZ6bW0zUnFFTVVKdWhrKMb85cYGMgYcRu0btx06LBbhDwMU-pFOCdHxBno2LxvnLYGI4RqHXno8OHpWrckaNcQ5gSzIZZeTybs3',NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(68,16,6,7,3.00,'USD','paid',NULL,NULL,NULL,NULL,'pi_3SCPRO3RqEMUJuhk0CEZO5qc','2025-09-28 18:34:11','2025-09-28 18:37:40',301,'Paid',25,'pi_3SCPRO3RqEMUJuhk0CEZO5qc',NULL,NULL,NULL,'https://pay.stripe.com/receipts/payment/CAcaFwoVYWNjdF8xUnZ6bW0zUnFFTVVKdWhrKPSA5sYGMgbv-Uc1x9I6LBZuc1YrH5B3NPMohNeKOC5vFdKgeRjs66E18nI2NyRbz29GxBD-sMrTxSj2',NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(69,6,6,7,3.00,'USD','pending',NULL,NULL,NULL,NULL,NULL,'2025-10-05 15:30:24','2025-10-05 15:30:24',312,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,NULL,NULL,NULL,NULL,NULL),
+(70,15,6,7,3.00,'USD','paid',NULL,NULL,NULL,NULL,'pi_3SEunM3RqEMUJuhk19pRMy1l','2025-10-05 16:26:21','2025-10-05 16:28:28',303,'Paid',27,'pi_3SEunM3RqEMUJuhk19pRMy1l',NULL,NULL,NULL,'https://pay.stripe.com/receipts/payment/CAcaFwoVYWNjdF8xUnZ6bW0zUnFFTVVKdWhrKKy5iscGMgZZLSPaXoM6LBYVRoJKPtDfyZ4GR2rU4W45DJGa1X2MU64kh2V24RLRFlqiLXwRvRpIhadh',NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(71,2,6,7,120.00,'USD','paid',NULL,NULL,NULL,NULL,'pi_3SMjLy3RqEMUJuhk0OH4jZhe','2025-10-27 05:51:59','2025-10-27 05:52:28',359,'Paid',51,'pi_3SMjLy3RqEMUJuhk0OH4jZhe',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(72,2,3,8,500.00,'USD','paid',NULL,NULL,NULL,NULL,'pi_3SPjoq3RqEMUJuhk1dzTJt9f','2025-11-04 12:58:37','2025-11-04 12:58:41',526,'Paid',58,'pi_3SPjoq3RqEMUJuhk1dzTJt9f',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(73,2,3,8,500.00,'USD','paid',NULL,NULL,NULL,NULL,'pi_3SPkF63RqEMUJuhk1f3KY4oX','2025-11-04 13:25:42','2025-11-04 13:25:49',527,'Paid',59,'pi_3SPkF63RqEMUJuhk1f3KY4oX',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(74,2,3,3,29.00,'USD','paid',NULL,NULL,NULL,NULL,'pi_3SSBMZ3RqEMUJuhk0PFOSCmA','2025-11-11 06:47:32','2025-11-11 06:47:36',528,'Paid',71,'pi_3SSBMZ3RqEMUJuhk0PFOSCmA',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(75,2,3,6,450.00,'USD','pending',NULL,NULL,NULL,NULL,NULL,'2025-11-12 15:07:47','2025-11-12 15:07:47',542,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,NULL,NULL,NULL,NULL,NULL),
+(76,2,3,6,450.00,'USD','paid',NULL,NULL,NULL,NULL,'pi_3SSfeX3RqEMUJuhk1l4MZTb1','2025-11-12 15:07:47','2025-11-12 15:08:10',542,'Paid',73,'pi_3SSfeX3RqEMUJuhk1l4MZTb1',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(77,2,3,8,500.00,'USD','paid',NULL,NULL,NULL,NULL,'pi_3SU1Pa3RqEMUJuhk0Qo7MpWo','2025-11-16 08:34:13','2025-11-16 08:34:18',508,'Paid',77,'pi_3SU1Pa3RqEMUJuhk0Qo7MpWo',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(78,2,6,7,120.00,'USD','paid',NULL,NULL,NULL,NULL,'pi_3SURCj3RqEMUJuhk1OXsaeD6','2025-11-17 12:06:41','2025-11-17 12:06:46',421,'Paid',78,'pi_3SURCj3RqEMUJuhk1OXsaeD6',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL),
+(79,2,6,7,120.00,'USD','pending',NULL,NULL,NULL,NULL,NULL,'2025-12-30 17:42:03','2025-12-30 17:42:23',786,'Pending',NULL,'pi_3Sk6w63RqEMUJuhk0iYWyq6i',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,NULL,'pi_3Sk6w63RqEMUJuhk0iYWyq6i',NULL,NULL,'cs_test_a1feUrpXhYBHuKGeV43BFP3cW17IwxVfAosLPnxfmdDXwmpfLTsR4RYlIy'),
+(80,2,6,7,120.00,'USD','pending',NULL,NULL,NULL,NULL,NULL,'2025-12-30 18:03:25','2025-12-30 18:03:47',786,'Pending',NULL,'pi_3Sk7Go3RqEMUJuhk1VjEAOEF',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,NULL,'pi_3Sk7Go3RqEMUJuhk1VjEAOEF',NULL,NULL,'cs_test_a1kUWyerej1FE41LdPWNrzRcU4UbghzefIczwLV3NuscqY2DQgRnFfOl1t'),
+(81,2,3,6,450.00,'USD','paid',NULL,NULL,NULL,NULL,'pi_3SkSjY3RqEMUJuhk1mIJxgSX','2025-12-31 16:58:26','2025-12-31 16:58:53',635,'Paid',76,'pi_3SkSjY3RqEMUJuhk1mIJxgSX',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,'pi_3SkSjY3RqEMUJuhk1mIJxgSX','2025-12-31 16:58:53',NULL,'cs_test_a1DtBlboFfoo12jhsqr2M5Syu3IT0hhmP9iBLEEx7DXj1ANQYNhA3qinMs'),
+(82,2,3,6,450.00,'USD','paid',NULL,NULL,NULL,NULL,'pi_3SkSrl3RqEMUJuhk0u28fenM','2025-12-31 17:06:58','2025-12-31 17:07:22',639,'Paid',77,'pi_3SkSrl3RqEMUJuhk0u28fenM',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,'pi_3SkSrl3RqEMUJuhk0u28fenM','2025-12-31 17:07:22',NULL,'cs_test_a14dQK6GpfcEMtAoVq11OmVNd1Ff3XAekClhQVNppSZDDWTfB537oIh9xr'),
+(88,35,3,6,450.00,'USD','paid',NULL,NULL,NULL,NULL,NULL,'2026-01-03 08:52:38','2026-01-03 08:52:58',563,'Paid',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,'pi_3SlQZw3RqEMUJuhk1Q0oween','2026-01-03 08:52:58',NULL,'cs_test_a1h9kHcq51fP7OHVVyMbU9CsVAP0VCmTBXEXUg675aDlJ9e7ALW8HJNqUV'),
+(89,35,3,6,450.00,'USD','paid',NULL,NULL,NULL,NULL,NULL,'2026-01-03 10:45:16','2026-01-03 10:45:35',563,'Paid',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,'pi_3SlSKv3RqEMUJuhk1V4g8yZm','2026-01-03 10:45:35',NULL,'cs_test_a1jt5IDq9LswEpicoGI5uoX6V0Fg0s4yzGm7nkX7TjeFtywHNbJrOvHSg1'),
+(90,35,3,6,450.00,'USD','paid',NULL,NULL,NULL,NULL,NULL,'2026-01-03 10:57:57','2026-01-03 10:58:18',564,'Paid',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,'pi_3SlSXE3RqEMUJuhk1HWsfHuf','2026-01-03 10:58:18',NULL,'cs_test_a1fErrzKeoTB9ZhoVcXwxMdch2MHScaDr5N4tPHgUUT0B6oNWEHrqleAf1'),
+(91,35,3,6,450.00,'USD','paid',NULL,NULL,NULL,NULL,NULL,'2026-01-03 14:52:16','2026-01-03 15:52:22',564,'Paid',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,'pi_3SlWBz3RqEMUJuhk00pKashF','2026-01-03 15:52:22',NULL,'cs_test_a15kG3ZTRFGWPusVfsjl5gEGXCAafxwD40IiZFhyqh0byiYQWn2SNnvxRm'),
+(92,35,3,6,450.00,'USD','paid',NULL,NULL,NULL,NULL,NULL,'2026-01-03 15:32:06','2026-01-03 16:32:33',564,'Paid',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,'pi_3SlWoV3RqEMUJuhk1INUoHa7','2026-01-03 16:32:33',NULL,'cs_test_a14cFDJhtYOQkuxsvAgV9oRfr2y27rSMHoYOYeONlykwvJz90dJGN5wVN6'),
+(93,35,3,6,450.00,'USD','paid',NULL,NULL,NULL,NULL,NULL,'2026-01-03 15:35:26','2026-01-03 16:35:57',564,'Paid',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,'pi_3SlWrh3RqEMUJuhk1LF6f3xN','2026-01-03 16:35:57',NULL,'cs_test_a1vlO8oqKKJe4y9IUByDTAqiHLiY1ShZAY48Qr4d7r2JtVxP97JE3II5Iw'),
+(94,35,3,6,450.00,'USD','paid',NULL,NULL,NULL,NULL,NULL,'2026-01-03 15:38:49','2026-01-03 15:39:11',564,'Paid',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,NULL,'pi_3SlWv33RqEMUJuhk0xJ29yEV','2026-01-03 15:39:11',NULL,'cs_test_a14Ya2RIkI1LFB7onrqesh37EvtEXTdLgzwxm1IBEnueQnDrG17S4NNsfW');
+/*!40000 ALTER TABLE `service_orders` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `service_reviews`
+--
+
+DROP TABLE IF EXISTS `service_reviews`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `service_reviews` (
+  `id` int(11) NOT NULL,
+  `service_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `rating` int(11) DEFAULT NULL CHECK (`rating` between 1 and 5),
+  `review` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `service_reviews`
+--
+
+LOCK TABLES `service_reviews` WRITE;
+/*!40000 ALTER TABLE `service_reviews` DISABLE KEYS */;
+INSERT INTO `service_reviews` VALUES
+(1,1,3,4,'Very helpful session!','2025-08-05 19:44:44');
+/*!40000 ALTER TABLE `service_reviews` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `skills`
+--
+
+DROP TABLE IF EXISTS `skills`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `skills` (
+  `id` int(11) NOT NULL,
+  `name` varchar(100) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `skills`
+--
+
+LOCK TABLES `skills` WRITE;
+/*!40000 ALTER TABLE `skills` DISABLE KEYS */;
+INSERT INTO `skills` VALUES
+(3,'AI Strategy'),
+(10,'Building Innovation Ecosystems'),
+(16,'Career Change & Professional Reinvention'),
+(15,'Career Direction & Labor Market Insights'),
+(18,'Career Growth Strategy Planning'),
+(8,'Change Management'),
+(12,'Design and System Thinking'),
+(9,'Entrepreneurship and Startups Development'),
+(21,'HR Policy Design & Implementation'),
+(20,'Human Resource Planning'),
+(7,'Innovation Management and Leadership'),
+(11,'Leadership Coaching and Advisory Services'),
+(17,'New Job Onboarding & Early Career Support'),
+(4,'NodeJS'),
+(19,'Personalized Skills Assessment & Training Plan'),
+(1,'Python'),
+(5,'ReactJs'),
+(6,'RwactJS'),
+(13,'Social Impact and Social Innovation'),
+(14,'Social Innovation'),
+(2,'TensorFlow'),
+(22,'Training & Learning Program Design'),
+(23,'Workforce Data-Driven Decision Making');
+/*!40000 ALTER TABLE `skills` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `stripe_balance_txns`
+--
+
+DROP TABLE IF EXISTS `stripe_balance_txns`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `stripe_balance_txns` (
+  `id` varchar(64) NOT NULL,
+  `amount` bigint(20) NOT NULL,
+  `currency` char(3) NOT NULL,
+  `fee` bigint(20) NOT NULL,
+  `net` bigint(20) NOT NULL,
+  `type` varchar(64) NOT NULL,
+  `reporting_category` varchar(64) DEFAULT NULL,
+  `source_id` varchar(64) DEFAULT NULL,
+  `created` int(11) NOT NULL,
+  `available_on` int(11) DEFAULT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  `raw` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`raw`)),
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `stripe_balance_txns`
+--
+
+LOCK TABLES `stripe_balance_txns` WRITE;
+/*!40000 ALTER TABLE `stripe_balance_txns` DISABLE KEYS */;
+INSERT INTO `stripe_balance_txns` VALUES
+('txn_3Rw0Fo3RqEMUJuhk1zqhNL0t',2700,'CAD',130,2570,'charge','charge','ch_3Rw0Fo3RqEMUJuhk1gG6UEw2',1755174456,1755734400,NULL,'{\"id\":\"txn_3Rw0Fo3RqEMUJuhk1zqhNL0t\",\"object\":\"balance_transaction\",\"amount\":2700,\"available_on\":1755734400,\"balance_type\":\"payments\",\"created\":1755174456,\"currency\":\"cad\",\"description\":null,\"exchange_rate\":1.3507,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2570,\"reporting_category\":\"charge\",\"source\":\"ch_3Rw0Fo3RqEMUJuhk1gG6UEw2\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3Rw12w3RqEMUJuhk1JF2mbXv',2703,'CAD',130,2573,'charge','charge','ch_3Rw12w3RqEMUJuhk154ArQgv',1755177503,1755734400,NULL,'{\"id\":\"txn_3Rw12w3RqEMUJuhk1JF2mbXv\",\"object\":\"balance_transaction\",\"amount\":2703,\"available_on\":1755734400,\"balance_type\":\"payments\",\"created\":1755177503,\"currency\":\"cad\",\"description\":null,\"exchange_rate\":1.35205,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2573,\"reporting_category\":\"charge\",\"source\":\"ch_3Rw12w3RqEMUJuhk154ArQgv\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3Rw1lV3RqEMUJuhk0auEOR0Y',2705,'CAD',130,2575,'charge','charge','ch_3Rw1lV3RqEMUJuhk0IqNwYlx',1755180266,1755734400,NULL,'{\"id\":\"txn_3Rw1lV3RqEMUJuhk0auEOR0Y\",\"object\":\"balance_transaction\",\"amount\":2705,\"available_on\":1755734400,\"balance_type\":\"payments\",\"created\":1755180266,\"currency\":\"cad\",\"description\":null,\"exchange_rate\":1.35332,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2575,\"reporting_category\":\"charge\",\"source\":\"ch_3Rw1lV3RqEMUJuhk0IqNwYlx\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3Rw1R03RqEMUJuhk1WY4chPZ',2703,'CAD',130,2573,'charge','charge','ch_3Rw1R03RqEMUJuhk1PSlV2rJ',1755178994,1755734400,NULL,'{\"id\":\"txn_3Rw1R03RqEMUJuhk1WY4chPZ\",\"object\":\"balance_transaction\",\"amount\":2703,\"available_on\":1755734400,\"balance_type\":\"payments\",\"created\":1755178994,\"currency\":\"cad\",\"description\":null,\"exchange_rate\":1.35205,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2573,\"reporting_category\":\"charge\",\"source\":\"ch_3Rw1R03RqEMUJuhk1PSlV2rJ\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3Rw1rQ3RqEMUJuhk1KOnFdG2',2705,'CAD',130,2575,'charge','charge','ch_3Rw1rQ3RqEMUJuhk1YD8TUR0',1755180633,1755734400,NULL,'{\"id\":\"txn_3Rw1rQ3RqEMUJuhk1KOnFdG2\",\"object\":\"balance_transaction\",\"amount\":2705,\"available_on\":1755734400,\"balance_type\":\"payments\",\"created\":1755180633,\"currency\":\"cad\",\"description\":null,\"exchange_rate\":1.35332,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2575,\"reporting_category\":\"charge\",\"source\":\"ch_3Rw1rQ3RqEMUJuhk1YD8TUR0\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3Rw23E3RqEMUJuhk0AeRfyML',2705,'CAD',130,2575,'charge','charge','ch_3Rw23E3RqEMUJuhk0Sx483pP',1755181364,1755734400,NULL,'{\"id\":\"txn_3Rw23E3RqEMUJuhk0AeRfyML\",\"object\":\"balance_transaction\",\"amount\":2705,\"available_on\":1755734400,\"balance_type\":\"payments\",\"created\":1755181364,\"currency\":\"cad\",\"description\":null,\"exchange_rate\":1.35332,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2575,\"reporting_category\":\"charge\",\"source\":\"ch_3Rw23E3RqEMUJuhk0Sx483pP\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3Rw2Fx3RqEMUJuhk1Dy3hQTX',2705,'CAD',130,2575,'charge','charge','ch_3Rw2Fx3RqEMUJuhk1OHU26Th',1755182154,1755734400,NULL,'{\"id\":\"txn_3Rw2Fx3RqEMUJuhk1Dy3hQTX\",\"object\":\"balance_transaction\",\"amount\":2705,\"available_on\":1755734400,\"balance_type\":\"payments\",\"created\":1755182154,\"currency\":\"cad\",\"description\":null,\"exchange_rate\":1.35332,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2575,\"reporting_category\":\"charge\",\"source\":\"ch_3Rw2Fx3RqEMUJuhk1OHU26Th\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3Rw5fg3RqEMUJuhk0mzRB6Ai',6767,'CAD',280,6487,'charge','charge','ch_3Rw5fg3RqEMUJuhk0VJKWn1Y',1755195281,1755734400,NULL,'{\"id\":\"txn_3Rw5fg3RqEMUJuhk0mzRB6Ai\",\"object\":\"balance_transaction\",\"amount\":6767,\"available_on\":1755734400,\"balance_type\":\"payments\",\"created\":1755195281,\"currency\":\"cad\",\"description\":null,\"exchange_rate\":1.35365,\"fee\":280,\"fee_details\":[{\"amount\":280,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":6487,\"reporting_category\":\"charge\",\"source\":\"ch_3Rw5fg3RqEMUJuhk0VJKWn1Y\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3Rw74X3RqEMUJuhk0bDgGDFm',6768,'CAD',280,6488,'charge','charge','ch_3Rw74X3RqEMUJuhk01SLvTEy',1755200665,1755734400,'Order #6','{\"id\":\"txn_3Rw74X3RqEMUJuhk0bDgGDFm\",\"object\":\"balance_transaction\",\"amount\":6768,\"available_on\":1755734400,\"balance_type\":\"payments\",\"created\":1755200665,\"currency\":\"cad\",\"description\":\"Order #6\",\"exchange_rate\":1.35385,\"fee\":280,\"fee_details\":[{\"amount\":280,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":6488,\"reporting_category\":\"charge\",\"source\":\"ch_3Rw74X3RqEMUJuhk01SLvTEy\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3Rwdxw3RqEMUJuhk16V8yYQr',2708,'CAD',130,2578,'charge','charge','ch_3Rwdxw3RqEMUJuhk1skTjrTj',1755327108,1755907200,'Order #36','{\"id\":\"txn_3Rwdxw3RqEMUJuhk16V8yYQr\",\"object\":\"balance_transaction\",\"amount\":2708,\"available_on\":1755907200,\"balance_type\":\"payments\",\"created\":1755327108,\"currency\":\"cad\",\"description\":\"Order #36\",\"exchange_rate\":1.35444,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2578,\"reporting_category\":\"charge\",\"source\":\"ch_3Rwdxw3RqEMUJuhk1skTjrTj\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3Rweii3RqEMUJuhk1JqeT3Zp',2708,'CAD',130,2578,'payment','charge','py_3Rweii3RqEMUJuhk10AMjbFM',1755330011,1755907200,'Order #39','{\"id\":\"txn_3Rweii3RqEMUJuhk1JqeT3Zp\",\"object\":\"balance_transaction\",\"amount\":2708,\"available_on\":1755907200,\"balance_type\":\"payments\",\"created\":1755330011,\"currency\":\"cad\",\"description\":\"Order #39\",\"exchange_rate\":1.35444,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2578,\"reporting_category\":\"charge\",\"source\":\"py_3Rweii3RqEMUJuhk10AMjbFM\",\"status\":\"available\",\"type\":\"payment\"}','2025-09-09 19:50:39'),
+('txn_3RwlFW3RqEMUJuhk1Kjmi7J0',3928,'CAD',175,3753,'charge','charge','ch_3RwlFW3RqEMUJuhk1YTz6rTA',1755355107,1755907200,'Order #41','{\"id\":\"txn_3RwlFW3RqEMUJuhk1Kjmi7J0\",\"object\":\"balance_transaction\",\"amount\":3928,\"available_on\":1755907200,\"balance_type\":\"payments\",\"created\":1755355107,\"currency\":\"cad\",\"description\":\"Order #41\",\"exchange_rate\":1.35439,\"fee\":175,\"fee_details\":[{\"amount\":175,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":3753,\"reporting_category\":\"charge\",\"source\":\"ch_3RwlFW3RqEMUJuhk1YTz6rTA\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3RwoVJ3RqEMUJuhk0F2Kk407',2709,'CAD',130,2579,'charge','charge','ch_3RwoVJ3RqEMUJuhk0U5h3L06',1755367617,1755907200,NULL,'{\"id\":\"txn_3RwoVJ3RqEMUJuhk0F2Kk407\",\"object\":\"balance_transaction\",\"amount\":2709,\"available_on\":1755907200,\"balance_type\":\"payments\",\"created\":1755367617,\"currency\":\"cad\",\"description\":null,\"exchange_rate\":1.35444,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2579,\"reporting_category\":\"charge\",\"source\":\"ch_3RwoVJ3RqEMUJuhk0U5h3L06\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3RwpAf3RqEMUJuhk0Glh1Ds9',2709,'CAD',130,2579,'charge','charge','ch_3RwpAf3RqEMUJuhk0qL72Jpw',1755370181,1755907200,NULL,'{\"id\":\"txn_3RwpAf3RqEMUJuhk0Glh1Ds9\",\"object\":\"balance_transaction\",\"amount\":2709,\"available_on\":1755907200,\"balance_type\":\"payments\",\"created\":1755370181,\"currency\":\"cad\",\"description\":null,\"exchange_rate\":1.35444,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2579,\"reporting_category\":\"charge\",\"source\":\"ch_3RwpAf3RqEMUJuhk0qL72Jpw\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3Rwxpm3RqEMUJuhk042Wdirj',2708,'CAD',130,2578,'charge','charge','ch_3Rwxpm3RqEMUJuhk0lJLuCJy',1755403482,1755993600,'Order #1','{\"id\":\"txn_3Rwxpm3RqEMUJuhk042Wdirj\",\"object\":\"balance_transaction\",\"amount\":2708,\"available_on\":1755993600,\"balance_type\":\"payments\",\"created\":1755403482,\"currency\":\"cad\",\"description\":\"Order #1\",\"exchange_rate\":1.35444,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2578,\"reporting_category\":\"charge\",\"source\":\"ch_3Rwxpm3RqEMUJuhk0lJLuCJy\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3Rx7N83RqEMUJuhk1lvTbWor',6771,'CAD',281,6490,'charge','charge','ch_3Rx7N83RqEMUJuhk1cQeB3VQ',1755440147,1755993600,'Order #40','{\"id\":\"txn_3Rx7N83RqEMUJuhk1lvTbWor\",\"object\":\"balance_transaction\",\"amount\":6771,\"available_on\":1755993600,\"balance_type\":\"payments\",\"created\":1755440147,\"currency\":\"cad\",\"description\":\"Order #40\",\"exchange_rate\":1.35444,\"fee\":281,\"fee_details\":[{\"amount\":281,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":6490,\"reporting_category\":\"charge\",\"source\":\"ch_3Rx7N83RqEMUJuhk1cQeB3VQ\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3Rx7Xt3RqEMUJuhk0HpPtkcM',6771,'CAD',281,6490,'charge','charge','ch_3Rx7Xt3RqEMUJuhk0AJBHRbT',1755440813,1755993600,'Order #40','{\"id\":\"txn_3Rx7Xt3RqEMUJuhk0HpPtkcM\",\"object\":\"balance_transaction\",\"amount\":6771,\"available_on\":1755993600,\"balance_type\":\"payments\",\"created\":1755440813,\"currency\":\"cad\",\"description\":\"Order #40\",\"exchange_rate\":1.35444,\"fee\":281,\"fee_details\":[{\"amount\":281,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":6490,\"reporting_category\":\"charge\",\"source\":\"ch_3Rx7Xt3RqEMUJuhk0AJBHRbT\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3RxmEB3RqEMUJuhk0JPIvzFO',2707,'CAD',130,2577,'charge','charge','ch_3RxmEB3RqEMUJuhk0sApluJz',1755597196,1756166400,'Order #37','{\"id\":\"txn_3RxmEB3RqEMUJuhk0JPIvzFO\",\"object\":\"balance_transaction\",\"amount\":2707,\"available_on\":1756166400,\"balance_type\":\"payments\",\"created\":1755597196,\"currency\":\"cad\",\"description\":\"Order #37\",\"exchange_rate\":1.35421,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2577,\"reporting_category\":\"charge\",\"source\":\"ch_3RxmEB3RqEMUJuhk0sApluJz\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3RxqXu3RqEMUJuhk1VBPl90k',1356,'CAD',80,1276,'charge','charge','ch_3RxqXu3RqEMUJuhk1yg0Bymq',1755613795,1756166400,'Order #41','{\"id\":\"txn_3RxqXu3RqEMUJuhk1VBPl90k\",\"object\":\"balance_transaction\",\"amount\":1356,\"available_on\":1756166400,\"balance_type\":\"payments\",\"created\":1755613795,\"currency\":\"cad\",\"description\":\"Order #41\",\"exchange_rate\":1.35648,\"fee\":80,\"fee_details\":[{\"amount\":80,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":1276,\"reporting_category\":\"charge\",\"source\":\"ch_3RxqXu3RqEMUJuhk1yg0Bymq\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3RzAd43RqEMUJuhk0xHWNct0',2708,'CAD',130,2578,'charge','charge','ch_3RzAd43RqEMUJuhk0hHooNl2',1755929322,1756512000,'Order #37','{\"id\":\"txn_3RzAd43RqEMUJuhk0xHWNct0\",\"object\":\"balance_transaction\",\"amount\":2708,\"available_on\":1756512000,\"balance_type\":\"payments\",\"created\":1755929322,\"currency\":\"cad\",\"description\":\"Order #37\",\"exchange_rate\":1.35477,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2578,\"reporting_category\":\"charge\",\"source\":\"ch_3RzAd43RqEMUJuhk0hHooNl2\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3RzAwn3RqEMUJuhk0gtaGzVW',2710,'CAD',130,2580,'charge','charge','ch_3RzAwn3RqEMUJuhk0NWgDpq1',1755930546,1756512000,NULL,'{\"id\":\"txn_3RzAwn3RqEMUJuhk0gtaGzVW\",\"object\":\"balance_transaction\",\"amount\":2710,\"available_on\":1756512000,\"balance_type\":\"payments\",\"created\":1755930546,\"currency\":\"cad\",\"description\":null,\"exchange_rate\":1.35477,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2580,\"reporting_category\":\"charge\",\"source\":\"ch_3RzAwn3RqEMUJuhk0NWgDpq1\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3RzAxN3RqEMUJuhk1qWFbwLk',6638,'CAD',276,6362,'charge','charge','ch_3RzAxN3RqEMUJuhk1xUGT4hG',1755930582,1756512000,NULL,'{\"id\":\"txn_3RzAxN3RqEMUJuhk1qWFbwLk\",\"object\":\"balance_transaction\",\"amount\":6638,\"available_on\":1756512000,\"balance_type\":\"payments\",\"created\":1755930582,\"currency\":\"cad\",\"description\":null,\"exchange_rate\":1.35477,\"fee\":276,\"fee_details\":[{\"amount\":276,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":6362,\"reporting_category\":\"charge\",\"source\":\"ch_3RzAxN3RqEMUJuhk1xUGT4hG\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3RzaYP3RqEMUJuhk16JVwthh',2710,'CAD',130,2580,'charge','charge','ch_3RzaYP3RqEMUJuhk14fqczKc',1756028978,1756598400,'Coaching order #8','{\"id\":\"txn_3RzaYP3RqEMUJuhk16JVwthh\",\"object\":\"balance_transaction\",\"amount\":2710,\"available_on\":1756598400,\"balance_type\":\"payments\",\"created\":1756028978,\"currency\":\"cad\",\"description\":\"Coaching order #8\",\"exchange_rate\":1.35477,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2580,\"reporting_category\":\"charge\",\"source\":\"ch_3RzaYP3RqEMUJuhk14fqczKc\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3RzZjD3RqEMUJuhk16JujOHN',2711,'CAD',130,2581,'charge','charge','ch_3RzZjD3RqEMUJuhk1Exu1DKs',1756025803,1756598400,NULL,'{\"id\":\"txn_3RzZjD3RqEMUJuhk16JujOHN\",\"object\":\"balance_transaction\",\"amount\":2711,\"available_on\":1756598400,\"balance_type\":\"payments\",\"created\":1756025803,\"currency\":\"cad\",\"description\":null,\"exchange_rate\":1.35532,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2581,\"reporting_category\":\"charge\",\"source\":\"ch_3RzZjD3RqEMUJuhk1Exu1DKs\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S0Mxh3RqEMUJuhk1mVoIuWd',25781,'CAD',984,24797,'charge','charge','ch_3S0Mxh3RqEMUJuhk1A23N6Px',1756215057,1756771200,NULL,'{\"id\":\"txn_3S0Mxh3RqEMUJuhk1mVoIuWd\",\"object\":\"balance_transaction\",\"amount\":25781,\"available_on\":1756771200,\"balance_type\":\"payments\",\"created\":1756215057,\"currency\":\"cad\",\"description\":null,\"exchange_rate\":1.35688,\"fee\":984,\"fee_details\":[{\"amount\":984,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":24797,\"reporting_category\":\"charge\",\"source\":\"ch_3S0Mxh3RqEMUJuhk1A23N6Px\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S0Myh3RqEMUJuhk1kF6JMWt',25781,'CAD',984,24797,'payment','charge','py_3S0Myh3RqEMUJuhk1YOqHu7u',1756215135,1756771200,NULL,'{\"id\":\"txn_3S0Myh3RqEMUJuhk1kF6JMWt\",\"object\":\"balance_transaction\",\"amount\":25781,\"available_on\":1756771200,\"balance_type\":\"payments\",\"created\":1756215135,\"currency\":\"cad\",\"description\":null,\"exchange_rate\":1.35688,\"fee\":984,\"fee_details\":[{\"amount\":984,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":24797,\"reporting_category\":\"charge\",\"source\":\"py_3S0Myh3RqEMUJuhk1YOqHu7u\",\"status\":\"available\",\"type\":\"payment\"}','2025-09-09 19:50:39'),
+('txn_3S0NTO3RqEMUJuhk1SJnNWSt',25781,'CAD',984,24797,'charge','charge','ch_3S0NTO3RqEMUJuhk1mLsi46W',1756217022,1756771200,NULL,'{\"id\":\"txn_3S0NTO3RqEMUJuhk1SJnNWSt\",\"object\":\"balance_transaction\",\"amount\":25781,\"available_on\":1756771200,\"balance_type\":\"payments\",\"created\":1756217022,\"currency\":\"cad\",\"description\":null,\"exchange_rate\":1.35688,\"fee\":984,\"fee_details\":[{\"amount\":984,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":24797,\"reporting_category\":\"charge\",\"source\":\"ch_3S0NTO3RqEMUJuhk1mLsi46W\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S0NUT3RqEMUJuhk11nqF6IM',25781,'CAD',984,24797,'charge','charge','ch_3S0NUT3RqEMUJuhk12VZNKkn',1756217089,1756771200,NULL,'{\"id\":\"txn_3S0NUT3RqEMUJuhk11nqF6IM\",\"object\":\"balance_transaction\",\"amount\":25781,\"available_on\":1756771200,\"balance_type\":\"payments\",\"created\":1756217089,\"currency\":\"cad\",\"description\":null,\"exchange_rate\":1.35688,\"fee\":984,\"fee_details\":[{\"amount\":984,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":24797,\"reporting_category\":\"charge\",\"source\":\"ch_3S0NUT3RqEMUJuhk12VZNKkn\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S0NUx3RqEMUJuhk0ulDJzYY',25786,'CAD',984,24802,'charge','charge','ch_3S0NUx3RqEMUJuhk0SbNGRkI',1756217119,1756771200,NULL,'{\"id\":\"txn_3S0NUx3RqEMUJuhk0ulDJzYY\",\"object\":\"balance_transaction\",\"amount\":25786,\"available_on\":1756771200,\"balance_type\":\"payments\",\"created\":1756217119,\"currency\":\"cad\",\"description\":null,\"exchange_rate\":1.35714,\"fee\":984,\"fee_details\":[{\"amount\":984,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":24802,\"reporting_category\":\"charge\",\"source\":\"ch_3S0NUx3RqEMUJuhk0SbNGRkI\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S1hIz3RqEMUJuhk0NBF54wc',6596,'CAD',274,6322,'charge','charge','ch_3S1hIz3RqEMUJuhk06SMM4oH',1756531585,1757116800,NULL,'{\"id\":\"txn_3S1hIz3RqEMUJuhk0NBF54wc\",\"object\":\"balance_transaction\",\"amount\":6596,\"available_on\":1757116800,\"balance_type\":\"payments\",\"created\":1756531585,\"currency\":\"cad\",\"description\":null,\"exchange_rate\":1.34621,\"fee\":274,\"fee_details\":[{\"amount\":274,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":6322,\"reporting_category\":\"charge\",\"source\":\"ch_3S1hIz3RqEMUJuhk06SMM4oH\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S1hLL3RqEMUJuhk0dJsFOw4',2692,'CAD',130,2562,'charge','charge','ch_3S1hLL3RqEMUJuhk0uK9Ex55',1756531731,1757116800,NULL,'{\"id\":\"txn_3S1hLL3RqEMUJuhk0dJsFOw4\",\"object\":\"balance_transaction\",\"amount\":2692,\"available_on\":1757116800,\"balance_type\":\"payments\",\"created\":1756531731,\"currency\":\"cad\",\"description\":null,\"exchange_rate\":1.34621,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2562,\"reporting_category\":\"charge\",\"source\":\"ch_3S1hLL3RqEMUJuhk0uK9Ex55\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S1huh3RqEMUJuhk0lyy8KyJ',2693,'CAD',130,2563,'charge','charge','ch_3S1huh3RqEMUJuhk0ja9lLib',1756533923,1757116800,NULL,'{\"id\":\"txn_3S1huh3RqEMUJuhk0lyy8KyJ\",\"object\":\"balance_transaction\",\"amount\":2693,\"available_on\":1757116800,\"balance_type\":\"payments\",\"created\":1756533923,\"currency\":\"cad\",\"description\":null,\"exchange_rate\":1.34633,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2563,\"reporting_category\":\"charge\",\"source\":\"ch_3S1huh3RqEMUJuhk0ja9lLib\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S1i4J3RqEMUJuhk0EawgZHM',9424,'CAD',379,9045,'charge','charge','ch_3S1i4J3RqEMUJuhk0WqjZFbq',1756534519,1757116800,NULL,'{\"id\":\"txn_3S1i4J3RqEMUJuhk0EawgZHM\",\"object\":\"balance_transaction\",\"amount\":9424,\"available_on\":1757116800,\"balance_type\":\"payments\",\"created\":1756534519,\"currency\":\"cad\",\"description\":null,\"exchange_rate\":1.34633,\"fee\":379,\"fee_details\":[{\"amount\":379,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":9045,\"reporting_category\":\"charge\",\"source\":\"ch_3S1i4J3RqEMUJuhk0WqjZFbq\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S2aAs3RqEMUJuhk1H7tiCai',2695,'CAD',130,2565,'charge','charge','ch_3S2aAs3RqEMUJuhk1kHsb7Dl',1756742502,1757289600,'Coaching order #11','{\"id\":\"txn_3S2aAs3RqEMUJuhk1H7tiCai\",\"object\":\"balance_transaction\",\"amount\":2695,\"available_on\":1757289600,\"balance_type\":\"payments\",\"created\":1756742502,\"currency\":\"cad\",\"description\":\"Coaching order #11\",\"exchange_rate\":1.34737,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2565,\"reporting_category\":\"charge\",\"source\":\"ch_3S2aAs3RqEMUJuhk1kHsb7Dl\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S2BbJ3RqEMUJuhk0oECahxm',2693,'CAD',130,2563,'charge','charge','ch_3S2BbJ3RqEMUJuhk0776CpG6',1756648041,1757203200,NULL,'{\"id\":\"txn_3S2BbJ3RqEMUJuhk0oECahxm\",\"object\":\"balance_transaction\",\"amount\":2693,\"available_on\":1757203200,\"balance_type\":\"payments\",\"created\":1756648041,\"currency\":\"cad\",\"description\":null,\"exchange_rate\":1.34633,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2563,\"reporting_category\":\"charge\",\"source\":\"ch_3S2BbJ3RqEMUJuhk0776CpG6\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S2bSa3RqEMUJuhk063Iflac',2697,'CAD',130,2567,'charge','charge','ch_3S2bSa3RqEMUJuhk0SryqgbG',1756747444,1757289600,'Coaching order #10','{\"id\":\"txn_3S2bSa3RqEMUJuhk063Iflac\",\"object\":\"balance_transaction\",\"amount\":2697,\"available_on\":1757289600,\"balance_type\":\"payments\",\"created\":1756747444,\"currency\":\"cad\",\"description\":\"Coaching order #10\",\"exchange_rate\":1.34825,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2567,\"reporting_category\":\"charge\",\"source\":\"ch_3S2bSa3RqEMUJuhk0SryqgbG\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S2c1p3RqEMUJuhk1A1Lg9vd',2697,'CAD',130,2567,'charge','charge','ch_3S2c1p3RqEMUJuhk1q6Hcuv5',1756749629,1757289600,'Coaching order #13','{\"id\":\"txn_3S2c1p3RqEMUJuhk1A1Lg9vd\",\"object\":\"balance_transaction\",\"amount\":2697,\"available_on\":1757289600,\"balance_type\":\"payments\",\"created\":1756749629,\"currency\":\"cad\",\"description\":\"Coaching order #13\",\"exchange_rate\":1.34825,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2567,\"reporting_category\":\"charge\",\"source\":\"ch_3S2c1p3RqEMUJuhk1q6Hcuv5\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S2coX3RqEMUJuhk18t19lHG',2696,'CAD',130,2566,'charge','charge','ch_3S2coX3RqEMUJuhk139MHXda',1756752649,1757289600,'Coaching order #9','{\"id\":\"txn_3S2coX3RqEMUJuhk18t19lHG\",\"object\":\"balance_transaction\",\"amount\":2696,\"available_on\":1757289600,\"balance_type\":\"payments\",\"created\":1756752649,\"currency\":\"cad\",\"description\":\"Coaching order #9\",\"exchange_rate\":1.34807,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2566,\"reporting_category\":\"charge\",\"source\":\"ch_3S2coX3RqEMUJuhk139MHXda\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S2doo3RqEMUJuhk0UjJMczz',1348,'CAD',80,1268,'charge','charge','ch_3S2doo3RqEMUJuhk0Pc3WKtj',1756756510,1757289600,'Order #46','{\"id\":\"txn_3S2doo3RqEMUJuhk0UjJMczz\",\"object\":\"balance_transaction\",\"amount\":1348,\"available_on\":1757289600,\"balance_type\":\"payments\",\"created\":1756756510,\"currency\":\"cad\",\"description\":\"Order #46\",\"exchange_rate\":1.34772,\"fee\":80,\"fee_details\":[{\"amount\":80,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":1268,\"reporting_category\":\"charge\",\"source\":\"ch_3S2doo3RqEMUJuhk0Pc3WKtj\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S2dTq3RqEMUJuhk0P2vQR0L',1348,'CAD',80,1268,'charge','charge','ch_3S2dTq3RqEMUJuhk01qq8ghr',1756755210,1757289600,'Order #46','{\"id\":\"txn_3S2dTq3RqEMUJuhk0P2vQR0L\",\"object\":\"balance_transaction\",\"amount\":1348,\"available_on\":1757289600,\"balance_type\":\"payments\",\"created\":1756755210,\"currency\":\"cad\",\"description\":\"Order #46\",\"exchange_rate\":1.34772,\"fee\":80,\"fee_details\":[{\"amount\":80,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":1268,\"reporting_category\":\"charge\",\"source\":\"ch_3S2dTq3RqEMUJuhk01qq8ghr\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S2eal3RqEMUJuhk09LWTKqD',2694,'CAD',130,2564,'charge','charge','ch_3S2eal3RqEMUJuhk0OZk8Dur',1756759484,1757289600,NULL,'{\"id\":\"txn_3S2eal3RqEMUJuhk09LWTKqD\",\"object\":\"balance_transaction\",\"amount\":2694,\"available_on\":1757289600,\"balance_type\":\"payments\",\"created\":1756759484,\"currency\":\"cad\",\"description\":null,\"exchange_rate\":1.3476,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2564,\"reporting_category\":\"charge\",\"source\":\"ch_3S2eal3RqEMUJuhk0OZk8Dur\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S2eL43RqEMUJuhk0HUFKUM8',4043,'CAD',180,3863,'charge','charge','ch_3S2eL43RqEMUJuhk0kP9sVvJ',1756758510,1757289600,'Order #49','{\"id\":\"txn_3S2eL43RqEMUJuhk0HUFKUM8\",\"object\":\"balance_transaction\",\"amount\":4043,\"available_on\":1757289600,\"balance_type\":\"payments\",\"created\":1756758510,\"currency\":\"cad\",\"description\":\"Order #49\",\"exchange_rate\":1.3476,\"fee\":180,\"fee_details\":[{\"amount\":180,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":3863,\"reporting_category\":\"charge\",\"source\":\"ch_3S2eL43RqEMUJuhk0kP9sVvJ\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S2Rr03RqEMUJuhk0Pz4YuL8',2695,'CAD',130,2565,'charge','charge','ch_3S2Rr03RqEMUJuhk0opLhfwK',1756710518,1757289600,'Coaching order #7','{\"id\":\"txn_3S2Rr03RqEMUJuhk0Pz4YuL8\",\"object\":\"balance_transaction\",\"amount\":2695,\"available_on\":1757289600,\"balance_type\":\"payments\",\"created\":1756710518,\"currency\":\"cad\",\"description\":\"Coaching order #7\",\"exchange_rate\":1.34734,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2565,\"reporting_category\":\"charge\",\"source\":\"ch_3S2Rr03RqEMUJuhk0opLhfwK\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S2S1M3RqEMUJuhk1wOfKHJO',2695,'CAD',130,2565,'charge','charge','ch_3S2S1M3RqEMUJuhk1HWoRxCO',1756711160,1757289600,'Coaching order #7','{\"id\":\"txn_3S2S1M3RqEMUJuhk1wOfKHJO\",\"object\":\"balance_transaction\",\"amount\":2695,\"available_on\":1757289600,\"balance_type\":\"payments\",\"created\":1756711160,\"currency\":\"cad\",\"description\":\"Coaching order #7\",\"exchange_rate\":1.34734,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2565,\"reporting_category\":\"charge\",\"source\":\"ch_3S2S1M3RqEMUJuhk1HWoRxCO\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S2S5i3RqEMUJuhk1iHtHRcu',2695,'CAD',130,2565,'charge','charge','ch_3S2S5i3RqEMUJuhk1XcHuxmp',1756711430,1757289600,'Coaching order #7','{\"id\":\"txn_3S2S5i3RqEMUJuhk1iHtHRcu\",\"object\":\"balance_transaction\",\"amount\":2695,\"available_on\":1757289600,\"balance_type\":\"payments\",\"created\":1756711430,\"currency\":\"cad\",\"description\":\"Coaching order #7\",\"exchange_rate\":1.34734,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2565,\"reporting_category\":\"charge\",\"source\":\"ch_3S2S5i3RqEMUJuhk1XcHuxmp\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S2SGe3RqEMUJuhk1VgPMmka',2695,'CAD',130,2565,'charge','charge','ch_3S2SGe3RqEMUJuhk1OEMnB2W',1756712108,1757289600,'Coaching order #6','{\"id\":\"txn_3S2SGe3RqEMUJuhk1VgPMmka\",\"object\":\"balance_transaction\",\"amount\":2695,\"available_on\":1757289600,\"balance_type\":\"payments\",\"created\":1756712108,\"currency\":\"cad\",\"description\":\"Coaching order #6\",\"exchange_rate\":1.34734,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2565,\"reporting_category\":\"charge\",\"source\":\"ch_3S2SGe3RqEMUJuhk1OEMnB2W\",\"status\":\"available\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S4c0R3RqEMUJuhk07fswsU4',2711,'CAD',130,2581,'charge','charge','ch_3S4c0R3RqEMUJuhk08hK9yBf',1757226200,1757808000,'Coaching order #15','{\"id\":\"txn_3S4c0R3RqEMUJuhk07fswsU4\",\"object\":\"balance_transaction\",\"amount\":2711,\"available_on\":1757808000,\"balance_type\":\"payments\",\"created\":1757226200,\"currency\":\"cad\",\"description\":\"Coaching order #15\",\"exchange_rate\":1.35532,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2581,\"reporting_category\":\"charge\",\"source\":\"ch_3S4c0R3RqEMUJuhk08hK9yBf\",\"status\":\"pending\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S4d3S3RqEMUJuhk05oJTb3G',2711,'CAD',130,2581,'charge','charge','ch_3S4d3S3RqEMUJuhk0PiRn8mH',1757230230,1757808000,'Coaching order #15','{\"id\":\"txn_3S4d3S3RqEMUJuhk05oJTb3G\",\"object\":\"balance_transaction\",\"amount\":2711,\"available_on\":1757808000,\"balance_type\":\"payments\",\"created\":1757230230,\"currency\":\"cad\",\"description\":\"Coaching order #15\",\"exchange_rate\":1.35532,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2581,\"reporting_category\":\"charge\",\"source\":\"ch_3S4d3S3RqEMUJuhk0PiRn8mH\",\"status\":\"pending\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S4dYQ3RqEMUJuhk02ONvvES',2711,'CAD',130,2581,'charge','charge','ch_3S4dYQ3RqEMUJuhk0kF6C9e5',1757232150,1757808000,'Coaching order #15','{\"id\":\"txn_3S4dYQ3RqEMUJuhk02ONvvES\",\"object\":\"balance_transaction\",\"amount\":2711,\"available_on\":1757808000,\"balance_type\":\"payments\",\"created\":1757232150,\"currency\":\"cad\",\"description\":\"Coaching order #15\",\"exchange_rate\":1.35532,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2581,\"reporting_category\":\"charge\",\"source\":\"ch_3S4dYQ3RqEMUJuhk0kF6C9e5\",\"status\":\"pending\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S4dZo3RqEMUJuhk0tSD0k5R',2711,'CAD',130,2581,'charge','charge','ch_3S4dZo3RqEMUJuhk0qVQ73Oa',1757232236,1757808000,'Coaching order #15','{\"id\":\"txn_3S4dZo3RqEMUJuhk0tSD0k5R\",\"object\":\"balance_transaction\",\"amount\":2711,\"available_on\":1757808000,\"balance_type\":\"payments\",\"created\":1757232236,\"currency\":\"cad\",\"description\":\"Coaching order #15\",\"exchange_rate\":1.35532,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2581,\"reporting_category\":\"charge\",\"source\":\"ch_3S4dZo3RqEMUJuhk0qVQ73Oa\",\"status\":\"pending\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S4eDn3RqEMUJuhk1Kq1ZCgu',2711,'CAD',130,2581,'charge','charge','ch_3S4eDn3RqEMUJuhk1epNZ6FN',1757234715,1757808000,'Coaching order #15','{\"id\":\"txn_3S4eDn3RqEMUJuhk1Kq1ZCgu\",\"object\":\"balance_transaction\",\"amount\":2711,\"available_on\":1757808000,\"balance_type\":\"payments\",\"created\":1757234715,\"currency\":\"cad\",\"description\":\"Coaching order #15\",\"exchange_rate\":1.35532,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2581,\"reporting_category\":\"charge\",\"source\":\"ch_3S4eDn3RqEMUJuhk1epNZ6FN\",\"status\":\"pending\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S4g7u3RqEMUJuhk1UIeDj64',1355,'CAD',80,1275,'charge','charge','ch_3S4g7u3RqEMUJuhk1nAfYhgI',1757242038,1757808000,'Order #53 (saved card)','{\"id\":\"txn_3S4g7u3RqEMUJuhk1UIeDj64\",\"object\":\"balance_transaction\",\"amount\":1355,\"available_on\":1757808000,\"balance_type\":\"payments\",\"created\":1757242038,\"currency\":\"cad\",\"description\":\"Order #53 (saved card)\",\"exchange_rate\":1.35532,\"fee\":80,\"fee_details\":[{\"amount\":80,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":1275,\"reporting_category\":\"charge\",\"source\":\"ch_3S4g7u3RqEMUJuhk1nAfYhgI\",\"status\":\"pending\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S4hkE3RqEMUJuhk13SX1ppb',2711,'CAD',130,2581,'charge','charge','ch_3S4hkE3RqEMUJuhk10FZvnAJ',1757248258,1757808000,NULL,'{\"id\":\"txn_3S4hkE3RqEMUJuhk13SX1ppb\",\"object\":\"balance_transaction\",\"amount\":2711,\"available_on\":1757808000,\"balance_type\":\"payments\",\"created\":1757248258,\"currency\":\"cad\",\"description\":null,\"exchange_rate\":1.35532,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2581,\"reporting_category\":\"charge\",\"source\":\"ch_3S4hkE3RqEMUJuhk10FZvnAJ\",\"status\":\"pending\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S4hnT3RqEMUJuhk1TTda6GJ',2711,'CAD',130,2581,'charge','charge','ch_3S4hnT3RqEMUJuhk1vaVtweN',1757248459,1757808000,NULL,'{\"id\":\"txn_3S4hnT3RqEMUJuhk1TTda6GJ\",\"object\":\"balance_transaction\",\"amount\":2711,\"available_on\":1757808000,\"balance_type\":\"payments\",\"created\":1757248459,\"currency\":\"cad\",\"description\":null,\"exchange_rate\":1.35532,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2581,\"reporting_category\":\"charge\",\"source\":\"ch_3S4hnT3RqEMUJuhk1vaVtweN\",\"status\":\"pending\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S4ilM3RqEMUJuhk1F1K9yJf',2711,'CAD',130,2581,'charge','charge','ch_3S4ilM3RqEMUJuhk1XTZIe1D',1757252172,1757808000,NULL,'{\"id\":\"txn_3S4ilM3RqEMUJuhk1F1K9yJf\",\"object\":\"balance_transaction\",\"amount\":2711,\"available_on\":1757808000,\"balance_type\":\"payments\",\"created\":1757252172,\"currency\":\"cad\",\"description\":null,\"exchange_rate\":1.35532,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2581,\"reporting_category\":\"charge\",\"source\":\"ch_3S4ilM3RqEMUJuhk1XTZIe1D\",\"status\":\"pending\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S4iRA3RqEMUJuhk0osO0xMd',2711,'CAD',130,2581,'charge','charge','ch_3S4iRA3RqEMUJuhk0oOAcOD7',1757250921,1757808000,NULL,'{\"id\":\"txn_3S4iRA3RqEMUJuhk0osO0xMd\",\"object\":\"balance_transaction\",\"amount\":2711,\"available_on\":1757808000,\"balance_type\":\"payments\",\"created\":1757250921,\"currency\":\"cad\",\"description\":null,\"exchange_rate\":1.35532,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2581,\"reporting_category\":\"charge\",\"source\":\"ch_3S4iRA3RqEMUJuhk0oOAcOD7\",\"status\":\"pending\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S4iyc3RqEMUJuhk1SHp52Zl',3930,'CAD',175,3755,'charge','charge','ch_3S4iyc3RqEMUJuhk1f2fzX5U',1757252995,1757808000,NULL,'{\"id\":\"txn_3S4iyc3RqEMUJuhk1SHp52Zl\",\"object\":\"balance_transaction\",\"amount\":3930,\"available_on\":1757808000,\"balance_type\":\"payments\",\"created\":1757252995,\"currency\":\"cad\",\"description\":null,\"exchange_rate\":1.35532,\"fee\":175,\"fee_details\":[{\"amount\":175,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":3755,\"reporting_category\":\"charge\",\"source\":\"ch_3S4iyc3RqEMUJuhk1f2fzX5U\",\"status\":\"pending\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S4j4G3RqEMUJuhk0DC9cstx',2711,'CAD',130,2581,'charge','charge','ch_3S4j4G3RqEMUJuhk02x9Lzez',1757253345,1757808000,'Course order #5','{\"id\":\"txn_3S4j4G3RqEMUJuhk0DC9cstx\",\"object\":\"balance_transaction\",\"amount\":2711,\"available_on\":1757808000,\"balance_type\":\"payments\",\"created\":1757253345,\"currency\":\"cad\",\"description\":\"Course order #5\",\"exchange_rate\":1.35532,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2581,\"reporting_category\":\"charge\",\"source\":\"ch_3S4j4G3RqEMUJuhk02x9Lzez\",\"status\":\"pending\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S4jal3RqEMUJuhk1O6bJUe6',2711,'CAD',130,2581,'charge','charge','ch_3S4jal3RqEMUJuhk1YOnlLYn',1757255359,1757808000,'Course order #5','{\"id\":\"txn_3S4jal3RqEMUJuhk1O6bJUe6\",\"object\":\"balance_transaction\",\"amount\":2711,\"available_on\":1757808000,\"balance_type\":\"payments\",\"created\":1757255359,\"currency\":\"cad\",\"description\":\"Course order #5\",\"exchange_rate\":1.35532,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2581,\"reporting_category\":\"charge\",\"source\":\"ch_3S4jal3RqEMUJuhk1YOnlLYn\",\"status\":\"pending\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S4jcB3RqEMUJuhk0vRpypTW',2711,'CAD',130,2581,'charge','charge','ch_3S4jcB3RqEMUJuhk04pzP1VJ',1757255448,1757808000,'Course order #5','{\"id\":\"txn_3S4jcB3RqEMUJuhk0vRpypTW\",\"object\":\"balance_transaction\",\"amount\":2711,\"available_on\":1757808000,\"balance_type\":\"payments\",\"created\":1757255448,\"currency\":\"cad\",\"description\":\"Course order #5\",\"exchange_rate\":1.35532,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2581,\"reporting_category\":\"charge\",\"source\":\"ch_3S4jcB3RqEMUJuhk04pzP1VJ\",\"status\":\"pending\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S4jeK3RqEMUJuhk05kq113v',2711,'CAD',130,2581,'charge','charge','ch_3S4jeK3RqEMUJuhk0ceDPSkW',1757255581,1757808000,'Course order #5','{\"id\":\"txn_3S4jeK3RqEMUJuhk05kq113v\",\"object\":\"balance_transaction\",\"amount\":2711,\"available_on\":1757808000,\"balance_type\":\"payments\",\"created\":1757255581,\"currency\":\"cad\",\"description\":\"Course order #5\",\"exchange_rate\":1.35532,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2581,\"reporting_category\":\"charge\",\"source\":\"ch_3S4jeK3RqEMUJuhk0ceDPSkW\",\"status\":\"pending\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S4jk63RqEMUJuhk0cCsWkUb',2711,'CAD',130,2581,'charge','charge','ch_3S4jk63RqEMUJuhk0wtg1rQk',1757255938,1757808000,'Course order #5','{\"id\":\"txn_3S4jk63RqEMUJuhk0cCsWkUb\",\"object\":\"balance_transaction\",\"amount\":2711,\"available_on\":1757808000,\"balance_type\":\"payments\",\"created\":1757255938,\"currency\":\"cad\",\"description\":\"Course order #5\",\"exchange_rate\":1.35532,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2581,\"reporting_category\":\"charge\",\"source\":\"ch_3S4jk63RqEMUJuhk0wtg1rQk\",\"status\":\"pending\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S4k8b3RqEMUJuhk0toa1ohn',6641,'CAD',276,6365,'charge','charge','ch_3S4k8b3RqEMUJuhk0fdRgANZ',1757257457,1757808000,'Course order #13','{\"id\":\"txn_3S4k8b3RqEMUJuhk0toa1ohn\",\"object\":\"balance_transaction\",\"amount\":6641,\"available_on\":1757808000,\"balance_type\":\"payments\",\"created\":1757257457,\"currency\":\"cad\",\"description\":\"Course order #13\",\"exchange_rate\":1.35532,\"fee\":276,\"fee_details\":[{\"amount\":276,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":6365,\"reporting_category\":\"charge\",\"source\":\"ch_3S4k8b3RqEMUJuhk0fdRgANZ\",\"status\":\"pending\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S4kgP3RqEMUJuhk0F8y37p1',2711,'CAD',130,2581,'charge','charge','ch_3S4kgP3RqEMUJuhk08PQBSXe',1757259554,1757808000,'Course order #7','{\"id\":\"txn_3S4kgP3RqEMUJuhk0F8y37p1\",\"object\":\"balance_transaction\",\"amount\":2711,\"available_on\":1757808000,\"balance_type\":\"payments\",\"created\":1757259554,\"currency\":\"cad\",\"description\":\"Course order #7\",\"exchange_rate\":1.35532,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2581,\"reporting_category\":\"charge\",\"source\":\"ch_3S4kgP3RqEMUJuhk08PQBSXe\",\"status\":\"pending\",\"type\":\"charge\"}','2025-09-09 19:50:39'),
+('txn_3S4klk3RqEMUJuhk00WOFd42',2711,'CAD',130,2581,'charge','charge','ch_3S4klk3RqEMUJuhk0tFqkMh4',1757259884,1757808000,'Course order #7','{\"id\":\"txn_3S4klk3RqEMUJuhk00WOFd42\",\"object\":\"balance_transaction\",\"amount\":2711,\"available_on\":1757808000,\"balance_type\":\"payments\",\"created\":1757259884,\"currency\":\"cad\",\"description\":\"Course order #7\",\"exchange_rate\":1.35532,\"fee\":130,\"fee_details\":[{\"amount\":130,\"application\":null,\"currency\":\"cad\",\"description\":\"Stripe processing fees\",\"type\":\"stripe_fee\"}],\"net\":2581,\"reporting_category\":\"charge\",\"source\":\"ch_3S4klk3RqEMUJuhk0tFqkMh4\",\"status\":\"pending\",\"type\":\"charge\"}','2025-09-09 19:50:39');
+/*!40000 ALTER TABLE `stripe_balance_txns` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `stripe_payouts`
+--
+
+DROP TABLE IF EXISTS `stripe_payouts`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `stripe_payouts` (
+  `id` varchar(64) NOT NULL,
+  `amount` bigint(20) NOT NULL,
+  `currency` char(3) NOT NULL,
+  `status` varchar(32) NOT NULL,
+  `arrival_date` int(11) DEFAULT NULL,
+  `method` varchar(32) DEFAULT NULL,
+  `raw` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`raw`)),
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `stripe_payouts`
+--
+
+LOCK TABLES `stripe_payouts` WRITE;
+/*!40000 ALTER TABLE `stripe_payouts` DISABLE KEYS */;
+/*!40000 ALTER TABLE `stripe_payouts` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `stripe_sync_state`
+--
+
+DROP TABLE IF EXISTS `stripe_sync_state`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `stripe_sync_state` (
+  `id` tinyint(3) unsigned NOT NULL DEFAULT 1,
+  `last_balance_txn_id` varchar(64) DEFAULT NULL,
+  `last_balance_txn_created` int(11) DEFAULT NULL,
+  `last_payout_id` varchar(64) DEFAULT NULL,
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `stripe_sync_state`
+--
+
+LOCK TABLES `stripe_sync_state` WRITE;
+/*!40000 ALTER TABLE `stripe_sync_state` DISABLE KEYS */;
+INSERT INTO `stripe_sync_state` VALUES
+(1,'txn_3Rw0Fo3RqEMUJuhk1zqhNL0t',1755174456,NULL,'2025-09-09 19:50:39');
+/*!40000 ALTER TABLE `stripe_sync_state` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `stripe_webhook_events`
+--
+
+DROP TABLE IF EXISTS `stripe_webhook_events`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `stripe_webhook_events` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `event_id` varchar(255) NOT NULL,
+  `type` varchar(255) NOT NULL,
+  `payload` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`payload`)),
+  `processed_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `event_type` varchar(100) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `stripe_webhook_events`
+--
+
+LOCK TABLES `stripe_webhook_events` WRITE;
+/*!40000 ALTER TABLE `stripe_webhook_events` DISABLE KEYS */;
+INSERT INTO `stripe_webhook_events` VALUES
+(1,'evt_1SkQUj3RqEMUJuhkHrP69mCo','checkout.session.completed','{\"id\":\"evt_1SkQUj3RqEMUJuhkHrP69mCo\",\"object\":\"event\",\"api_version\":\"2022-11-15\",\"created\":1767191724,\"data\":{\"object\":{\"id\":\"cs_test_a1ubhDG5qpeJQAIXuPSPzmscnzLxlXNTjMEcKEGLyJ5KLCzZCqFfNMV3oF\",\"object\":\"checkout.session\",\"adaptive_pricing\":{\"enabled\":true},\"after_expiration\":null,\"allow_promotion_codes\":null,\"amount_subtotal\":90000,\"amount_total\":90000,\"automatic_tax\":{\"enabled\":false,\"liability\":null,\"provider\":null,\"status\":null},\"billing_address_collection\":null,\"branding_settings\":{\"background_color\":\"#ffffff\",\"border_style\":\"rounded\",\"button_color\":\"#0074d4\",\"display_name\":\"Gamboge Slide\",\"font_family\":\"default\",\"icon\":null,\"logo\":null},\"cancel_url\":\"https://prosfata.space/checkout/cancel\",\"client_reference_id\":null,\"client_secret\":null,\"collected_information\":{\"business_name\":null,\"individual_name\":null,\"shipping_details\":null},\"consent\":null,\"consent_collection\":null,\"created\":1767191703,\"currency\":\"usd\",\"currency_conversion\":null,\"custom_fields\":[],\"custom_text\":{\"after_submit\":null,\"shipping_address\":null,\"submit\":null,\"terms_of_service_acceptance\":null},\"customer\":null,\"customer_account\":null,\"customer_creation\":\"if_required\",\"customer_details\":{\"address\":{\"city\":null,\"country\":\"BD\",\"line1\":null,\"line2\":null,\"postal_code\":null,\"state\":null},\"business_name\":null,\"email\":\"mustafizur142@gmail.com\",\"individual_name\":null,\"name\":\"Mustafizur Rahman\",\"phone\":null,\"tax_exempt\":\"none\",\"tax_ids\":[]},\"customer_email\":\"mustafizur142@gmail.com\",\"discounts\":[],\"expires_at\":1767278103,\"invoice\":null,\"invoice_creation\":{\"enabled\":false,\"invoice_data\":{\"account_tax_ids\":null,\"custom_fields\":null,\"description\":null,\"footer\":null,\"issuer\":null,\"metadata\":{},\"rendering_options\":null}},\"livemode\":false,\"locale\":null,\"metadata\":{\"kind\":\"coaching\",\"guest_email\":\"mustafizur142@gmail.com\",\"first_name\":\"Mustafizur\",\"order_id\":\"79\",\"last_name\":\"Rahman\"},\"mode\":\"payment\",\"origin_context\":null,\"payment_intent\":\"pi_3SkQUh3RqEMUJuhk0a1UpiX2\",\"payment_link\":null,\"payment_method_collection\":\"if_required\",\"payment_method_configuration_details\":{\"id\":\"pmc_1Rvzn03RqEMUJuhkn2rmzKNi\",\"parent\":null},\"payment_method_options\":{\"card\":{\"request_three_d_secure\":\"automatic\"}},\"payment_method_types\":[\"card\",\"link\"],\"payment_status\":\"paid\",\"permissions\":null,\"phone_number_collection\":{\"enabled\":false},\"recovered_from\":null,\"saved_payment_method_options\":null,\"setup_intent\":null,\"shipping_address_collection\":null,\"shipping_cost\":null,\"shipping_details\":null,\"shipping_options\":[],\"status\":\"complete\",\"submit_type\":null,\"subscription\":null,\"success_url\":\"https://prosfata.space/checkout/success?session_id={CHECKOUT_SESSION_ID}\",\"total_details\":{\"amount_discount\":0,\"amount_shipping\":0,\"amount_tax\":0},\"ui_mode\":\"hosted\",\"url\":null,\"wallet_options\":null}},\"livemode\":false,\"pending_webhooks\":1,\"request\":{\"id\":null,\"idempotency_key\":null},\"type\":\"checkout.session.completed\"}',NULL,'2025-12-31 14:35:25',NULL),
+(2,'evt_1SkSEG3RqEMUJuhknHLQ1L9m','checkout.session.completed','{\"id\":\"evt_1SkSEG3RqEMUJuhknHLQ1L9m\",\"object\":\"event\",\"api_version\":\"2022-11-15\",\"created\":1767198392,\"data\":{\"object\":{\"id\":\"cs_test_a16MJFFqmPAEs8l72zkWsaYkiX0fM3yRPTSWYqqOuZIijRTuVOMigY5aUR\",\"object\":\"checkout.session\",\"adaptive_pricing\":{\"enabled\":true},\"after_expiration\":null,\"allow_promotion_codes\":null,\"amount_subtotal\":90000,\"amount_total\":90000,\"automatic_tax\":{\"enabled\":false,\"liability\":null,\"provider\":null,\"status\":null},\"billing_address_collection\":null,\"branding_settings\":{\"background_color\":\"#ffffff\",\"border_style\":\"rounded\",\"button_color\":\"#0074d4\",\"display_name\":\"Gamboge Slide\",\"font_family\":\"default\",\"icon\":null,\"logo\":null},\"cancel_url\":\"https://prosfata.space/checkout/cancel\",\"client_reference_id\":null,\"client_secret\":null,\"collected_information\":{\"business_name\":null,\"individual_name\":null,\"shipping_details\":null},\"consent\":null,\"consent_collection\":null,\"created\":1767198369,\"currency\":\"usd\",\"currency_conversion\":null,\"custom_fields\":[],\"custom_text\":{\"after_submit\":null,\"shipping_address\":null,\"submit\":null,\"terms_of_service_acceptance\":null},\"customer\":null,\"customer_account\":null,\"customer_creation\":\"if_required\",\"customer_details\":{\"address\":{\"city\":null,\"country\":\"BD\",\"line1\":null,\"line2\":null,\"postal_code\":null,\"state\":null},\"business_name\":null,\"email\":\"mustafizur142@gmail.com\",\"individual_name\":null,\"name\":\"Mustafizur Rahman\",\"phone\":null,\"tax_exempt\":\"none\",\"tax_ids\":[]},\"customer_email\":\"mustafizur142@gmail.com\",\"discounts\":[],\"expires_at\":1767284769,\"invoice\":null,\"invoice_creation\":{\"enabled\":false,\"invoice_data\":{\"account_tax_ids\":null,\"custom_fields\":null,\"description\":null,\"footer\":null,\"issuer\":null,\"metadata\":{},\"rendering_options\":null}},\"livemode\":false,\"locale\":null,\"metadata\":{\"kind\":\"coaching\",\"guest_email\":\"mustafizur142@gmail.com\",\"first_name\":\"Mustafizur\",\"order_id\":\"80\",\"last_name\":\"Rahman\"},\"mode\":\"payment\",\"origin_context\":null,\"payment_intent\":\"pi_3SkSEF3RqEMUJuhk1qxdfZO6\",\"payment_link\":null,\"payment_method_collection\":\"if_required\",\"payment_method_configuration_details\":{\"id\":\"pmc_1Rvzn03RqEMUJuhkn2rmzKNi\",\"parent\":null},\"payment_method_options\":{\"card\":{\"request_three_d_secure\":\"automatic\"}},\"payment_method_types\":[\"card\",\"link\"],\"payment_status\":\"paid\",\"permissions\":null,\"phone_number_collection\":{\"enabled\":false},\"recovered_from\":null,\"saved_payment_method_options\":null,\"setup_intent\":null,\"shipping_address_collection\":null,\"shipping_cost\":null,\"shipping_details\":null,\"shipping_options\":[],\"status\":\"complete\",\"submit_type\":null,\"subscription\":null,\"success_url\":\"https://prosfata.space/checkout/success?session_id={CHECKOUT_SESSION_ID}\",\"total_details\":{\"amount_discount\":0,\"amount_shipping\":0,\"amount_tax\":0},\"ui_mode\":\"hosted\",\"url\":null,\"wallet_options\":null}},\"livemode\":false,\"pending_webhooks\":1,\"request\":{\"id\":null,\"idempotency_key\":null},\"type\":\"checkout.session.completed\"}',NULL,'2025-12-31 16:26:33',NULL);
+/*!40000 ALTER TABLE `stripe_webhook_events` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `user_audit_logs`
+--
+
+DROP TABLE IF EXISTS `user_audit_logs`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_audit_logs` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `action` enum('CREATE','UPDATE','SOFT_DELETE','RESTORE','PERMANENT_DELETE','PASSWORD_CHANGE','ROLE_CHANGE','STATUS_CHANGE') NOT NULL,
+  `performed_by` int(11) DEFAULT NULL,
+  `ip_address` varchar(45) DEFAULT NULL,
+  `user_agent` varchar(255) DEFAULT NULL,
+  `metadata` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`metadata`)),
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`),
+  KEY `action` (`action`),
+  KEY `performed_by` (`performed_by`)
+) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `user_audit_logs`
+--
+
+LOCK TABLES `user_audit_logs` WRITE;
+/*!40000 ALTER TABLE `user_audit_logs` DISABLE KEYS */;
+INSERT INTO `user_audit_logs` VALUES
+(1,1,'RESTORE',4,'103.153.174.57','Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36',NULL,'2026-01-01 17:44:09'),
+(2,1,'SOFT_DELETE',4,'103.153.174.57','Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36',NULL,'2026-01-01 17:49:09'),
+(3,1,'RESTORE',4,'103.153.174.57','Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36','{\"email\":\"abutaleb142@gmail.com\"}','2026-01-01 17:49:36'),
+(4,1,'SOFT_DELETE',4,'103.153.174.57','Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36','{\"email\":\"abutaleb142@gmail.com\",\"name\":\"Mohammad Abu Taleb\"}','2026-01-01 17:58:40'),
+(5,1,'PERMANENT_DELETE',4,'103.153.174.57','Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36','{\"email\":\"abutaleb142@gmail.com\"}','2026-01-01 17:59:16'),
+(6,28,'SOFT_DELETE',4,'103.153.174.57','Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36','{\"email\":\"abutaleb142@gmail.com\",\"name\":\"Mohammad Abu Taleb\"}','2026-01-02 16:15:57'),
+(7,28,'PERMANENT_DELETE',4,'103.153.174.57','Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36','{\"email\":\"abutaleb142@gmail.com\"}','2026-01-02 16:16:04'),
+(8,29,'SOFT_DELETE',4,'103.153.174.57','Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36','{\"email\":\"abutaleb142@gmail.com\",\"name\":\"Mohammad Abu Taleb\"}','2026-01-02 18:14:06'),
+(9,29,'PERMANENT_DELETE',4,'103.153.174.57','Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36','{\"email\":\"abutaleb142@gmail.com\"}','2026-01-02 18:14:12'),
+(10,32,'SOFT_DELETE',4,'103.153.174.57','Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36','{\"email\":\"abutaleb142@gmail.com\",\"name\":\"Mohammad Abu Taleb\"}','2026-01-02 18:58:54'),
+(11,32,'PERMANENT_DELETE',4,'103.153.174.57','Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36','{\"email\":\"abutaleb142@gmail.com\"}','2026-01-02 18:58:58'),
+(12,33,'SOFT_DELETE',4,'103.153.174.57','Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36','{\"email\":\"abutaleb142@gmail.com\",\"name\":\"Mohammad Abu Taleb\"}','2026-01-02 19:24:15'),
+(13,33,'PERMANENT_DELETE',4,'103.153.174.57','Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36','{\"email\":\"abutaleb142@gmail.com\"}','2026-01-02 19:24:20'),
+(14,34,'SOFT_DELETE',4,'103.153.174.57','Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36','{\"email\":\"abutaleb142@gmail.com\",\"name\":\"Mohammad Abu Taleb\"}','2026-01-03 08:52:06'),
+(15,34,'PERMANENT_DELETE',4,'103.153.174.57','Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36','{\"email\":\"abutaleb142@gmail.com\"}','2026-01-03 08:52:11');
+/*!40000 ALTER TABLE `user_audit_logs` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `user_connections`
+--
+
+DROP TABLE IF EXISTS `user_connections`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_connections` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `connected_user_id` int(11) NOT NULL,
+  `status` enum('pending','connected','rejected') DEFAULT 'pending',
+  `created_at` datetime DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `user_connections`
+--
+
+LOCK TABLES `user_connections` WRITE;
+/*!40000 ALTER TABLE `user_connections` DISABLE KEYS */;
+INSERT INTO `user_connections` VALUES
+(3,3,4,'pending','2025-08-08 20:15:45','2025-08-08 20:15:45'),
+(4,3,1,'pending','2025-08-08 21:16:24','2025-08-08 21:16:24'),
+(5,3,3,'pending','2025-08-15 19:48:51','2025-08-15 19:48:51'),
+(6,3,5,'pending','2025-08-15 19:49:32','2025-08-15 19:49:32'),
+(7,4,5,'pending','2025-08-16 04:38:18','2025-08-16 04:38:18'),
+(8,4,3,'pending','2025-08-16 04:38:19','2025-08-16 04:38:19'),
+(9,4,1,'pending','2025-08-20 06:17:07','2025-08-20 06:17:07'),
+(10,1,5,'pending','2025-08-20 10:11:15','2025-08-20 10:11:15'),
+(11,1,3,'pending','2025-08-20 10:11:16','2025-08-20 10:11:16'),
+(12,6,5,'pending','2025-08-20 13:52:12','2025-08-20 13:52:12'),
+(14,6,1,'pending','2025-08-20 13:52:15','2025-08-20 13:52:15'),
+(15,9,7,'pending','2025-09-13 07:38:14','2025-09-13 07:38:14'),
+(16,9,6,'pending','2025-09-13 07:38:14','2025-09-13 07:38:14'),
+(17,9,1,'pending','2025-09-13 07:38:15','2025-09-13 07:38:15'),
+(18,9,3,'pending','2025-09-13 07:38:17','2025-09-13 07:38:17'),
+(19,9,5,'pending','2025-09-13 07:38:18','2025-09-13 07:38:18'),
+(21,9,10,'pending','2025-09-13 07:46:12','2025-09-13 07:46:12'),
+(23,13,10,'pending','2025-09-13 07:58:27','2025-09-13 07:58:27'),
+(24,13,7,'pending','2025-09-13 07:58:28','2025-09-13 07:58:28'),
+(25,13,6,'pending','2025-09-13 07:58:30','2025-09-13 07:58:30'),
+(29,13,5,'pending','2025-09-13 10:57:16','2025-09-13 10:57:16'),
+(30,13,3,'pending','2025-09-13 10:57:17','2025-09-13 10:57:17'),
+(32,6,6,'pending','2025-09-13 15:07:13','2025-09-13 15:07:13'),
+(33,10,3,'pending','2025-09-13 15:41:52','2025-09-13 15:41:52'),
+(34,3,10,'pending','2025-09-25 10:08:36','2025-09-25 10:08:36'),
+(35,3,7,'pending','2025-09-25 10:08:38','2025-09-25 10:08:38'),
+(37,2,3,'pending','2025-09-25 10:27:13','2025-09-25 10:27:13'),
+(38,2,10,'pending','2025-09-25 10:27:14','2025-09-25 10:27:14'),
+(39,2,7,'pending','2025-09-25 10:27:15','2025-09-25 10:27:15'),
+(40,2,6,'pending','2025-09-25 10:27:16','2025-09-25 10:27:16'),
+(41,2,5,'pending','2025-09-25 10:27:17','2025-09-25 10:27:17'),
+(42,2,1,'pending','2025-09-25 10:27:18','2025-09-25 10:27:18'),
+(43,6,15,'pending','2025-09-28 15:26:10','2025-09-28 15:26:10'),
+(44,6,16,'pending','2025-09-28 15:27:56','2025-09-28 15:27:56'),
+(45,16,6,'pending','2025-09-28 17:35:55','2025-09-28 17:35:55'),
+(46,3,16,'pending','2025-10-05 05:08:01','2025-10-05 05:08:01'),
+(47,17,6,'pending','2025-10-05 16:15:57','2025-10-05 16:15:57'),
+(48,6,18,'pending','2025-10-13 18:03:33','2025-10-13 18:03:33'),
+(49,20,3,'pending','2025-10-20 06:56:13','2025-10-20 06:56:13'),
+(50,20,19,'pending','2025-10-20 06:56:15','2025-10-20 06:56:15'),
+(0,3,6,'pending','2025-12-31 14:03:49','2025-12-31 14:03:49');
+/*!40000 ALTER TABLE `user_connections` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `user_industries`
+--
+
+DROP TABLE IF EXISTS `user_industries`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_industries` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `industry_id` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `user_industries`
+--
+
+LOCK TABLES `user_industries` WRITE;
+/*!40000 ALTER TABLE `user_industries` DISABLE KEYS */;
+INSERT INTO `user_industries` VALUES
+(32,1,1),
+(35,2,1),
+(37,7,2),
+(38,8,2),
+(41,10,2),
+(42,9,2),
+(44,11,1),
+(45,12,2),
+(46,13,2),
+(54,3,2),
+(57,15,1),
+(58,16,2),
+(59,16,1),
+(61,18,2),
+(63,17,2),
+(80,6,2),
+(81,19,2),
+(86,20,2),
+(88,21,2),
+(90,22,2),
+(92,23,2),
+(94,24,2),
+(96,25,2),
+(97,26,2);
+/*!40000 ALTER TABLE `user_industries` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `user_roles`
+--
+
+DROP TABLE IF EXISTS `user_roles`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_roles` (
+  `user_id` int(11) NOT NULL,
+  `role_id` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `user_roles`
+--
+
+LOCK TABLES `user_roles` WRITE;
+/*!40000 ALTER TABLE `user_roles` DISABLE KEYS */;
+INSERT INTO `user_roles` VALUES
+(1,1),
+(1,2),
+(3,2),
+(4,1);
+/*!40000 ALTER TABLE `user_roles` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `user_wallets`
+--
+
+DROP TABLE IF EXISTS `user_wallets`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_wallets` (
+  `user_id` int(11) NOT NULL,
+  `available` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `pending` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `reserved` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `withdrawn_total` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `currency` char(3) NOT NULL DEFAULT 'USD',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `user_wallets`
+--
+
+LOCK TABLES `user_wallets` WRITE;
+/*!40000 ALTER TABLE `user_wallets` DISABLE KEYS */;
+INSERT INTO `user_wallets` VALUES
+(1,17.12,0.00,0.00,0.00,'USD','2025-09-07 20:21:51','2025-12-13 05:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-09-07 20:21:42','2025-12-13 05:00:00'),
+(4,0.00,0.00,0.00,0.00,'USD','2025-09-12 19:35:14','2025-09-12 19:35:14'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-09-09 19:03:25','2025-12-13 05:00:00'),
+(7,0.00,0.00,0.00,0.00,'USD','2025-09-13 08:01:46','2025-09-13 08:01:46'),
+(10,0.00,0.00,0.00,0.00,'USD','2025-09-14 06:35:47','2025-09-14 06:35:47'),
+(16,0.00,0.00,0.00,0.00,'USD','2025-09-28 17:08:26','2025-09-28 17:08:26'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-13 19:00:00','2025-12-13 19:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-13 19:00:00','2025-12-13 19:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-13 19:00:00','2025-12-13 19:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-13 20:00:00','2025-12-13 20:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-13 20:00:00','2025-12-13 20:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-13 20:00:00','2025-12-13 20:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-13 21:00:00','2025-12-13 21:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-13 21:00:00','2025-12-13 21:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-13 21:00:00','2025-12-13 21:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-13 22:00:00','2025-12-13 22:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-13 22:00:00','2025-12-13 22:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-13 22:00:00','2025-12-13 22:00:00'),
+(6,0.00,0.00,0.00,0.00,'USD','2025-12-13 22:08:55','2025-12-13 22:08:55'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-13 23:00:00','2025-12-13 23:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-13 23:00:00','2025-12-13 23:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-13 23:00:00','2025-12-13 23:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-14 00:00:00','2025-12-14 00:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-14 00:00:00','2025-12-14 00:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-14 00:00:00','2025-12-14 00:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-14 01:00:00','2025-12-14 01:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-14 01:00:00','2025-12-14 01:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-14 01:00:00','2025-12-14 01:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-14 02:00:00','2025-12-14 02:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-14 02:00:00','2025-12-14 02:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-14 02:00:00','2025-12-14 02:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-14 03:00:00','2025-12-14 03:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-14 03:00:00','2025-12-14 03:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-14 03:00:00','2025-12-14 03:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-14 04:00:00','2025-12-14 04:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-14 04:00:00','2025-12-14 04:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-14 04:00:00','2025-12-14 04:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-14 05:00:00','2025-12-14 05:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-14 05:00:00','2025-12-14 05:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-14 05:00:00','2025-12-14 05:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-14 06:00:00','2025-12-14 06:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-14 06:00:00','2025-12-14 06:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-14 06:00:00','2025-12-14 06:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-14 07:00:00','2025-12-14 07:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-14 07:00:00','2025-12-14 07:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-14 07:00:00','2025-12-14 07:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-14 08:00:00','2025-12-14 08:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-14 08:00:00','2025-12-14 08:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-14 08:00:00','2025-12-14 08:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-14 09:00:00','2025-12-14 09:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-14 09:00:00','2025-12-14 09:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-14 09:00:00','2025-12-14 09:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-14 10:00:00','2025-12-14 10:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-14 10:00:00','2025-12-14 10:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-14 10:00:00','2025-12-14 10:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-14 11:00:00','2025-12-14 11:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-14 11:00:00','2025-12-14 11:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-14 11:00:00','2025-12-14 11:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-14 12:00:00','2025-12-14 12:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-14 12:00:00','2025-12-14 12:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-14 12:00:00','2025-12-14 12:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-14 13:00:00','2025-12-14 13:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-14 13:00:00','2025-12-14 13:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-14 13:00:00','2025-12-14 13:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-14 14:00:00','2025-12-14 14:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-14 14:00:00','2025-12-14 14:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-14 14:00:00','2025-12-14 14:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-14 15:00:00','2025-12-14 15:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-14 15:00:00','2025-12-14 15:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-14 15:00:00','2025-12-14 15:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-14 16:00:00','2025-12-14 16:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-14 16:00:00','2025-12-14 16:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-14 16:00:00','2025-12-14 16:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-14 17:00:00','2025-12-14 17:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-14 17:00:00','2025-12-14 17:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-14 17:00:00','2025-12-14 17:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-14 18:00:00','2025-12-14 18:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-14 18:00:00','2025-12-14 18:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-14 18:00:00','2025-12-14 18:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-14 19:00:00','2025-12-14 19:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-14 19:00:00','2025-12-14 19:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-14 19:00:00','2025-12-14 19:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-14 20:00:00','2025-12-14 20:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-14 20:00:00','2025-12-14 20:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-14 20:00:00','2025-12-14 20:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-14 21:00:00','2025-12-14 21:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-14 21:00:00','2025-12-14 21:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-14 21:00:00','2025-12-14 21:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-14 22:00:00','2025-12-14 22:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-14 22:00:00','2025-12-14 22:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-14 22:00:00','2025-12-14 22:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-14 23:00:00','2025-12-14 23:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-14 23:00:00','2025-12-14 23:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-14 23:00:00','2025-12-14 23:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-15 00:00:00','2025-12-15 00:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-15 00:00:00','2025-12-15 00:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-15 00:00:00','2025-12-15 00:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-15 01:00:00','2025-12-15 01:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-15 01:00:00','2025-12-15 01:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-15 01:00:00','2025-12-15 01:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-15 02:00:00','2025-12-15 02:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-15 02:00:00','2025-12-15 02:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-15 02:00:00','2025-12-15 02:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-15 03:00:00','2025-12-15 03:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-15 03:00:00','2025-12-15 03:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-15 03:00:00','2025-12-15 03:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-15 04:00:00','2025-12-15 04:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-15 04:00:00','2025-12-15 04:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-15 04:00:00','2025-12-15 04:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-15 05:00:00','2025-12-15 05:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-15 05:00:00','2025-12-15 05:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-15 05:00:00','2025-12-15 05:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-15 06:00:00','2025-12-15 06:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-15 06:00:00','2025-12-15 06:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-15 06:00:00','2025-12-15 06:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-15 07:00:00','2025-12-15 07:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-15 07:00:00','2025-12-15 07:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-15 07:00:00','2025-12-15 07:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-15 08:00:00','2025-12-15 08:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-15 08:00:00','2025-12-15 08:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-15 08:00:00','2025-12-15 08:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-15 09:00:00','2025-12-15 09:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-15 09:00:00','2025-12-15 09:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-15 09:00:00','2025-12-15 09:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-15 10:00:00','2025-12-15 10:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-15 10:00:00','2025-12-15 10:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-15 10:00:00','2025-12-15 10:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-15 11:00:00','2025-12-15 11:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-15 11:00:00','2025-12-15 11:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-15 11:00:00','2025-12-15 11:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-15 12:00:00','2025-12-15 12:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-15 12:00:00','2025-12-15 12:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-15 12:00:00','2025-12-15 12:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-15 13:00:00','2025-12-15 13:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-15 13:00:00','2025-12-15 13:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-15 13:00:00','2025-12-15 13:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-15 14:00:00','2025-12-15 14:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-15 14:00:00','2025-12-15 14:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-15 14:00:00','2025-12-15 14:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-15 15:00:00','2025-12-15 15:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-15 15:00:00','2025-12-15 15:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-15 15:00:00','2025-12-15 15:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-15 16:00:00','2025-12-15 16:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-15 16:00:00','2025-12-15 16:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-15 16:00:00','2025-12-15 16:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-15 17:00:00','2025-12-15 17:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-15 17:00:00','2025-12-15 17:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-15 17:00:00','2025-12-15 17:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-15 18:00:00','2025-12-15 18:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-15 18:00:00','2025-12-15 18:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-15 18:00:00','2025-12-15 18:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-15 19:00:00','2025-12-15 19:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-15 19:00:00','2025-12-15 19:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-15 19:00:00','2025-12-15 19:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-15 20:00:00','2025-12-15 20:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-15 20:00:00','2025-12-15 20:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-15 20:00:00','2025-12-15 20:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-15 21:00:00','2025-12-15 21:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-15 21:00:00','2025-12-15 21:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-15 21:00:00','2025-12-15 21:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-15 22:00:00','2025-12-15 22:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-15 22:00:00','2025-12-15 22:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-15 22:00:00','2025-12-15 22:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-15 23:00:00','2025-12-15 23:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-15 23:00:00','2025-12-15 23:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-15 23:00:00','2025-12-15 23:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-16 00:00:00','2025-12-16 00:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-16 00:00:00','2025-12-16 00:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-16 00:00:00','2025-12-16 00:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-16 01:00:00','2025-12-16 01:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-16 01:00:00','2025-12-16 01:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-16 01:00:00','2025-12-16 01:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-16 02:00:00','2025-12-16 02:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-16 02:00:00','2025-12-16 02:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-16 02:00:00','2025-12-16 02:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-16 03:00:00','2025-12-16 03:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-16 03:00:00','2025-12-16 03:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-16 03:00:00','2025-12-16 03:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-16 04:00:00','2025-12-16 04:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-16 04:00:00','2025-12-16 04:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-16 04:00:00','2025-12-16 04:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-16 05:00:00','2025-12-16 05:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-16 05:00:00','2025-12-16 05:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-16 05:00:00','2025-12-16 05:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-16 06:00:00','2025-12-16 06:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-16 06:00:00','2025-12-16 06:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-16 06:00:00','2025-12-16 06:00:00'),
+(6,0.00,0.00,0.00,0.00,'USD','2025-12-16 06:47:24','2025-12-16 06:47:24'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-16 07:00:00','2025-12-16 07:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-16 07:00:00','2025-12-16 07:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-16 07:00:00','2025-12-16 07:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-16 08:00:00','2025-12-16 08:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-16 08:00:00','2025-12-16 08:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-16 08:00:00','2025-12-16 08:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-16 09:00:00','2025-12-16 09:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-16 09:00:00','2025-12-16 09:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-16 09:00:00','2025-12-16 09:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-16 10:00:00','2025-12-16 10:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-16 10:00:00','2025-12-16 10:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-16 10:00:00','2025-12-16 10:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-16 11:00:00','2025-12-16 11:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-16 11:00:00','2025-12-16 11:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-16 11:00:00','2025-12-16 11:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-16 12:00:00','2025-12-16 12:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-16 12:00:00','2025-12-16 12:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-16 12:00:00','2025-12-16 12:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-16 13:00:00','2025-12-16 13:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-16 13:00:00','2025-12-16 13:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-16 13:00:00','2025-12-16 13:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-16 14:00:00','2025-12-16 14:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-16 14:00:00','2025-12-16 14:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-16 14:00:00','2025-12-16 14:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-16 15:00:00','2025-12-16 15:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-16 15:00:00','2025-12-16 15:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-16 15:00:00','2025-12-16 15:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-16 16:00:00','2025-12-16 16:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-16 16:00:00','2025-12-16 16:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-16 16:00:00','2025-12-16 16:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-16 17:00:00','2025-12-16 17:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-16 17:00:00','2025-12-16 17:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-16 17:00:00','2025-12-16 17:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-16 18:00:00','2025-12-16 18:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-16 18:00:00','2025-12-16 18:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-16 18:00:00','2025-12-16 18:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-16 19:00:00','2025-12-16 19:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-16 19:00:00','2025-12-16 19:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-16 19:00:00','2025-12-16 19:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-16 20:00:00','2025-12-16 20:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-16 20:00:00','2025-12-16 20:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-16 20:00:00','2025-12-16 20:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-16 21:00:00','2025-12-16 21:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-16 21:00:00','2025-12-16 21:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-16 21:00:00','2025-12-16 21:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-16 22:00:00','2025-12-16 22:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-16 22:00:00','2025-12-16 22:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-16 22:00:00','2025-12-16 22:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-16 23:00:00','2025-12-16 23:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-16 23:00:00','2025-12-16 23:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-16 23:00:00','2025-12-16 23:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-17 00:00:00','2025-12-17 00:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-17 00:00:00','2025-12-17 00:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-17 00:00:00','2025-12-17 00:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-17 01:00:00','2025-12-17 01:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-17 01:00:00','2025-12-17 01:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-17 01:00:00','2025-12-17 01:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-17 02:00:00','2025-12-17 02:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-17 02:00:00','2025-12-17 02:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-17 02:00:00','2025-12-17 02:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-17 03:00:00','2025-12-17 03:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-17 03:00:00','2025-12-17 03:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-17 03:00:00','2025-12-17 03:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-17 04:00:00','2025-12-17 04:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-17 04:00:00','2025-12-17 04:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-17 04:00:00','2025-12-17 04:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-17 05:00:00','2025-12-17 05:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-17 05:00:00','2025-12-17 05:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-17 05:00:00','2025-12-17 05:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-17 06:00:00','2025-12-17 06:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-17 06:00:00','2025-12-17 06:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-17 06:00:00','2025-12-17 06:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-17 07:00:00','2025-12-17 07:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-17 07:00:00','2025-12-17 07:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-17 07:00:00','2025-12-17 07:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-17 08:00:00','2025-12-17 08:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-17 08:00:00','2025-12-17 08:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-17 08:00:00','2025-12-17 08:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-17 09:00:00','2025-12-17 09:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-17 09:00:00','2025-12-17 09:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-17 09:00:00','2025-12-17 09:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-17 10:00:00','2025-12-17 10:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-17 10:00:00','2025-12-17 10:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-17 10:00:00','2025-12-17 10:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-17 11:00:00','2025-12-17 11:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-17 11:00:00','2025-12-17 11:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-17 11:00:00','2025-12-17 11:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-17 12:00:00','2025-12-17 12:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-17 12:00:00','2025-12-17 12:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-17 12:00:00','2025-12-17 12:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-17 13:00:00','2025-12-17 13:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-17 13:00:00','2025-12-17 13:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-17 13:00:00','2025-12-17 13:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-17 14:00:00','2025-12-17 14:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-17 14:00:00','2025-12-17 14:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-17 14:00:00','2025-12-17 14:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-17 15:00:00','2025-12-17 15:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-17 15:00:00','2025-12-17 15:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-17 15:00:00','2025-12-17 15:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-17 16:00:00','2025-12-17 16:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-17 16:00:00','2025-12-17 16:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-17 16:00:00','2025-12-17 16:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-17 17:00:00','2025-12-17 17:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-17 17:00:00','2025-12-17 17:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-17 17:00:00','2025-12-17 17:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-17 18:00:00','2025-12-17 18:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-17 18:00:00','2025-12-17 18:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-17 18:00:00','2025-12-17 18:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-17 19:00:00','2025-12-17 19:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-17 19:00:00','2025-12-17 19:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-17 19:00:00','2025-12-17 19:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-17 20:00:00','2025-12-17 20:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-17 20:00:00','2025-12-17 20:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-17 20:00:00','2025-12-17 20:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-17 21:00:00','2025-12-17 21:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-17 21:00:00','2025-12-17 21:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-17 21:00:00','2025-12-17 21:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-17 22:00:00','2025-12-17 22:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-17 22:00:00','2025-12-17 22:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-17 22:00:00','2025-12-17 22:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-17 23:00:00','2025-12-17 23:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-17 23:00:00','2025-12-17 23:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-17 23:00:00','2025-12-17 23:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-18 00:00:00','2025-12-18 00:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-18 00:00:00','2025-12-18 00:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-18 00:00:00','2025-12-18 00:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-18 01:00:00','2025-12-18 01:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-18 01:00:00','2025-12-18 01:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-18 01:00:00','2025-12-18 01:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-18 02:00:00','2025-12-18 02:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-18 02:00:00','2025-12-18 02:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-18 02:00:00','2025-12-18 02:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-18 03:00:00','2025-12-18 03:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-18 03:00:00','2025-12-18 03:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-18 03:00:00','2025-12-18 03:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-18 04:00:00','2025-12-18 04:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-18 04:00:00','2025-12-18 04:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-18 04:00:00','2025-12-18 04:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-18 05:00:00','2025-12-18 05:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-18 05:00:00','2025-12-18 05:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-18 05:00:00','2025-12-18 05:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-18 06:00:00','2025-12-18 06:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-18 06:00:00','2025-12-18 06:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-18 06:00:00','2025-12-18 06:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-18 07:00:00','2025-12-18 07:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-18 07:00:00','2025-12-18 07:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-18 07:00:00','2025-12-18 07:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-18 08:00:00','2025-12-18 08:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-18 08:00:00','2025-12-18 08:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-18 08:00:00','2025-12-18 08:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-18 09:00:00','2025-12-18 09:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-18 09:00:00','2025-12-18 09:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-18 09:00:00','2025-12-18 09:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-18 10:00:00','2025-12-18 10:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-18 10:00:00','2025-12-18 10:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-18 10:00:00','2025-12-18 10:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-18 11:00:00','2025-12-18 11:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-18 11:00:00','2025-12-18 11:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-18 11:00:00','2025-12-18 11:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-18 12:00:00','2025-12-18 12:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-18 12:00:00','2025-12-18 12:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-18 12:00:00','2025-12-18 12:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-18 13:00:00','2025-12-18 13:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-18 13:00:00','2025-12-18 13:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-18 13:00:00','2025-12-18 13:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-18 14:00:00','2025-12-18 14:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-18 14:00:00','2025-12-18 14:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-18 14:00:00','2025-12-18 14:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-18 15:00:00','2025-12-18 15:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-18 15:00:00','2025-12-18 15:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-18 15:00:00','2025-12-18 15:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-18 16:00:00','2025-12-18 16:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-18 16:00:00','2025-12-18 16:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-18 16:00:00','2025-12-18 16:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-18 17:00:00','2025-12-18 17:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-18 17:00:00','2025-12-18 17:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-18 17:00:00','2025-12-18 17:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-18 18:00:00','2025-12-18 18:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-18 18:00:00','2025-12-18 18:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-18 18:00:00','2025-12-18 18:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-18 19:00:00','2025-12-18 19:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-18 19:00:00','2025-12-18 19:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-18 19:00:00','2025-12-18 19:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-18 20:00:00','2025-12-18 20:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-18 20:00:00','2025-12-18 20:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-18 20:00:00','2025-12-18 20:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-18 21:00:00','2025-12-18 21:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-18 21:00:00','2025-12-18 21:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-18 21:00:00','2025-12-18 21:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-18 22:00:00','2025-12-18 22:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-18 22:00:00','2025-12-18 22:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-18 22:00:00','2025-12-18 22:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-18 23:00:00','2025-12-18 23:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-18 23:00:00','2025-12-18 23:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-18 23:00:00','2025-12-18 23:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-19 00:00:00','2025-12-19 00:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-19 00:00:00','2025-12-19 00:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-19 00:00:00','2025-12-19 00:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-19 01:00:00','2025-12-19 01:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-19 01:00:00','2025-12-19 01:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-19 01:00:00','2025-12-19 01:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-19 02:00:00','2025-12-19 02:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-19 02:00:00','2025-12-19 02:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-19 02:00:00','2025-12-19 02:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-19 03:00:00','2025-12-19 03:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-19 03:00:00','2025-12-19 03:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-19 03:00:00','2025-12-19 03:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-19 04:00:00','2025-12-19 04:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-19 04:00:00','2025-12-19 04:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-19 04:00:00','2025-12-19 04:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-19 05:00:00','2025-12-19 05:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-19 05:00:00','2025-12-19 05:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-19 05:00:00','2025-12-19 05:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-19 06:00:00','2025-12-19 06:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-19 06:00:00','2025-12-19 06:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-19 06:00:00','2025-12-19 06:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-19 07:00:00','2025-12-19 07:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-19 07:00:00','2025-12-19 07:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-19 07:00:00','2025-12-19 07:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-19 08:00:00','2025-12-19 08:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-19 08:00:00','2025-12-19 08:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-19 08:00:00','2025-12-19 08:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-19 09:00:00','2025-12-19 09:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-19 09:00:00','2025-12-19 09:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-19 09:00:00','2025-12-19 09:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-19 10:00:00','2025-12-19 10:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-19 10:00:00','2025-12-19 10:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-19 10:00:00','2025-12-19 10:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-19 11:00:00','2025-12-19 11:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-19 11:00:00','2025-12-19 11:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-19 11:00:00','2025-12-19 11:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-19 12:00:00','2025-12-19 12:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-19 12:00:00','2025-12-19 12:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-19 12:00:00','2025-12-19 12:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-19 13:00:00','2025-12-19 13:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-19 13:00:00','2025-12-19 13:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-19 13:00:00','2025-12-19 13:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-19 14:00:00','2025-12-19 14:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-19 14:00:00','2025-12-19 14:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-19 14:00:00','2025-12-19 14:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-19 15:00:00','2025-12-19 15:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-19 15:00:00','2025-12-19 15:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-19 15:00:00','2025-12-19 15:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-19 16:00:00','2025-12-19 16:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-19 16:00:00','2025-12-19 16:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-19 16:00:00','2025-12-19 16:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-19 17:00:00','2025-12-19 17:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-19 17:00:00','2025-12-19 17:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-19 17:00:00','2025-12-19 17:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-19 18:00:00','2025-12-19 18:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-19 18:00:00','2025-12-19 18:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-19 18:00:00','2025-12-19 18:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-19 19:00:00','2025-12-19 19:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-19 19:00:00','2025-12-19 19:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-19 19:00:00','2025-12-19 19:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-19 20:00:00','2025-12-19 20:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-19 20:00:00','2025-12-19 20:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-19 20:00:00','2025-12-19 20:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-19 21:00:00','2025-12-19 21:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-19 21:00:00','2025-12-19 21:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-19 21:00:00','2025-12-19 21:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-19 22:00:00','2025-12-19 22:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-19 22:00:00','2025-12-19 22:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-19 22:00:00','2025-12-19 22:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-19 23:00:00','2025-12-19 23:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-19 23:00:00','2025-12-19 23:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-19 23:00:00','2025-12-19 23:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-20 00:00:00','2025-12-20 00:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-20 00:00:00','2025-12-20 00:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-20 00:00:00','2025-12-20 00:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-20 01:00:00','2025-12-20 01:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-20 01:00:00','2025-12-20 01:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-20 01:00:00','2025-12-20 01:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-20 02:00:00','2025-12-20 02:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-20 02:00:00','2025-12-20 02:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-20 02:00:00','2025-12-20 02:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-20 03:00:00','2025-12-20 03:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-20 03:00:00','2025-12-20 03:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-20 03:00:00','2025-12-20 03:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-20 04:00:00','2025-12-20 04:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-20 04:00:00','2025-12-20 04:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-20 04:00:00','2025-12-20 04:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-20 05:00:00','2025-12-20 05:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-20 05:00:00','2025-12-20 05:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-20 05:00:00','2025-12-20 05:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-20 06:00:00','2025-12-20 06:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-20 06:00:00','2025-12-20 06:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-20 06:00:00','2025-12-20 06:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-20 07:00:00','2025-12-20 07:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-20 07:00:00','2025-12-20 07:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-20 07:00:00','2025-12-20 07:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-20 08:00:00','2025-12-20 08:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-20 08:00:00','2025-12-20 08:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-20 08:00:00','2025-12-20 08:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-20 09:00:00','2025-12-20 09:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-20 09:00:00','2025-12-20 09:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-20 09:00:00','2025-12-20 09:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-20 10:00:00','2025-12-20 10:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-20 10:00:00','2025-12-20 10:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-20 10:00:00','2025-12-20 10:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-20 11:00:00','2025-12-20 11:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-20 11:00:00','2025-12-20 11:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-20 11:00:00','2025-12-20 11:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-20 12:00:00','2025-12-20 12:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-20 12:00:00','2025-12-20 12:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-20 12:00:00','2025-12-20 12:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-20 13:00:00','2025-12-20 13:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-20 13:00:00','2025-12-20 13:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-20 13:00:00','2025-12-20 13:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-20 14:00:00','2025-12-20 14:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-20 14:00:00','2025-12-20 14:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-20 14:00:00','2025-12-20 14:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-20 15:00:00','2025-12-20 15:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-20 15:00:00','2025-12-20 15:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-20 15:00:00','2025-12-20 15:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-20 16:00:00','2025-12-20 16:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-20 16:00:00','2025-12-20 16:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-20 16:00:00','2025-12-20 16:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-20 17:00:00','2025-12-20 17:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-20 17:00:00','2025-12-20 17:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-20 17:00:00','2025-12-20 17:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-20 18:00:00','2025-12-20 18:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-20 18:00:00','2025-12-20 18:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-20 18:00:00','2025-12-20 18:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-20 19:00:00','2025-12-20 19:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-20 19:00:00','2025-12-20 19:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-20 19:00:00','2025-12-20 19:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-20 20:00:00','2025-12-20 20:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-20 20:00:00','2025-12-20 20:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-20 20:00:00','2025-12-20 20:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-20 21:00:00','2025-12-20 21:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-20 21:00:00','2025-12-20 21:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-20 21:00:00','2025-12-20 21:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-20 22:00:00','2025-12-20 22:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-20 22:00:00','2025-12-20 22:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-20 22:00:00','2025-12-20 22:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-20 23:00:00','2025-12-20 23:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-20 23:00:00','2025-12-20 23:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-20 23:00:00','2025-12-20 23:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-21 00:00:00','2025-12-21 00:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-21 00:00:00','2025-12-21 00:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-21 00:00:00','2025-12-21 00:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-21 01:00:00','2025-12-21 01:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-21 01:00:00','2025-12-21 01:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-21 01:00:00','2025-12-21 01:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-21 02:00:00','2025-12-21 02:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-21 02:00:00','2025-12-21 02:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-21 02:00:00','2025-12-21 02:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-21 03:00:00','2025-12-21 03:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-21 03:00:00','2025-12-21 03:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-21 03:00:00','2025-12-21 03:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-21 04:00:00','2025-12-21 04:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-21 04:00:00','2025-12-21 04:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-21 04:00:00','2025-12-21 04:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-21 05:00:00','2025-12-21 05:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-21 05:00:00','2025-12-21 05:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-21 05:00:00','2025-12-21 05:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-21 06:00:00','2025-12-21 06:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-21 06:00:00','2025-12-21 06:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-21 06:00:00','2025-12-21 06:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-21 07:00:00','2025-12-21 07:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-21 07:00:00','2025-12-21 07:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-21 07:00:00','2025-12-21 07:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-21 08:00:00','2025-12-21 08:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-21 08:00:00','2025-12-21 08:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-21 08:00:00','2025-12-21 08:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-21 09:00:00','2025-12-21 09:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-21 09:00:00','2025-12-21 09:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-21 09:00:00','2025-12-21 09:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-21 10:00:00','2025-12-21 10:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-21 10:00:00','2025-12-21 10:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-21 10:00:00','2025-12-21 10:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-21 11:00:00','2025-12-21 11:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-21 11:00:00','2025-12-21 11:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-21 11:00:00','2025-12-21 11:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-21 12:00:00','2025-12-21 12:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-21 12:00:00','2025-12-21 12:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-21 12:00:00','2025-12-21 12:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-21 13:00:00','2025-12-21 13:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-21 13:00:00','2025-12-21 13:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-21 13:00:00','2025-12-21 13:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-21 14:00:00','2025-12-21 14:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-21 14:00:00','2025-12-21 14:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-21 14:00:00','2025-12-21 14:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-21 15:00:00','2025-12-21 15:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-21 15:00:00','2025-12-21 15:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-21 15:00:00','2025-12-21 15:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-21 16:00:00','2025-12-21 16:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-21 16:00:00','2025-12-21 16:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-21 16:00:00','2025-12-21 16:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-21 17:00:00','2025-12-21 17:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-21 17:00:00','2025-12-21 17:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-21 17:00:00','2025-12-21 17:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-21 18:00:00','2025-12-21 18:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-21 18:00:00','2025-12-21 18:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-21 18:00:00','2025-12-21 18:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-21 19:00:00','2025-12-21 19:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-21 19:00:00','2025-12-21 19:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-21 19:00:00','2025-12-21 19:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-21 20:00:00','2025-12-21 20:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-21 20:00:00','2025-12-21 20:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-21 20:00:00','2025-12-21 20:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-21 21:00:00','2025-12-21 21:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-21 21:00:00','2025-12-21 21:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-21 21:00:00','2025-12-21 21:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-21 22:00:00','2025-12-21 22:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-21 22:00:00','2025-12-21 22:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-21 22:00:00','2025-12-21 22:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-21 23:00:00','2025-12-21 23:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-21 23:00:00','2025-12-21 23:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-21 23:00:00','2025-12-21 23:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-22 00:00:00','2025-12-22 00:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-22 00:00:00','2025-12-22 00:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-22 00:00:00','2025-12-22 00:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-22 01:00:00','2025-12-22 01:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-22 01:00:00','2025-12-22 01:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-22 01:00:00','2025-12-22 01:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-22 02:00:00','2025-12-22 02:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-22 02:00:00','2025-12-22 02:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-22 02:00:00','2025-12-22 02:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-22 03:00:00','2025-12-22 03:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-22 03:00:00','2025-12-22 03:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-22 03:00:00','2025-12-22 03:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-22 04:00:00','2025-12-22 04:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-22 04:00:00','2025-12-22 04:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-22 04:00:00','2025-12-22 04:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-22 05:00:00','2025-12-22 05:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-22 05:00:00','2025-12-22 05:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-22 05:00:00','2025-12-22 05:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-22 06:00:00','2025-12-22 06:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-22 06:00:00','2025-12-22 06:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-22 06:00:00','2025-12-22 06:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-22 07:00:00','2025-12-22 07:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-22 07:00:00','2025-12-22 07:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-22 07:00:00','2025-12-22 07:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-22 08:00:00','2025-12-22 08:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-22 08:00:00','2025-12-22 08:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-22 08:00:00','2025-12-22 08:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-22 09:00:00','2025-12-22 09:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-22 09:00:00','2025-12-22 09:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-22 09:00:00','2025-12-22 09:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-22 10:00:00','2025-12-22 10:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-22 10:00:00','2025-12-22 10:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-22 10:00:00','2025-12-22 10:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-22 11:00:00','2025-12-22 11:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-22 11:00:00','2025-12-22 11:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-22 11:00:00','2025-12-22 11:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-22 12:00:00','2025-12-22 12:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-22 12:00:00','2025-12-22 12:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-22 12:00:00','2025-12-22 12:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-22 13:00:00','2025-12-22 13:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-22 13:00:00','2025-12-22 13:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-22 13:00:00','2025-12-22 13:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-22 14:00:00','2025-12-22 14:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-22 14:00:00','2025-12-22 14:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-22 14:00:00','2025-12-22 14:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-22 15:00:00','2025-12-22 15:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-22 15:00:00','2025-12-22 15:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-22 15:00:00','2025-12-22 15:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-22 16:00:00','2025-12-22 16:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-22 16:00:00','2025-12-22 16:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-22 16:00:00','2025-12-22 16:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-22 17:00:00','2025-12-22 17:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-22 17:00:00','2025-12-22 17:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-22 17:00:00','2025-12-22 17:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-22 18:00:00','2025-12-22 18:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-22 18:00:00','2025-12-22 18:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-22 18:00:00','2025-12-22 18:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-22 19:00:00','2025-12-22 19:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-22 19:00:00','2025-12-22 19:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-22 19:00:00','2025-12-22 19:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-22 20:00:00','2025-12-22 20:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-22 20:00:00','2025-12-22 20:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-22 20:00:00','2025-12-22 20:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-22 21:00:00','2025-12-22 21:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-22 21:00:00','2025-12-22 21:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-22 21:00:00','2025-12-22 21:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-22 22:00:00','2025-12-22 22:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-22 22:00:00','2025-12-22 22:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-22 22:00:00','2025-12-22 22:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-22 23:00:00','2025-12-22 23:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-22 23:00:00','2025-12-22 23:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-22 23:00:00','2025-12-22 23:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-23 00:00:00','2025-12-23 00:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-23 00:00:00','2025-12-23 00:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-23 00:00:00','2025-12-23 00:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-23 01:00:00','2025-12-23 01:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-23 01:00:00','2025-12-23 01:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-23 01:00:00','2025-12-23 01:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-23 02:00:00','2025-12-23 02:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-23 02:00:00','2025-12-23 02:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-23 02:00:00','2025-12-23 02:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-23 03:00:00','2025-12-23 03:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-23 03:00:00','2025-12-23 03:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-23 03:00:00','2025-12-23 03:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-23 04:00:00','2025-12-23 04:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-23 04:00:00','2025-12-23 04:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-23 04:00:00','2025-12-23 04:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-23 05:00:00','2025-12-23 05:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-23 05:00:00','2025-12-23 05:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-23 05:00:00','2025-12-23 05:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-23 06:00:00','2025-12-23 06:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-23 06:00:00','2025-12-23 06:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-23 06:00:00','2025-12-23 06:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-23 07:00:00','2025-12-23 07:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-23 07:00:00','2025-12-23 07:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-23 07:00:00','2025-12-23 07:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-23 08:00:00','2025-12-23 08:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-23 08:00:00','2025-12-23 08:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-23 08:00:00','2025-12-23 08:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-23 09:00:00','2025-12-23 09:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-23 09:00:00','2025-12-23 09:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-23 09:00:00','2025-12-23 09:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-23 10:00:00','2025-12-23 10:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-23 10:00:00','2025-12-23 10:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-23 10:00:00','2025-12-23 10:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-23 11:00:00','2025-12-23 11:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-23 11:00:00','2025-12-23 11:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-23 11:00:00','2025-12-23 11:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-23 12:00:00','2025-12-23 12:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-23 12:00:00','2025-12-23 12:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-23 12:00:00','2025-12-23 12:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-23 13:00:00','2025-12-23 13:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-23 13:00:00','2025-12-23 13:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-23 13:00:00','2025-12-23 13:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-23 14:00:00','2025-12-23 14:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-23 14:00:00','2025-12-23 14:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-23 14:00:00','2025-12-23 14:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-23 15:00:00','2025-12-23 15:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-23 15:00:00','2025-12-23 15:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-23 15:00:00','2025-12-23 15:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-23 16:00:00','2025-12-23 16:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-23 16:00:00','2025-12-23 16:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-23 16:00:00','2025-12-23 16:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-23 17:00:00','2025-12-23 17:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-23 17:00:00','2025-12-23 17:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-23 17:00:00','2025-12-23 17:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-23 18:00:00','2025-12-23 18:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-23 18:00:00','2025-12-23 18:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-23 18:00:00','2025-12-23 18:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-23 19:00:00','2025-12-23 19:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-23 19:00:00','2025-12-23 19:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-23 19:00:00','2025-12-23 19:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-23 20:00:00','2025-12-23 20:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-23 20:00:00','2025-12-23 20:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-23 20:00:00','2025-12-23 20:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-23 21:00:00','2025-12-23 21:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-23 21:00:00','2025-12-23 21:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-23 21:00:00','2025-12-23 21:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-23 22:00:00','2025-12-23 22:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-23 22:00:00','2025-12-23 22:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-23 22:00:00','2025-12-23 22:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-23 23:00:00','2025-12-23 23:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-23 23:00:00','2025-12-23 23:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-23 23:00:00','2025-12-23 23:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-24 00:00:00','2025-12-24 00:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-24 00:00:00','2025-12-24 00:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-24 00:00:00','2025-12-24 00:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-24 01:00:00','2025-12-24 01:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-24 01:00:00','2025-12-24 01:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-24 01:00:00','2025-12-24 01:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-24 02:00:00','2025-12-24 02:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-24 02:00:00','2025-12-24 02:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-24 02:00:00','2025-12-24 02:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-24 03:00:00','2025-12-24 03:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-24 03:00:00','2025-12-24 03:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-24 03:00:00','2025-12-24 03:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-24 04:00:00','2025-12-24 04:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-24 04:00:00','2025-12-24 04:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-24 04:00:00','2025-12-24 04:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-24 05:00:00','2025-12-24 05:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-24 05:00:00','2025-12-24 05:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-24 05:00:00','2025-12-24 05:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-24 06:00:00','2025-12-24 06:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-24 06:00:00','2025-12-24 06:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-24 06:00:00','2025-12-24 06:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-24 07:00:00','2025-12-24 07:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-24 07:00:00','2025-12-24 07:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-24 07:00:00','2025-12-24 07:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-24 08:00:00','2025-12-24 08:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-24 08:00:00','2025-12-24 08:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-24 08:00:00','2025-12-24 08:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-24 09:00:00','2025-12-24 09:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-24 09:00:00','2025-12-24 09:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-24 09:00:00','2025-12-24 09:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-24 10:00:00','2025-12-24 10:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-24 10:00:00','2025-12-24 10:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-24 10:00:00','2025-12-24 10:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-24 11:00:00','2025-12-24 11:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-24 11:00:00','2025-12-24 11:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-24 11:00:00','2025-12-24 11:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-24 12:00:00','2025-12-24 12:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-24 12:00:00','2025-12-24 12:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-24 12:00:00','2025-12-24 12:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-24 13:00:00','2025-12-24 13:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-24 13:00:00','2025-12-24 13:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-24 13:00:00','2025-12-24 13:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-24 14:00:00','2025-12-24 14:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-24 14:00:00','2025-12-24 14:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-24 14:00:00','2025-12-24 14:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-24 15:00:00','2025-12-24 15:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-24 15:00:00','2025-12-24 15:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-24 15:00:00','2025-12-24 15:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-24 16:00:00','2025-12-24 16:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-24 16:00:00','2025-12-24 16:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-24 16:00:00','2025-12-24 16:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-24 17:00:00','2025-12-24 17:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-24 17:00:00','2025-12-24 17:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-24 17:00:00','2025-12-24 17:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-24 18:00:00','2025-12-24 18:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-24 18:00:00','2025-12-24 18:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-24 18:00:00','2025-12-24 18:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-24 19:00:00','2025-12-24 19:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-24 19:00:00','2025-12-24 19:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-24 19:00:00','2025-12-24 19:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-24 20:00:00','2025-12-24 20:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-24 20:00:00','2025-12-24 20:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-24 20:00:00','2025-12-24 20:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-24 21:00:00','2025-12-24 21:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-24 21:00:00','2025-12-24 21:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-24 21:00:00','2025-12-24 21:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-24 22:00:00','2025-12-24 22:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-24 22:00:00','2025-12-24 22:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-24 22:00:00','2025-12-24 22:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-24 23:00:00','2025-12-24 23:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-24 23:00:00','2025-12-24 23:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-24 23:00:00','2025-12-24 23:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-25 00:00:00','2025-12-25 00:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-25 00:00:00','2025-12-25 00:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-25 00:00:00','2025-12-25 00:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-25 01:00:00','2025-12-25 01:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-25 01:00:00','2025-12-25 01:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-25 01:00:00','2025-12-25 01:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-25 02:00:00','2025-12-25 02:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-25 02:00:00','2025-12-25 02:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-25 02:00:00','2025-12-25 02:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-25 03:00:00','2025-12-25 03:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-25 03:00:00','2025-12-25 03:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-25 03:00:00','2025-12-25 03:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-25 04:00:00','2025-12-25 04:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-25 04:00:00','2025-12-25 04:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-25 04:00:00','2025-12-25 04:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-25 05:00:00','2025-12-25 05:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-25 05:00:00','2025-12-25 05:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-25 05:00:00','2025-12-25 05:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-25 06:00:00','2025-12-25 06:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-25 06:00:00','2025-12-25 06:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-25 06:00:00','2025-12-25 06:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-25 07:00:00','2025-12-25 07:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-25 07:00:00','2025-12-25 07:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-25 07:00:00','2025-12-25 07:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-25 08:00:00','2025-12-25 08:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-25 08:00:00','2025-12-25 08:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-25 08:00:00','2025-12-25 08:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-25 09:00:00','2025-12-25 09:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-25 09:00:00','2025-12-25 09:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-25 09:00:00','2025-12-25 09:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-25 10:00:00','2025-12-25 10:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-25 10:00:00','2025-12-25 10:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-25 10:00:00','2025-12-25 10:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-25 11:00:00','2025-12-25 11:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-25 11:00:00','2025-12-25 11:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-25 11:00:00','2025-12-25 11:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-25 12:00:00','2025-12-25 12:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-25 12:00:00','2025-12-25 12:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-25 12:00:00','2025-12-25 12:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-25 13:00:00','2025-12-25 13:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-25 13:00:00','2025-12-25 13:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-25 13:00:00','2025-12-25 13:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-25 14:00:00','2025-12-25 14:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-25 14:00:00','2025-12-25 14:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-25 14:00:00','2025-12-25 14:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-25 15:00:00','2025-12-25 15:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-25 15:00:00','2025-12-25 15:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-25 15:00:00','2025-12-25 15:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-25 16:00:00','2025-12-25 16:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-25 16:00:00','2025-12-25 16:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-25 16:00:00','2025-12-25 16:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-25 17:00:00','2025-12-25 17:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-25 17:00:00','2025-12-25 17:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-25 17:00:00','2025-12-25 17:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-25 18:00:00','2025-12-25 18:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-25 18:00:00','2025-12-25 18:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-25 18:00:00','2025-12-25 18:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-25 19:00:00','2025-12-25 19:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-25 19:00:00','2025-12-25 19:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-25 19:00:00','2025-12-25 19:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-25 20:00:00','2025-12-25 20:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-25 20:00:00','2025-12-25 20:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-25 20:00:00','2025-12-25 20:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-25 21:00:00','2025-12-25 21:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-25 21:00:00','2025-12-25 21:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-25 21:00:00','2025-12-25 21:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-25 22:00:00','2025-12-25 22:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-25 22:00:00','2025-12-25 22:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-25 22:00:00','2025-12-25 22:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-25 23:00:00','2025-12-25 23:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-25 23:00:00','2025-12-25 23:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-25 23:00:00','2025-12-25 23:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-26 00:00:00','2025-12-26 00:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-26 00:00:00','2025-12-26 00:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-26 00:00:00','2025-12-26 00:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-26 01:00:00','2025-12-26 01:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-26 01:00:00','2025-12-26 01:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-26 01:00:00','2025-12-26 01:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-26 02:00:00','2025-12-26 02:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-26 02:00:00','2025-12-26 02:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-26 02:00:00','2025-12-26 02:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-26 03:00:00','2025-12-26 03:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-26 03:00:00','2025-12-26 03:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-26 03:00:00','2025-12-26 03:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-26 04:00:00','2025-12-26 04:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-26 04:00:00','2025-12-26 04:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-26 04:00:00','2025-12-26 04:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-26 05:00:00','2025-12-26 05:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-26 05:00:00','2025-12-26 05:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-26 05:00:00','2025-12-26 05:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-26 06:00:00','2025-12-26 06:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-26 06:00:00','2025-12-26 06:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-26 06:00:00','2025-12-26 06:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-26 07:00:00','2025-12-26 07:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-26 07:00:00','2025-12-26 07:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-26 07:00:00','2025-12-26 07:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-26 08:00:00','2025-12-26 08:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-26 08:00:00','2025-12-26 08:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-26 08:00:00','2025-12-26 08:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-26 09:00:00','2025-12-26 09:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-26 09:00:00','2025-12-26 09:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-26 09:00:00','2025-12-26 09:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-26 10:00:00','2025-12-26 10:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-26 10:00:00','2025-12-26 10:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-26 10:00:00','2025-12-26 10:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-26 11:00:00','2025-12-26 11:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-26 11:00:00','2025-12-26 11:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-26 11:00:00','2025-12-26 11:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-26 12:00:00','2025-12-26 12:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-26 12:00:00','2025-12-26 12:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-26 12:00:00','2025-12-26 12:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-26 13:00:00','2025-12-26 13:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-26 13:00:00','2025-12-26 13:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-26 13:00:00','2025-12-26 13:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-26 14:00:00','2025-12-26 14:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-26 14:00:00','2025-12-26 14:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-26 14:00:00','2025-12-26 14:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-26 15:00:00','2025-12-26 15:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-26 15:00:00','2025-12-26 15:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-26 15:00:00','2025-12-26 15:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-26 16:00:00','2025-12-26 16:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-26 16:00:00','2025-12-26 16:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-26 16:00:00','2025-12-26 16:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-26 17:00:00','2025-12-26 17:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-26 17:00:00','2025-12-26 17:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-26 17:00:00','2025-12-26 17:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-26 18:00:00','2025-12-26 18:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-26 18:00:00','2025-12-26 18:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-26 18:00:00','2025-12-26 18:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-26 19:00:00','2025-12-26 19:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-26 19:00:00','2025-12-26 19:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-26 19:00:00','2025-12-26 19:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-26 20:00:00','2025-12-26 20:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-26 20:00:00','2025-12-26 20:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-26 20:00:00','2025-12-26 20:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-26 21:00:00','2025-12-26 21:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-26 21:00:00','2025-12-26 21:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-26 21:00:00','2025-12-26 21:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-26 22:00:00','2025-12-26 22:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-26 22:00:00','2025-12-26 22:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-26 22:00:00','2025-12-26 22:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-26 23:00:00','2025-12-26 23:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-26 23:00:00','2025-12-26 23:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-26 23:00:00','2025-12-26 23:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-27 00:00:00','2025-12-27 00:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-27 00:00:00','2025-12-27 00:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-27 00:00:00','2025-12-27 00:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-27 01:00:00','2025-12-27 01:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-27 01:00:00','2025-12-27 01:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-27 01:00:00','2025-12-27 01:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-27 02:00:00','2025-12-27 02:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-27 02:00:00','2025-12-27 02:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-27 02:00:00','2025-12-27 02:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-27 03:00:00','2025-12-27 03:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-27 03:00:00','2025-12-27 03:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-27 03:00:00','2025-12-27 03:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-27 04:00:00','2025-12-27 04:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-27 04:00:00','2025-12-27 04:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-27 04:00:00','2025-12-27 04:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-27 05:00:00','2025-12-27 05:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-27 05:00:00','2025-12-27 05:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-27 05:00:00','2025-12-27 05:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-27 06:00:00','2025-12-27 06:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-27 06:00:00','2025-12-27 06:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-27 06:00:00','2025-12-27 06:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-27 07:00:00','2025-12-27 07:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-27 07:00:00','2025-12-27 07:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-27 07:00:00','2025-12-27 07:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-27 08:00:00','2025-12-27 08:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-27 08:00:00','2025-12-27 08:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-27 08:00:00','2025-12-27 08:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-27 09:00:00','2025-12-27 09:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-27 09:00:00','2025-12-27 09:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-27 09:00:00','2025-12-27 09:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-27 10:00:00','2025-12-27 10:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-27 10:00:00','2025-12-27 10:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-27 10:00:00','2025-12-27 10:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-27 11:00:00','2025-12-27 11:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-27 11:00:00','2025-12-27 11:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-27 11:00:00','2025-12-27 11:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-27 12:00:00','2025-12-27 12:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-27 12:00:00','2025-12-27 12:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-27 12:00:00','2025-12-27 12:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-27 13:00:00','2025-12-27 13:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-27 13:00:00','2025-12-27 13:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-27 13:00:00','2025-12-27 13:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-27 14:00:00','2025-12-27 14:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-27 14:00:00','2025-12-27 14:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-27 14:00:00','2025-12-27 14:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-27 15:00:00','2025-12-27 15:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-27 15:00:00','2025-12-27 15:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-27 15:00:00','2025-12-27 15:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-27 16:00:00','2025-12-27 16:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-27 16:00:00','2025-12-27 16:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-27 16:00:00','2025-12-27 16:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-27 17:00:00','2025-12-27 17:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-27 17:00:00','2025-12-27 17:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-27 17:00:00','2025-12-27 17:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-27 18:00:00','2025-12-27 18:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-27 18:00:00','2025-12-27 18:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-27 18:00:00','2025-12-27 18:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-27 19:00:00','2025-12-27 19:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-27 19:00:00','2025-12-27 19:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-27 19:00:00','2025-12-27 19:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-27 20:00:00','2025-12-27 20:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-27 20:00:00','2025-12-27 20:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-27 20:00:00','2025-12-27 20:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-27 21:00:00','2025-12-27 21:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-27 21:00:00','2025-12-27 21:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-27 21:00:00','2025-12-27 21:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-27 22:00:00','2025-12-27 22:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-27 22:00:00','2025-12-27 22:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-27 22:00:00','2025-12-27 22:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-27 23:00:00','2025-12-27 23:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-27 23:00:00','2025-12-27 23:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-27 23:00:00','2025-12-27 23:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-28 00:00:00','2025-12-28 00:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-28 00:00:00','2025-12-28 00:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-28 00:00:00','2025-12-28 00:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-28 01:00:00','2025-12-28 01:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-28 01:00:00','2025-12-28 01:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-28 01:00:00','2025-12-28 01:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-28 02:00:00','2025-12-28 02:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-28 02:00:00','2025-12-28 02:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-28 02:00:00','2025-12-28 02:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-28 03:00:00','2025-12-28 03:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-28 03:00:00','2025-12-28 03:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-28 03:00:00','2025-12-28 03:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-28 04:00:00','2025-12-28 04:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-28 04:00:00','2025-12-28 04:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-28 04:00:00','2025-12-28 04:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-28 05:00:00','2025-12-28 05:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-28 05:00:00','2025-12-28 05:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-28 05:00:00','2025-12-28 05:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-28 06:00:00','2025-12-28 06:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-28 06:00:00','2025-12-28 06:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-28 06:00:00','2025-12-28 06:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-28 07:00:00','2025-12-28 07:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-28 07:00:00','2025-12-28 07:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-28 07:00:00','2025-12-28 07:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-28 08:00:00','2025-12-28 08:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-28 08:00:00','2025-12-28 08:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-28 08:00:00','2025-12-28 08:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-28 09:00:00','2025-12-28 09:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-28 09:00:00','2025-12-28 09:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-28 09:00:00','2025-12-28 09:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-28 10:00:00','2025-12-28 10:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-28 10:00:00','2025-12-28 10:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-28 10:00:00','2025-12-28 10:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-28 11:00:00','2025-12-28 11:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-28 11:00:00','2025-12-28 11:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-28 11:00:00','2025-12-28 11:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-28 12:00:00','2025-12-28 12:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-28 12:00:00','2025-12-28 12:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-28 12:00:00','2025-12-28 12:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-28 13:00:00','2025-12-28 13:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-28 13:00:00','2025-12-28 13:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-28 13:00:00','2025-12-28 13:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-28 14:00:00','2025-12-28 14:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-28 14:00:00','2025-12-28 14:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-28 14:00:00','2025-12-28 14:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-28 15:00:00','2025-12-28 15:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-28 15:00:00','2025-12-28 15:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-28 15:00:00','2025-12-28 15:00:00'),
+(3,0.00,0.00,0.00,0.00,'USD','2025-12-28 15:29:05','2025-12-28 15:29:05'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-28 16:00:00','2025-12-28 16:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-28 16:00:00','2025-12-28 16:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-28 16:00:00','2025-12-28 16:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-28 17:00:00','2025-12-28 17:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-28 17:00:00','2025-12-28 17:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-28 17:00:00','2025-12-28 17:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-28 18:00:00','2025-12-28 18:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-28 18:00:00','2025-12-28 18:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-28 18:00:00','2025-12-28 18:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-28 19:00:00','2025-12-28 19:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-28 19:00:00','2025-12-28 19:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-28 19:00:00','2025-12-28 19:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-28 20:00:00','2025-12-28 20:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-28 20:00:00','2025-12-28 20:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-28 20:00:00','2025-12-28 20:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-28 21:00:00','2025-12-28 21:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-28 21:00:00','2025-12-28 21:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-28 21:00:00','2025-12-28 21:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-28 22:00:00','2025-12-28 22:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-28 22:00:00','2025-12-28 22:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-28 22:00:00','2025-12-28 22:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-28 23:00:00','2025-12-28 23:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-28 23:00:00','2025-12-28 23:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-28 23:00:00','2025-12-28 23:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-29 00:00:00','2025-12-29 00:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-29 00:00:00','2025-12-29 00:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-29 00:00:00','2025-12-29 00:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-29 01:00:00','2025-12-29 01:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-29 01:00:00','2025-12-29 01:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-29 01:00:00','2025-12-29 01:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-29 02:00:00','2025-12-29 02:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-29 02:00:00','2025-12-29 02:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-29 02:00:00','2025-12-29 02:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-29 03:00:00','2025-12-29 03:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-29 03:00:00','2025-12-29 03:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-29 03:00:00','2025-12-29 03:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-29 04:00:00','2025-12-29 04:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-29 04:00:00','2025-12-29 04:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-29 04:00:00','2025-12-29 04:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-29 05:00:00','2025-12-29 05:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-29 05:00:00','2025-12-29 05:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-29 05:00:00','2025-12-29 05:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-29 06:00:00','2025-12-29 06:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-29 06:00:00','2025-12-29 06:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-29 06:00:00','2025-12-29 06:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-29 07:00:00','2025-12-29 07:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-29 07:00:00','2025-12-29 07:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-29 07:00:00','2025-12-29 07:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-29 08:00:00','2025-12-29 08:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-29 08:00:00','2025-12-29 08:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-29 08:00:00','2025-12-29 08:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-29 09:00:00','2025-12-29 09:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-29 09:00:00','2025-12-29 09:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-29 09:00:00','2025-12-29 09:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-29 10:00:00','2025-12-29 10:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-29 10:00:00','2025-12-29 10:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-29 10:00:00','2025-12-29 10:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-29 11:00:00','2025-12-29 11:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-29 11:00:00','2025-12-29 11:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-29 11:00:00','2025-12-29 11:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-29 12:00:00','2025-12-29 12:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-29 12:00:00','2025-12-29 12:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-29 12:00:00','2025-12-29 12:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-29 13:00:00','2025-12-29 13:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-29 13:00:00','2025-12-29 13:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-29 13:00:00','2025-12-29 13:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-29 14:00:00','2025-12-29 14:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-29 14:00:00','2025-12-29 14:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-29 14:00:00','2025-12-29 14:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-29 15:00:00','2025-12-29 15:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-29 15:00:00','2025-12-29 15:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-29 15:00:00','2025-12-29 15:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-29 16:00:00','2025-12-29 16:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-29 16:00:00','2025-12-29 16:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-29 16:00:00','2025-12-29 16:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-29 17:00:00','2025-12-29 17:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-29 17:00:00','2025-12-29 17:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-29 17:00:00','2025-12-29 17:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-29 18:00:00','2025-12-29 18:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-29 18:00:00','2025-12-29 18:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-29 18:00:00','2025-12-29 18:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-29 19:00:00','2025-12-29 19:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-29 19:00:00','2025-12-29 19:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-29 19:00:00','2025-12-29 19:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-29 20:00:00','2025-12-29 20:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-29 20:00:00','2025-12-29 20:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-29 20:00:00','2025-12-29 20:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-29 21:00:00','2025-12-29 21:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-29 21:00:00','2025-12-29 21:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-29 21:00:00','2025-12-29 21:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-29 22:00:00','2025-12-29 22:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-29 22:00:00','2025-12-29 22:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-29 22:00:00','2025-12-29 22:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-29 23:00:00','2025-12-29 23:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-29 23:00:00','2025-12-29 23:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-29 23:00:00','2025-12-29 23:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-30 00:00:00','2025-12-30 00:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-30 00:00:00','2025-12-30 00:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-30 00:00:00','2025-12-30 00:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-30 01:00:00','2025-12-30 01:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-30 01:00:00','2025-12-30 01:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-30 01:00:00','2025-12-30 01:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-30 02:00:00','2025-12-30 02:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-30 02:00:00','2025-12-30 02:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-30 02:00:00','2025-12-30 02:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-30 03:00:00','2025-12-30 03:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-30 03:00:00','2025-12-30 03:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-30 03:00:00','2025-12-30 03:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-30 04:00:00','2025-12-30 04:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-30 04:00:00','2025-12-30 04:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-30 04:00:00','2025-12-30 04:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-30 05:00:00','2025-12-30 05:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-30 05:00:00','2025-12-30 05:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-30 05:00:00','2025-12-30 05:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-30 06:00:00','2025-12-30 06:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-30 06:00:00','2025-12-30 06:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-30 06:00:00','2025-12-30 06:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-30 07:00:00','2025-12-30 07:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-30 07:00:00','2025-12-30 07:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-30 07:00:00','2025-12-30 07:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-30 08:00:00','2025-12-30 08:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-30 08:00:00','2025-12-30 08:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-30 08:00:00','2025-12-30 08:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-30 09:00:00','2025-12-30 09:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-30 09:00:00','2025-12-30 09:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-30 09:00:00','2025-12-30 09:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-30 10:00:00','2025-12-30 10:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-30 10:00:00','2025-12-30 10:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-30 10:00:00','2025-12-30 10:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-30 11:00:00','2025-12-30 11:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-30 11:00:00','2025-12-30 11:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-30 11:00:00','2025-12-30 11:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-30 12:00:00','2025-12-30 12:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-30 12:00:00','2025-12-30 12:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-30 12:00:00','2025-12-30 12:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-30 13:00:00','2025-12-30 13:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-30 13:00:00','2025-12-30 13:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-30 13:00:00','2025-12-30 13:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-30 14:00:00','2025-12-30 14:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-30 14:00:00','2025-12-30 14:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-30 14:00:00','2025-12-30 14:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-30 15:00:00','2025-12-30 15:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-30 15:00:00','2025-12-30 15:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-30 15:00:00','2025-12-30 15:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-30 16:00:00','2025-12-30 16:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-30 16:00:00','2025-12-30 16:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-30 16:00:00','2025-12-30 16:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-30 17:00:00','2025-12-30 17:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-30 17:00:00','2025-12-30 17:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-30 17:00:00','2025-12-30 17:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-30 18:00:00','2025-12-30 18:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-30 18:00:00','2025-12-30 18:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-30 18:00:00','2025-12-30 18:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-30 19:00:00','2025-12-30 19:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-30 19:00:00','2025-12-30 19:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-30 19:00:00','2025-12-30 19:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-30 20:00:00','2025-12-30 20:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-30 20:00:00','2025-12-30 20:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-30 20:00:00','2025-12-30 20:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-30 21:00:00','2025-12-30 21:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-30 21:00:00','2025-12-30 21:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-30 21:00:00','2025-12-30 21:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-30 22:00:00','2025-12-30 22:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-30 22:00:00','2025-12-30 22:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-30 22:00:00','2025-12-30 22:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-30 23:00:00','2025-12-30 23:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-30 23:00:00','2025-12-30 23:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-30 23:00:00','2025-12-30 23:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-31 00:00:00','2025-12-31 00:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-31 00:00:00','2025-12-31 00:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-31 00:00:00','2025-12-31 00:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-31 01:00:00','2025-12-31 01:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-31 01:00:00','2025-12-31 01:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-31 01:00:00','2025-12-31 01:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-31 02:00:00','2025-12-31 02:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-31 02:00:00','2025-12-31 02:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-31 02:00:00','2025-12-31 02:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-31 03:00:00','2025-12-31 03:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-31 03:00:00','2025-12-31 03:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-31 03:00:00','2025-12-31 03:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-31 04:00:00','2025-12-31 04:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-31 04:00:00','2025-12-31 04:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-31 04:00:00','2025-12-31 04:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-31 05:00:00','2025-12-31 05:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-31 05:00:00','2025-12-31 05:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-31 05:00:00','2025-12-31 05:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-31 06:00:00','2025-12-31 06:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-31 06:00:00','2025-12-31 06:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-31 06:00:00','2025-12-31 06:00:00'),
+(3,0.00,0.00,0.00,0.00,'USD','2025-12-31 06:39:11','2025-12-31 06:39:11'),
+(3,0.00,0.00,0.00,0.00,'USD','2025-12-31 06:39:11','2025-12-31 06:39:11'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-31 10:00:00','2025-12-31 10:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-31 10:00:00','2025-12-31 10:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-31 10:00:00','2025-12-31 10:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-31 11:00:00','2025-12-31 11:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-31 11:00:00','2025-12-31 11:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-31 11:00:00','2025-12-31 11:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-31 12:00:00','2025-12-31 12:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-31 12:00:00','2025-12-31 12:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-31 12:00:00','2025-12-31 12:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-31 13:00:00','2025-12-31 13:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-31 13:00:00','2025-12-31 13:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-31 13:00:00','2025-12-31 13:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-31 14:00:00','2025-12-31 14:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-31 14:00:00','2025-12-31 14:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-31 14:00:00','2025-12-31 14:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-31 15:00:00','2025-12-31 15:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-31 15:00:00','2025-12-31 15:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-31 15:00:00','2025-12-31 15:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-31 16:00:00','2025-12-31 16:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-31 16:00:00','2025-12-31 16:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-31 16:00:00','2025-12-31 16:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-31 17:00:00','2025-12-31 17:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-31 17:00:00','2025-12-31 17:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-31 17:00:00','2025-12-31 17:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-31 18:00:00','2025-12-31 18:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-31 18:00:00','2025-12-31 18:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-31 18:00:00','2025-12-31 18:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-31 19:00:00','2025-12-31 19:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-31 19:00:00','2025-12-31 19:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-31 19:00:00','2025-12-31 19:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-31 20:00:00','2025-12-31 20:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-31 20:00:00','2025-12-31 20:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-31 20:00:00','2025-12-31 20:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-31 21:00:00','2025-12-31 21:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-31 21:00:00','2025-12-31 21:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-31 21:00:00','2025-12-31 21:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-31 22:00:00','2025-12-31 22:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-31 22:00:00','2025-12-31 22:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-31 22:00:00','2025-12-31 22:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2025-12-31 23:00:00','2025-12-31 23:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2025-12-31 23:00:00','2025-12-31 23:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2025-12-31 23:00:00','2025-12-31 23:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-01 00:00:00','2026-01-01 00:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-01 00:00:00','2026-01-01 00:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-01 00:00:00','2026-01-01 00:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-01 01:00:00','2026-01-01 01:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-01 01:00:00','2026-01-01 01:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-01 01:00:00','2026-01-01 01:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-01 02:00:00','2026-01-01 02:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-01 02:00:00','2026-01-01 02:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-01 02:00:00','2026-01-01 02:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-01 03:00:00','2026-01-01 03:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-01 03:00:00','2026-01-01 03:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-01 03:00:00','2026-01-01 03:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-01 04:00:00','2026-01-01 04:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-01 04:00:00','2026-01-01 04:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-01 04:00:00','2026-01-01 04:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-01 05:00:00','2026-01-01 05:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-01 05:00:00','2026-01-01 05:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-01 05:00:00','2026-01-01 05:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-01 06:00:00','2026-01-01 06:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-01 06:00:00','2026-01-01 06:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-01 06:00:00','2026-01-01 06:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-01 07:00:00','2026-01-01 07:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-01 07:00:00','2026-01-01 07:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-01 07:00:00','2026-01-01 07:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-01 08:00:00','2026-01-01 08:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-01 08:00:00','2026-01-01 08:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-01 08:00:00','2026-01-01 08:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-01 09:00:00','2026-01-01 09:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-01 09:00:00','2026-01-01 09:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-01 09:00:00','2026-01-01 09:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-01 10:00:00','2026-01-01 10:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-01 10:00:00','2026-01-01 10:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-01 10:00:00','2026-01-01 10:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-01 11:00:00','2026-01-01 11:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-01 11:00:00','2026-01-01 11:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-01 11:00:00','2026-01-01 11:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-01 12:00:00','2026-01-01 12:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-01 12:00:00','2026-01-01 12:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-01 12:00:00','2026-01-01 12:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-01 13:00:00','2026-01-01 13:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-01 13:00:00','2026-01-01 13:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-01 13:00:00','2026-01-01 13:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-01 14:00:00','2026-01-01 14:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-01 14:00:00','2026-01-01 14:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-01 14:00:00','2026-01-01 14:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-01 15:00:00','2026-01-01 15:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-01 15:00:00','2026-01-01 15:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-01 15:00:00','2026-01-01 15:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-01 16:00:00','2026-01-01 16:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-01 16:00:00','2026-01-01 16:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-01 16:00:00','2026-01-01 16:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-01 17:00:00','2026-01-01 17:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-01 17:00:00','2026-01-01 17:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-01 17:00:00','2026-01-01 17:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-01 18:00:00','2026-01-01 18:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-01 18:00:00','2026-01-01 18:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-01 18:00:00','2026-01-01 18:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-01 19:00:00','2026-01-01 19:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-01 19:00:00','2026-01-01 19:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-01 19:00:00','2026-01-01 19:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-01 20:00:00','2026-01-01 20:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-01 20:00:00','2026-01-01 20:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-01 20:00:00','2026-01-01 20:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-01 21:00:00','2026-01-01 21:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-01 21:00:00','2026-01-01 21:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-01 21:00:00','2026-01-01 21:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-01 22:00:00','2026-01-01 22:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-01 22:00:00','2026-01-01 22:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-01 22:00:00','2026-01-01 22:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-01 23:00:00','2026-01-01 23:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-01 23:00:00','2026-01-01 23:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-01 23:00:00','2026-01-01 23:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-02 00:00:00','2026-01-02 00:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-02 00:00:00','2026-01-02 00:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-02 00:00:00','2026-01-02 00:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-02 01:00:00','2026-01-02 01:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-02 01:00:00','2026-01-02 01:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-02 01:00:00','2026-01-02 01:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-02 02:00:00','2026-01-02 02:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-02 02:00:00','2026-01-02 02:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-02 02:00:00','2026-01-02 02:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-02 03:00:00','2026-01-02 03:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-02 03:00:00','2026-01-02 03:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-02 03:00:00','2026-01-02 03:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-02 04:00:00','2026-01-02 04:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-02 04:00:00','2026-01-02 04:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-02 04:00:00','2026-01-02 04:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-02 05:00:00','2026-01-02 05:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-02 05:00:00','2026-01-02 05:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-02 05:00:00','2026-01-02 05:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-02 06:00:00','2026-01-02 06:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-02 06:00:00','2026-01-02 06:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-02 06:00:00','2026-01-02 06:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-02 07:00:00','2026-01-02 07:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-02 07:00:00','2026-01-02 07:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-02 07:00:00','2026-01-02 07:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-02 08:00:00','2026-01-02 08:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-02 08:00:00','2026-01-02 08:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-02 08:00:00','2026-01-02 08:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-02 09:00:00','2026-01-02 09:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-02 09:00:00','2026-01-02 09:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-02 09:00:00','2026-01-02 09:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-02 10:00:00','2026-01-02 10:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-02 10:00:00','2026-01-02 10:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-02 10:00:00','2026-01-02 10:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-02 11:00:00','2026-01-02 11:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-02 11:00:00','2026-01-02 11:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-02 11:00:00','2026-01-02 11:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-02 12:00:00','2026-01-02 12:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-02 12:00:00','2026-01-02 12:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-02 12:00:00','2026-01-02 12:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-02 13:00:00','2026-01-02 13:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-02 13:00:00','2026-01-02 13:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-02 13:00:00','2026-01-02 13:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-02 14:00:00','2026-01-02 14:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-02 14:00:00','2026-01-02 14:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-02 14:00:00','2026-01-02 14:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-02 15:00:00','2026-01-02 15:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-02 15:00:00','2026-01-02 15:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-02 15:00:00','2026-01-02 15:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-02 16:00:00','2026-01-02 16:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-02 16:00:00','2026-01-02 16:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-02 16:00:00','2026-01-02 16:00:00'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-02 17:00:00','2026-01-02 17:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-02 17:00:00','2026-01-02 17:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-02 17:00:00','2026-01-02 17:00:00'),
+(3,0.00,0.00,0.00,0.00,'USD','2026-01-02 17:04:31','2026-01-02 17:04:31'),
+(3,2300.84,0.00,0.00,0.00,'USD','2026-01-02 18:00:00','2026-01-02 18:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-02 18:00:00','2026-01-02 18:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-02 18:00:00','2026-01-02 18:00:00'),
+(3,2300.84,351.05,0.00,0.00,'USD','2026-01-02 18:17:37','2026-01-02 18:17:37'),
+(3,2300.84,351.05,0.00,0.00,'USD','2026-01-02 19:00:00','2026-01-02 19:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-02 19:00:00','2026-01-02 19:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-02 19:00:00','2026-01-02 19:00:00'),
+(3,2300.84,702.10,0.00,0.00,'USD','2026-01-02 19:02:38','2026-01-02 19:02:38'),
+(3,2300.84,702.10,0.00,0.00,'USD','2026-01-02 20:00:00','2026-01-02 20:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-02 20:00:00','2026-01-02 20:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-02 20:00:00','2026-01-02 20:00:00'),
+(3,2300.84,702.10,0.00,0.00,'USD','2026-01-02 21:00:00','2026-01-02 21:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-02 21:00:00','2026-01-02 21:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-02 21:00:00','2026-01-02 21:00:00'),
+(3,2300.84,702.10,0.00,0.00,'USD','2026-01-02 22:00:00','2026-01-02 22:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-02 22:00:00','2026-01-02 22:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-02 22:00:00','2026-01-02 22:00:00'),
+(3,2300.84,702.10,0.00,0.00,'USD','2026-01-02 23:00:00','2026-01-02 23:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-02 23:00:00','2026-01-02 23:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-02 23:00:00','2026-01-02 23:00:00'),
+(3,2300.84,702.10,0.00,0.00,'USD','2026-01-03 00:00:00','2026-01-03 00:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-03 00:00:00','2026-01-03 00:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-03 00:00:00','2026-01-03 00:00:00'),
+(3,2300.84,702.10,0.00,0.00,'USD','2026-01-03 01:00:00','2026-01-03 01:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-03 01:00:00','2026-01-03 01:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-03 01:00:00','2026-01-03 01:00:00'),
+(3,2300.84,702.10,0.00,0.00,'USD','2026-01-03 02:00:00','2026-01-03 02:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-03 02:00:00','2026-01-03 02:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-03 02:00:00','2026-01-03 02:00:00'),
+(3,2300.84,702.10,0.00,0.00,'USD','2026-01-03 03:00:00','2026-01-03 03:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-03 03:00:00','2026-01-03 03:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-03 03:00:00','2026-01-03 03:00:00'),
+(3,2300.84,702.10,0.00,0.00,'USD','2026-01-03 04:00:00','2026-01-03 04:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-03 04:00:00','2026-01-03 04:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-03 04:00:00','2026-01-03 04:00:00'),
+(3,2300.84,702.10,0.00,0.00,'USD','2026-01-03 05:00:00','2026-01-03 05:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-03 05:00:00','2026-01-03 05:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-03 05:00:00','2026-01-03 05:00:00'),
+(3,2300.84,702.10,0.00,0.00,'USD','2026-01-03 06:00:00','2026-01-03 06:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-03 06:00:00','2026-01-03 06:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-03 06:00:00','2026-01-03 06:00:00'),
+(3,2300.84,702.10,0.00,0.00,'USD','2026-01-03 07:00:00','2026-01-03 07:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-03 07:00:00','2026-01-03 07:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-03 07:00:00','2026-01-03 07:00:00'),
+(3,2300.84,702.10,0.00,0.00,'USD','2026-01-03 08:00:00','2026-01-03 08:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-03 08:00:00','2026-01-03 08:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-03 08:00:00','2026-01-03 08:00:00'),
+(3,2300.84,702.10,0.00,0.00,'USD','2026-01-03 09:00:00','2026-01-03 09:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-03 09:00:00','2026-01-03 09:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-03 09:00:00','2026-01-03 09:00:00'),
+(3,2300.84,702.10,0.00,0.00,'USD','2026-01-03 10:00:00','2026-01-03 10:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-03 10:00:00','2026-01-03 10:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-03 10:00:00','2026-01-03 10:00:00'),
+(3,2300.84,702.10,0.00,0.00,'USD','2026-01-03 11:00:00','2026-01-03 11:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-03 11:00:00','2026-01-03 11:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-03 11:00:00','2026-01-03 11:00:00'),
+(3,2300.84,702.10,0.00,0.00,'USD','2026-01-03 12:00:00','2026-01-03 12:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-03 12:00:00','2026-01-03 12:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-03 12:00:00','2026-01-03 12:00:00'),
+(3,2300.84,702.10,0.00,0.00,'USD','2026-01-03 13:00:00','2026-01-03 13:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-03 13:00:00','2026-01-03 13:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-03 13:00:00','2026-01-03 13:00:00'),
+(3,2300.84,702.10,0.00,0.00,'USD','2026-01-03 14:00:00','2026-01-03 14:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-03 14:00:00','2026-01-03 14:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-03 14:00:00','2026-01-03 14:00:00'),
+(3,2300.84,702.10,0.00,0.00,'USD','2026-01-03 15:00:00','2026-01-03 15:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-03 15:00:00','2026-01-03 15:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-03 15:00:00','2026-01-03 15:00:00'),
+(3,2300.84,702.10,0.00,0.00,'USD','2026-01-03 16:00:00','2026-01-03 16:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-03 16:00:00','2026-01-03 16:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-03 16:00:00','2026-01-03 16:00:00'),
+(3,2300.84,702.10,0.00,0.00,'USD','2026-01-03 17:00:00','2026-01-03 17:00:00'),
+(1,17.12,0.00,0.00,0.00,'USD','2026-01-03 17:00:00','2026-01-03 17:00:00'),
+(6,386.92,0.00,0.00,0.00,'USD','2026-01-03 17:00:00','2026-01-03 17:00:00');
+/*!40000 ALTER TABLE `user_wallets` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `users`
+--
+
+DROP TABLE IF EXISTS `users`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `users` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `email` varchar(255) NOT NULL,
+  `phone_number` varchar(32) DEFAULT NULL,
+  `date_of_birth` date DEFAULT NULL,
+  `password` varchar(255) NOT NULL,
+  `password_changed_at` datetime DEFAULT NULL,
+  `role_id` int(11) NOT NULL,
+  `is_guest` tinyint(1) NOT NULL DEFAULT 0,
+  `guest_created_at` datetime DEFAULT NULL,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `deleted_at` datetime DEFAULT NULL,
+  `profile_photo` text DEFAULT NULL,
+  `city` varchar(100) DEFAULT NULL,
+  `state` varchar(100) DEFAULT NULL,
+  `country` varchar(100) DEFAULT NULL,
+  `status` enum('active','inactive') NOT NULL DEFAULT 'active',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `first_name` varchar(100) DEFAULT NULL,
+  `last_name` varchar(100) DEFAULT NULL,
+  `is_verified` tinyint(1) DEFAULT 0,
+  `location` varchar(255) DEFAULT NULL,
+  `timezone` varchar(100) DEFAULT NULL,
+  `stripe_customer_id` varchar(255) DEFAULT NULL,
+  `stripe_default_payment_method` varchar(255) DEFAULT NULL,
+  `public_slug` varchar(120) DEFAULT NULL,
+  `stripe_account_id` varchar(64) DEFAULT NULL,
+  `stripe_country` char(2) DEFAULT NULL,
+  `stripe_charges_enabled` tinyint(1) DEFAULT 0,
+  `stripe_payouts_enabled` tinyint(1) DEFAULT 0,
+  `stripe_requirements_json` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`stripe_requirements_json`)),
+  `stripe_connect_supported` tinyint(1) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=36 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `users`
+--
+
+LOCK TABLES `users` WRITE;
+/*!40000 ALTER TABLE `users` DISABLE KEYS */;
+INSERT INTO `users` VALUES
+(2,'mustafizur142@gmail.com','019287543','1991-07-15','$2a$10$ytBh93tBsRM6TrGiXNvxrusnXfUvQ/NpTSeFErcDLXjYTgGgYG/Rq',NULL,5,0,NULL,1,NULL,'/uploads/profile_photos/1756021977140-Ahmed.jpg','Dhaka','Dhaka','Bangladesh','active','2025-08-05 07:07:41','2025-09-14 07:22:40','Mustafizur','Rahman',1,'Jessore Road','Asia/Dhaka','cus_SvRQWVuL5yfBEp',NULL,NULL,NULL,NULL,0,0,NULL,1),
+(3,'imranhossen1119999@gmail.com','1234353535',NULL,'$2a$10$gHsVq1qLWS65hjd6D7ufDOTMka4bzln7vrcdUJZmkfF.Sxq94LEUG','2025-08-10 14:52:23',2,0,NULL,1,NULL,'/uploads/profile_photos/1757838490533-rubayet ferdaus.jpg','Jessore','Jessore','CANADA','active','2025-08-05 07:14:34','2025-09-14 08:28:10','Imran','Hossen',1,'Jessore mani Road','Asia/Dhaka','cus_Ss5IuKQ2Wybk0m',NULL,'imran-hossen','acct_1S6HXd4I4GlhuBRq','CA',0,0,NULL,1),
+(4,'admin@example.com','',NULL,'$2a$10$BNkZhxIFJ3qRC5pHbOdTKe8w5G7Fm/oE6NrVnuWad/NpjSuG0BA6K',NULL,1,0,NULL,1,NULL,'/uploads/profile_photos/1758922797374_passport_photo.jpg','Dhaka 2','Dhaka','Bangladesh','active','2025-08-05 07:20:47','2025-09-26 21:39:59','MOHAMMAD ABU','TALEB',1,'Dhaka, Dhaka','Asia/Dhaka','cus_Srql9qnzJPpwCc','pm_1Rw8v33RqEMUJuhkSAN3rnay',NULL,NULL,NULL,0,0,NULL,1),
+(5,'admin2@example.com',NULL,NULL,'$2a$10$GwSLMgsCmCen/9Gqw5mIM.OLgHB7xjx4abIH0QwDqn0Pp.w7k2ntC',NULL,2,0,NULL,0,'2025-12-13 19:00:27','/uploads/profile_photos/1755289622403-apon.jpg','San Frincisco','CA','United States','inactive','2025-08-06 09:32:28','2025-12-13 19:00:27','Mr Alex','Joe',0,'San Frincisco, CA','Pacific/Midway','cus_StdplrRRlszAZY',NULL,'mr-alex-joe',NULL,NULL,0,0,NULL,1),
+(6,'norman@prosfata.com','+1 613-770-4810','1979-07-28','$2a$10$P2RctU8oIgjylPPpV5H4MeIB8arHuZFkDZ9L6rYPbQsX2JCyYQJ0a','2025-09-20 15:55:46',2,0,NULL,1,NULL,'/uploads/profile_photos/1760926690390_norman_musengimana.jpg','Kingston','ON','Canada','active','2025-08-20 13:49:12','2025-10-20 02:18:10','Norman','Musengimana',1,'Kingston, ON','US/Eastern','cus_T7fkkEtN4YFHMg',NULL,'norman-musengimana',NULL,NULL,0,0,NULL,1),
+(7,'Pinkykhatun13244@gmail.com',NULL,NULL,'$2a$10$5GBNdQAkw0LcKIBqZF7Hc.FAytc2SMwWrSBZdMbEJ6hCfTA5ugU9O',NULL,2,0,NULL,0,'2025-12-14 00:04:01',NULL,NULL,NULL,NULL,'inactive','2025-09-13 07:22:27','2025-12-13 18:04:01','Khadiza ','Khatun',0,NULL,NULL,NULL,NULL,'khadiza-khatun',NULL,NULL,0,0,NULL,1),
+(8,'imranhoss57@gmail.com',NULL,NULL,'$2a$10$UgieVVaz7dNz83mnSMcx6eezoDfgOsWZHnYTeWugLD.vraBxcwkgu',NULL,5,0,NULL,1,NULL,NULL,NULL,NULL,NULL,'active','2025-09-13 07:32:52','2025-09-14 05:56:46','Munsi','Imran',0,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,NULL,1),
+(9,'jamesbonadies75@gmail.com','',NULL,'$2a$10$7BoxWQbXhtJXanVtOnjEiO8PCOYftktUnN2LouDlIyW44RUfjoYoa',NULL,5,0,NULL,1,NULL,'/uploads/profile_photos/1757749110591-IMG-20250720-WA0592.jpg','','','','active','2025-09-13 07:34:19','2025-09-14 05:56:30','james','bonadies',0,'','',NULL,NULL,NULL,NULL,NULL,0,0,NULL,1),
+(10,'mdrazuahamad8@gmail.com','',NULL,'$2a$10$Ge/6axfgIMkwcbsuLxHne.ASVi8YJBXzzXsMtaymuLsFlGl9QFd/q',NULL,2,0,NULL,0,'2025-12-14 00:03:24','/uploads/profile_photos/1757749014484-MD Razu Ahamad 6.png','','','','inactive','2025-09-13 07:35:21','2025-12-13 18:03:24','MD. Razu','Ahamad',1,'','',NULL,NULL,'md-razu-ahamad',NULL,NULL,0,0,NULL,1),
+(11,'abdullahalfarabiraju12345@gmail.com','',NULL,'$2a$10$wqeDh8ZfuUzwUo.1Arx/tuC9c4wv3lukJp8wzvP4hyy/DvecFQ8Ci',NULL,5,0,NULL,0,'2025-12-14 00:03:29','/uploads/profile_photos/1757749336466-Razu passportSize.jpg','','','','inactive','2025-09-13 07:39:48','2025-12-13 18:03:29','Abdullah','AL Farabi',1,'','',NULL,NULL,NULL,NULL,NULL,0,0,NULL,1),
+(12,'mollarihad@4gmail.com',NULL,NULL,'$2a$10$1KSJMYPqwK4QYeSSRmK6Ku2qY64CTCXCeAkKcqCuJ.xJJIt/Ph0Uq',NULL,5,0,NULL,0,'2025-12-14 00:03:31',NULL,NULL,NULL,NULL,'inactive','2025-09-13 07:56:53','2025-12-13 18:03:31','Rihad','Molla',0,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,NULL,1),
+(13,'mollarihad4@gmail.com',NULL,NULL,'$2a$10$Tj69ZgFhTyxcNOj1OzwwnuRx83quzroixwdRPSv2p0fC21fRELaAO',NULL,5,0,NULL,0,'2025-12-14 00:03:57',NULL,NULL,NULL,NULL,'inactive','2025-09-13 07:57:47','2025-12-13 18:03:57','Rihad','Molla',0,NULL,NULL,'cus_T2uBj94Yh7mqCK',NULL,NULL,NULL,NULL,0,0,NULL,1),
+(14,'abdullahalfarab345@gmail.com',NULL,NULL,'$2a$10$WKw3gRozI/b89nr7GeYA.uJ8mFzwiMngc0I/clot/Vy0uWXqB2o.K',NULL,5,0,NULL,0,'2025-12-14 00:03:35',NULL,NULL,NULL,NULL,'inactive','2025-09-13 08:19:39','2025-12-13 18:03:35','Razu ','AL Farabi',0,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,NULL,1),
+(15,'nmuniru@yahoo.com',NULL,NULL,'$2a$10$Jw0h3ON8l0q8ZpmtZWNUuuQJE.Bf08c1rmkeZV11ULJh3iyaNvob.','2025-10-05 15:45:51',2,0,NULL,1,NULL,NULL,NULL,NULL,NULL,'active','2025-09-28 14:56:10','2025-10-05 16:55:40','Nashiru','Muniru',1,NULL,NULL,NULL,NULL,'nashiru-muniru',NULL,NULL,0,0,NULL,1),
+(16,'cyklonesolutions@gmail.com',NULL,NULL,'$2a$10$n3sO9g0lPEsnHCxqkI0vReTxyYIoyW8g3Il1kT8RovzYlwxFG9YDW',NULL,2,0,NULL,1,NULL,NULL,NULL,NULL,NULL,'active','2025-09-28 15:25:15','2025-09-28 15:29:38','Anthony ','Ighomuaye',1,NULL,NULL,'cus_T8dpSiafW9gTJK',NULL,'anthony-ighomuaye',NULL,NULL,0,0,NULL,1),
+(17,'Musengimana@gmail.com','',NULL,'$2a$10$SEVc1188fumoFTwxphbamehQyDvqeoIVTJoSWZIf60yXznErLLSeC',NULL,5,0,NULL,1,NULL,'/uploads/profile_photos/1760495525229_img_2926.jpg','','','','active','2025-09-28 17:26:47','2025-10-15 02:32:08','Normando','Musa',1,'','','cus_T8iWTQi6iNqG2g',NULL,NULL,NULL,NULL,0,0,NULL,1),
+(18,'joshuawmabonga@gmail.com','',NULL,'$2a$10$HuXSucVv9gDctmRPi8Ncvu9Mw3jvp2zMnMm/K3DBrluEjyxqG.oca',NULL,5,0,NULL,1,NULL,NULL,'','','','active','2025-10-12 18:03:30','2025-10-26 21:18:07','Joshua','Wanyonyi',1,NULL,'','cus_TDvcPLONw36bQV',NULL,'joshua-wanyonyi',NULL,NULL,0,0,NULL,1),
+(19,'marleneadelson@gmail.com',NULL,NULL,'$2a$10$n1w3PSnX6m2eGfq0gg0cW.4n72guvweXNpdJg/LFVBiZcJ7tcNTO2',NULL,2,0,NULL,1,NULL,NULL,NULL,NULL,NULL,'active','2025-10-20 06:15:32','2025-10-20 06:15:32','Marlene','Adelson',0,NULL,NULL,NULL,NULL,'marlene-adelson',NULL,NULL,0,0,NULL,1),
+(20,'marlene@prosfata.space','+1 (613) 770-4810',NULL,'$2a$10$UDBmTGGIjabIsd7Hp3HbTuj.6zj1CeiBPu5ThqvQdIpl5VMHPPnl.',NULL,2,0,NULL,1,NULL,'/uploads/profile_photos/1760942493362_marleneadelson.png','Ontario','Kingston','Canada','active','2025-10-20 06:35:28','2025-10-20 12:27:43','Marlene','Adelson',1,'Canada','Canada/Saskatchewan',NULL,NULL,'marlene-adelson-2',NULL,NULL,0,0,NULL,1),
+(21,'thandi@prosfata.space','+1 709-866-7507',NULL,'$2a$10$LuiTogmZpAa7DjphhxLkYOMtO8zfpNFGIGrdvHRFKiLuZJr/YpOeq',NULL,2,0,NULL,1,NULL,'/uploads/profile_photos/1760963843058_thandinkole.png','Ontario','Kingston','Canada','active','2025-10-20 12:30:43','2025-10-20 13:19:15','Thandi','Nkole',1,'Canada','Canada/Saskatchewan',NULL,NULL,'thandi-nkole',NULL,NULL,0,0,NULL,1),
+(22,'kanika@prosfata.space','+1 918-774-1106','1990-06-20','$2a$10$i5FQ8Cav46ldp5aSdNGn/.ULJ7ZU4F.rvySEnhpF69NdtdVHRmA4W',NULL,2,0,NULL,1,NULL,'/uploads/profile_photos/1760980474396_kanikapassi.png','Ontario','Kingston','Canada','active','2025-10-20 17:03:59','2025-10-20 17:25:19','Kanika','Passi',1,'Canada','Canada/Saskatchewan',NULL,NULL,'kanika-passi',NULL,NULL,0,0,NULL,1),
+(23,'george @prosfata.space','+1 912-207-6423','1991-06-20','$2a$10$56YLrMIc8Khk5G.SKJTCJenZzoe1WWqt0vF4DK6IVcl4AKLoyFmoG',NULL,2,0,NULL,1,NULL,'/uploads/profile_photos/1760981441961_georgejacob.png','Ontario','Kingston','Canada','active','2025-10-20 17:27:29','2025-10-20 17:55:20','George','Jacob',1,'Canada','Canada/Saskatchewan',NULL,NULL,'george-jacob',NULL,NULL,0,0,NULL,1),
+(24,'jan@prosfata.space','+1 416-306-1172','1986-06-20','$2a$10$CNv4K8TNayI9Fs0M3LD8J.DGeXvpgE6JpQ04LdsMDbceHWOOzQG2q',NULL,2,0,NULL,1,NULL,'/uploads/profile_photos/1760983235927_janmascini.png','Ontario','Kingston','Canada','active','2025-10-20 17:57:57','2025-10-20 18:19:02','Jan','Mascini',1,'Canada','Canada/Saskatchewan',NULL,NULL,'jan-mascini',NULL,NULL,0,0,NULL,1),
+(25,'lisa@prosfata.space','+1 770-387-9761','1993-06-21','$2a$10$zwBqQBz58R4ygCOa19xVWuqhn22MTY8hSV4CwD2bOOIlT04.R3Z2y',NULL,2,0,NULL,1,NULL,'/uploads/profile_photos/1760984680998_lisamacdonald.png','Ontario','Kingston','Canada','active','2025-10-20 18:20:56','2025-10-20 18:34:41','Lisa','Macdonald',1,'Canada','Canada/Saskatchewan',NULL,NULL,'lisa-macdonald',NULL,NULL,0,0,NULL,1),
+(26,'henripaul.jean@gmail.com',NULL,NULL,'$2a$10$7pjUOQoOJbjfOhIF4yXovudzHbQ3JwjqGvlCKdAz0W1sPv69WS8Ui',NULL,2,0,NULL,1,NULL,NULL,NULL,NULL,NULL,'active','2025-10-21 21:37:43','2025-10-21 21:39:27','Jean ','Paul',1,NULL,NULL,NULL,NULL,'jean-paul',NULL,NULL,0,0,NULL,1),
+(27,'00workfromhome@gmail.com',NULL,NULL,'$2a$10$J1h8vIApFu6okG2PGZWw3uCN/sbU4Mrf31O/nNngWySdI7OxYBZuW',NULL,1,0,'2026-01-01 05:49:27',1,NULL,NULL,NULL,NULL,NULL,'active','2026-01-01 05:49:27','2026-01-01 05:50:34','Saiful','Islam',1,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,NULL,1),
+(30,'munsiimranhossen46@gmail.com',NULL,NULL,'$2a$10$y3RIGUKrPYhnm/cGaKC6PuK4ZQFSw/8uWyS4elHbRajAMgGeXhGoK',NULL,2,0,NULL,1,NULL,NULL,NULL,NULL,NULL,'active','2026-01-02 17:00:07','2026-01-02 17:00:07','imran','munsi',0,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,NULL,1),
+(31,'munsiimran@gmail.com',NULL,NULL,'$2a$10$DAT35jS/2OMjM7X58PuY6O/ccy6b1EMdJXq.PnIlKRwE9tDHomYuu',NULL,2,0,NULL,1,NULL,NULL,NULL,NULL,NULL,'active','2026-01-02 17:00:55','2026-01-02 17:00:55','imran','munsi',0,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,NULL,1),
+(35,'abutaleb142@gmail.com',NULL,NULL,'$2a$10$RO5XjSll90Bh2ptXt2peLey/0/E.s7hX6kraJKSHyHU0Ef0zS.MvW',NULL,5,0,'2026-01-03 08:52:38',1,NULL,NULL,NULL,NULL,NULL,'active','2026-01-03 08:52:38','2026-01-03 11:05:06','Mohammad Abu','Taleb',1,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,NULL,1);
+/*!40000 ALTER TABLE `users` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `v_admin_accounting_overview`
+--
+
+DROP TABLE IF EXISTS `v_admin_accounting_overview`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `v_admin_accounting_overview` (
+  `currency` varchar(3) DEFAULT NULL,
+  `gross_sales_net_expert` decimal(34,2) DEFAULT NULL,
+  `payouts_paid` decimal(34,2) DEFAULT NULL,
+  `total_fees_collected` decimal(34,2) DEFAULT NULL,
+  `platform_liability_pending` decimal(34,2) DEFAULT NULL,
+  `platform_liability_available` decimal(36,2) DEFAULT NULL,
+  `platform_liability_reserved` decimal(34,2) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `v_admin_accounting_overview`
+--
+
+LOCK TABLES `v_admin_accounting_overview` WRITE;
+/*!40000 ALTER TABLE `v_admin_accounting_overview` DISABLE KEYS */;
+/*!40000 ALTER TABLE `v_admin_accounting_overview` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `v_user_orders`
+--
+
+DROP TABLE IF EXISTS `v_user_orders`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `v_user_orders` (
+  `order_id` int(11) DEFAULT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `kind` enum('service','course','coaching') DEFAULT NULL,
+  `ref_id` int(11) DEFAULT NULL,
+  `amount_cents` int(11) DEFAULT NULL,
+  `currency` char(3) DEFAULT NULL,
+  `status` enum('draft','requires_payment','processing','paid','failed','refunded','canceled') DEFAULT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `last_payment_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `v_user_orders`
+--
+
+LOCK TABLES `v_user_orders` WRITE;
+/*!40000 ALTER TABLE `v_user_orders` DISABLE KEYS */;
+/*!40000 ALTER TABLE `v_user_orders` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Temporary table structure for view `vw_chat_last_message`
+--
+
+DROP TABLE IF EXISTS `vw_chat_last_message`;
+/*!50001 DROP VIEW IF EXISTS `vw_chat_last_message`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8mb4;
+/*!50001 CREATE VIEW `vw_chat_last_message` AS SELECT
+ 1 AS `chat_id`,
+  1 AS `last_message_id`,
+  1 AS `sender_id`,
+  1 AS `content`,
+  1 AS `file_url`,
+  1 AS `attachment`,
+  1 AS `last_message_at` */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `vw_user_chat_unread`
+--
+
+DROP TABLE IF EXISTS `vw_user_chat_unread`;
+/*!50001 DROP VIEW IF EXISTS `vw_user_chat_unread`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8mb4;
+/*!50001 CREATE VIEW `vw_user_chat_unread` AS SELECT
+ 1 AS `user_id`,
+  1 AS `chat_id`,
+  1 AS `unread_count` */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Table structure for table `wallet_ledger`
+--
+
+DROP TABLE IF EXISTS `wallet_ledger`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `wallet_ledger` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `user_id` bigint(20) unsigned NOT NULL,
+  `role` enum('expert','platform','user') NOT NULL DEFAULT 'expert',
+  `kind` enum('EARN','HOLD_RELEASED','RESERVE','PAYOUT_RESERVE','PAYOUT_REQUEST','PAYOUT_APPROVED','PAYOUT_REJECTED','PAYOUT_PAID','ADJUST') NOT NULL,
+  `amount` decimal(12,2) NOT NULL,
+  `currency` char(3) NOT NULL DEFAULT 'USD',
+  `description` varchar(255) DEFAULT NULL,
+  `available_at` datetime DEFAULT NULL,
+  `ref_table` varchar(64) DEFAULT NULL,
+  `ref_id` bigint(20) DEFAULT NULL,
+  `ref_desc` varchar(255) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=109 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `wallet_ledger`
+--
+
+LOCK TABLES `wallet_ledger` WRITE;
+/*!40000 ALTER TABLE `wallet_ledger` DISABLE KEYS */;
+INSERT INTO `wallet_ledger` VALUES
+(1,3,'expert','EARN',17.11,'USD',NULL,'2025-08-18 12:00:00','service_orders',5,'Service order','2025-09-07 20:20:28'),
+(2,3,'expert','EARN',43.24,'USD',NULL,'2025-08-15 12:00:00','service_orders',6,'Service order','2025-09-07 20:20:28'),
+(3,3,'expert','EARN',17.11,'USD',NULL,'2025-08-15 14:00:00','service_orders',36,'Service order','2025-09-07 20:20:28'),
+(4,3,'expert','EARN',17.11,'USD',NULL,'2025-08-15 15:00:00','service_orders',39,'Service order','2025-09-07 20:20:28'),
+(5,3,'expert','EARN',8.41,'USD',NULL,'2025-08-20 11:00:00','service_orders',41,'Service order','2025-09-07 20:20:28'),
+(6,3,'expert','EARN',17.11,'USD',NULL,'2025-09-03 11:00:00','service_orders',50,'Service order','2025-09-07 20:20:28'),
+(7,3,'expert','EARN',8.41,'USD',NULL,'2025-09-08 13:00:00','service_orders',53,'Service order','2025-09-07 20:20:28'),
+(8,3,'expert','EARN',8.41,'USD',NULL,'2025-09-10 11:00:00','service_orders',55,'Service order','2025-09-07 20:20:28'),
+(9,3,'expert','EARN',24.96,'USD',NULL,'2025-09-10 12:00:00','service_orders',56,'Service order','2025-09-07 20:20:28'),
+(10,3,'expert','EARN',17.12,'USD',NULL,'2025-08-26 18:21:16','course_orders',1,'Course order','2025-09-07 20:20:29'),
+(11,1,'expert','EARN',17.12,'USD',NULL,'2025-09-14 23:39:59','course_orders',5,'Course order','2025-09-07 20:20:29'),
+(12,3,'expert','EARN',17.12,'USD',NULL,'2025-09-14 22:38:50','course_orders',7,'Course order','2025-09-07 20:20:29'),
+(13,3,'expert','EARN',42.38,'USD',NULL,'2025-09-14 22:03:58','course_orders',13,'Course order','2025-09-07 20:20:29'),
+(14,3,'expert','EARN',17.12,'USD',NULL,'2025-09-08 13:35:08','coaching_orders',6,'Coaching order','2025-09-07 20:20:29'),
+(15,3,'expert','EARN',17.12,'USD',NULL,'2025-09-08 13:23:49','coaching_orders',7,'Coaching order','2025-09-07 20:20:29'),
+(16,3,'expert','EARN',17.12,'USD',NULL,'2025-09-09 00:50:48','coaching_orders',9,'Coaching order','2025-09-07 20:20:29'),
+(17,3,'expert','EARN',17.12,'USD',NULL,'2025-09-08 23:24:04','coaching_orders',10,'Coaching order','2025-09-07 20:20:29'),
+(18,3,'expert','EARN',17.12,'USD',NULL,'2025-09-08 22:01:42','coaching_orders',11,'Coaching order','2025-09-07 20:20:29'),
+(19,3,'expert','EARN',17.12,'USD',NULL,'2025-09-09 00:00:28','coaching_orders',13,'Coaching order','2025-09-07 20:20:29'),
+(20,3,'expert','EARN',17.12,'USD',NULL,'2025-09-14 14:45:16','coaching_orders',15,'Coaching order','2025-09-07 20:20:29'),
+(45,3,'expert','PAYOUT_REQUEST',25.00,'USD',NULL,NULL,'payout_requests',6,NULL,'2025-09-07 20:59:03'),
+(47,3,'expert','PAYOUT_REQUEST',20.00,'USD',NULL,NULL,'payout_requests',7,NULL,'2025-09-07 21:16:04'),
+(48,3,'expert','PAYOUT_RESERVE',20.00,'USD',NULL,NULL,'payout_requests',7,NULL,'2025-09-07 21:16:04'),
+(49,3,'expert','PAYOUT_APPROVED',20.00,'USD',NULL,NULL,'payout_requests',7,NULL,'2025-09-07 21:18:55'),
+(51,3,'expert','PAYOUT_PAID',19.12,'USD',NULL,NULL,'payout_requests',7,NULL,'2025-09-07 21:23:27'),
+(52,3,'expert','ADJUST',0.88,'USD',NULL,NULL,'payout_requests',7,NULL,'2025-09-07 21:23:27'),
+(74,3,'expert','PAYOUT_REQUEST',30.00,'USD',NULL,NULL,'payout_requests',8,NULL,'2025-09-07 21:59:19'),
+(75,3,'expert','PAYOUT_RESERVE',30.00,'USD',NULL,NULL,'payout_requests',8,NULL,'2025-09-07 21:59:19'),
+(76,3,'expert','PAYOUT_APPROVED',30.00,'USD',NULL,NULL,'payout_requests',8,NULL,'2025-09-07 22:00:02'),
+(77,3,'expert','PAYOUT_PAID',30.00,'USD',NULL,NULL,'payout_requests',8,NULL,'2025-09-07 22:01:47'),
+(78,3,'expert','PAYOUT_REQUEST',20.00,'USD',NULL,NULL,'payout_requests',9,NULL,'2025-09-12 05:37:01'),
+(79,3,'expert','PAYOUT_RESERVE',20.00,'USD',NULL,NULL,'payout_requests',9,NULL,'2025-09-12 05:37:01'),
+(80,3,'expert','PAYOUT_APPROVED',20.00,'USD',NULL,NULL,'payout_requests',9,NULL,'2025-09-12 06:56:16'),
+(81,3,'expert','PAYOUT_PAID',19.02,'USD',NULL,NULL,'payout_requests',9,NULL,'2025-09-12 06:56:40'),
+(82,3,'expert','ADJUST',0.98,'USD',NULL,NULL,'payout_requests',9,NULL,'2025-09-12 06:56:40'),
+(83,3,'expert','EARN',8.81,'USD',NULL,'2025-09-20 08:03:51','service_orders',58,'Service order','2025-09-13 08:03:51'),
+(84,3,'expert','PAYOUT_REQUEST',50.00,'USD',NULL,NULL,'payout_requests',10,NULL,'2025-09-13 14:29:10'),
+(85,3,'expert','PAYOUT_RESERVE',50.00,'USD',NULL,NULL,'payout_requests',10,NULL,'2025-09-13 14:29:10'),
+(86,3,'expert','PAYOUT_APPROVED',50.00,'USD',NULL,NULL,'payout_requests',10,NULL,'2025-09-13 14:35:42'),
+(87,3,'expert','PAYOUT_PAID',48.65,'USD',NULL,NULL,'payout_requests',10,NULL,'2025-09-13 14:37:09'),
+(88,3,'expert','ADJUST',1.35,'USD',NULL,NULL,'payout_requests',10,NULL,'2025-09-13 14:37:09'),
+(89,6,'expert','EARN',97.23,'USD',NULL,'2025-09-21 07:25:21','service_orders',59,'Service order','2025-09-14 07:25:21'),
+(90,6,'expert','EARN',97.23,'USD',NULL,'2025-09-21 07:38:04','service_orders',60,'Service order','2025-09-14 07:38:04'),
+(91,3,'expert','EARN',390.10,'USD',NULL,'2025-10-04 09:21:27','service_orders',63,'Service order','2025-09-27 09:21:27'),
+(92,6,'expert','EARN',1.94,'USD',NULL,'2025-10-05 20:00:00','service_orders',67,'Service order','2025-09-28 18:28:22'),
+(93,6,'expert','EARN',1.94,'USD',NULL,'2025-10-05 21:00:00','service_orders',68,'Service order','2025-09-28 18:37:40'),
+(94,3,'expert','PAYOUT_REQUEST',30.00,'USD',NULL,NULL,'payout_requests',11,NULL,'2025-10-05 07:34:09'),
+(95,3,'expert','PAYOUT_RESERVE',30.00,'USD',NULL,NULL,'payout_requests',11,NULL,'2025-10-05 07:34:09'),
+(96,6,'expert','EARN',1.94,'USD',NULL,'2025-10-19 11:00:00','service_orders',70,'Service order','2025-10-05 16:28:28'),
+(97,3,'expert','PAYOUT_APPROVED',30.00,'USD',NULL,NULL,'payout_requests',11,NULL,'2025-10-26 07:19:31'),
+(98,3,'expert','PAYOUT_PAID',29.03,'USD',NULL,NULL,'payout_requests',11,NULL,'2025-10-26 07:19:41'),
+(99,3,'expert','ADJUST',0.97,'USD',NULL,NULL,'payout_requests',11,NULL,'2025-10-26 07:19:41'),
+(100,6,'expert','EARN',93.32,'USD',NULL,'2025-11-04 20:00:00','service_orders',71,'Service order','2025-10-27 05:52:28'),
+(101,3,'expert','EARN',390.10,'USD',NULL,'2025-11-12 11:00:00','service_orders',72,'Service order','2025-11-04 12:58:41'),
+(102,3,'expert','EARN',390.10,'USD',NULL,'2025-11-12 12:00:00','service_orders',73,'Service order','2025-11-04 13:25:49'),
+(103,3,'expert','EARN',22.25,'USD',NULL,'2025-11-19 11:00:00','service_orders',74,'Service order','2025-11-11 06:47:36'),
+(104,3,'expert','EARN',351.05,'USD',NULL,'2025-11-21 10:00:00','service_orders',76,'Service order','2025-11-12 15:08:10'),
+(105,3,'expert','EARN',390.10,'USD',NULL,'2025-11-24 10:00:00','service_orders',77,'Service order','2025-11-16 08:34:18'),
+(106,6,'expert','EARN',93.32,'USD',NULL,'2025-11-24 20:00:00','service_orders',78,'Service order','2025-11-17 12:06:46'),
+(107,3,'expert','EARN',351.05,'USD',NULL,'2026-01-12 10:00:00','service_orders',85,'Service order','2026-01-02 18:17:37'),
+(108,3,'expert','EARN',351.05,'USD',NULL,'2026-01-12 11:00:00','service_orders',86,'Service order','2026-01-02 19:02:38');
+/*!40000 ALTER TABLE `wallet_ledger` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `webhook_events`
+--
+
+DROP TABLE IF EXISTS `webhook_events`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `webhook_events` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `event_id` varchar(255) DEFAULT NULL,
+  `provider` varchar(50) DEFAULT NULL,
+  `created_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `event_id` (`event_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `webhook_events`
+--
+
+LOCK TABLES `webhook_events` WRITE;
+/*!40000 ALTER TABLE `webhook_events` DISABLE KEYS */;
+/*!40000 ALTER TABLE `webhook_events` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Final view structure for view `vw_chat_last_message`
+--
+
+/*!50001 DROP VIEW IF EXISTS `vw_chat_last_message`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
+/*!50001 VIEW `vw_chat_last_message` AS select `m`.`chat_id` AS `chat_id`,`m`.`id` AS `last_message_id`,`m`.`sender_id` AS `sender_id`,`m`.`content` AS `content`,`m`.`file_url` AS `file_url`,`m`.`attachment` AS `attachment`,`m`.`created_at` AS `last_message_at` from (`messages` `m` join (select `messages`.`chat_id` AS `chat_id`,max(`messages`.`created_at`) AS `max_created` from `messages` group by `messages`.`chat_id`) `t` on(`t`.`chat_id` = `m`.`chat_id` and `t`.`max_created` = `m`.`created_at`)) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `vw_user_chat_unread`
+--
+
+/*!50001 DROP VIEW IF EXISTS `vw_user_chat_unread`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb3 */;
+/*!50001 SET character_set_results     = utf8mb3 */;
+/*!50001 SET collation_connection      = utf8mb3_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
+/*!50001 VIEW `vw_user_chat_unread` AS select `cp`.`user_id` AS `user_id`,`m`.`chat_id` AS `chat_id`,count(0) AS `unread_count` from ((`chat_participants` `cp` join `messages` `m` on(`m`.`chat_id` = `cp`.`chat_id` and `m`.`sender_id` <> `cp`.`user_id`)) left join `message_reads` `mr` on(`mr`.`message_id` = `m`.`id` and `mr`.`user_id` = `cp`.`user_id`)) where `mr`.`message_id` is null group by `cp`.`user_id`,`m`.`chat_id` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+-- Dump completed on 2026-01-03 17:19:37

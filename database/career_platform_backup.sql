@@ -1,0 +1,1512 @@
+/*M!999999\- enable the sandbox mode */ 
+-- MariaDB dump 10.19  Distrib 10.11.13-MariaDB, for debian-linux-gnu (x86_64)
+--
+-- Host: localhost    Database: career_platform
+-- ------------------------------------------------------
+-- Server version	10.11.13-MariaDB-0ubuntu0.24.04.1
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+
+--
+-- Table structure for table `categories`
+--
+
+DROP TABLE IF EXISTS `categories`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `categories` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(120) NOT NULL,
+  `slug` varchar(160) NOT NULL,
+  `description` text DEFAULT NULL,
+  `is_active` tinyint(1) DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `slug` (`slug`),
+  UNIQUE KEY `uq_categories_name` (`name`),
+  KEY `idx_categories_active` (`is_active`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `categories`
+--
+
+LOCK TABLES `categories` WRITE;
+/*!40000 ALTER TABLE `categories` DISABLE KEYS */;
+INSERT INTO `categories` VALUES
+(1,'Interview Prep 2','interview-prep-2','Mock interviews, feedback and drills',1,'2025-08-12 04:15:38');
+/*!40000 ALTER TABLE `categories` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `chat_participants`
+--
+
+DROP TABLE IF EXISTS `chat_participants`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `chat_participants` (
+  `chat_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `joined_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `typing` tinyint(1) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`chat_id`,`user_id`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `fk_cp_chat` FOREIGN KEY (`chat_id`) REFERENCES `chats` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_cp_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `chat_participants`
+--
+
+LOCK TABLES `chat_participants` WRITE;
+/*!40000 ALTER TABLE `chat_participants` DISABLE KEYS */;
+INSERT INTO `chat_participants` VALUES
+(1,2,'2025-08-12 15:44:42',0),
+(1,4,'2025-08-12 15:44:42',0),
+(2,3,'2025-08-12 15:54:17',0),
+(2,4,'2025-08-12 15:54:17',0);
+/*!40000 ALTER TABLE `chat_participants` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `chats`
+--
+
+DROP TABLE IF EXISTS `chats`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `chats` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `is_group` tinyint(1) NOT NULL DEFAULT 0,
+  `name` varchar(100) DEFAULT NULL,
+  `photo` varchar(255) DEFAULT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `created_by` (`created_by`),
+  CONSTRAINT `fk_chats_created_by_users` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `chats`
+--
+
+LOCK TABLES `chats` WRITE;
+/*!40000 ALTER TABLE `chats` DISABLE KEYS */;
+INSERT INTO `chats` VALUES
+(1,0,NULL,NULL,4,'2025-08-12 15:44:42','2025-08-12 15:44:42'),
+(2,0,NULL,NULL,4,'2025-08-12 15:54:17','2025-08-12 15:54:17');
+/*!40000 ALTER TABLE `chats` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `course_category_map`
+--
+
+DROP TABLE IF EXISTS `course_category_map`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `course_category_map` (
+  `course_id` int(11) NOT NULL,
+  `category_id` int(11) NOT NULL,
+  PRIMARY KEY (`course_id`,`category_id`),
+  KEY `idx_ccm_category` (`category_id`),
+  CONSTRAINT `fk_ccm_category` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_ccm_course` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `course_category_map`
+--
+
+LOCK TABLES `course_category_map` WRITE;
+/*!40000 ALTER TABLE `course_category_map` DISABLE KEYS */;
+INSERT INTO `course_category_map` VALUES
+(1,1);
+/*!40000 ALTER TABLE `course_category_map` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `course_enrollments`
+--
+
+DROP TABLE IF EXISTS `course_enrollments`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `course_enrollments` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `course_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `enrolled_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `course_id` (`course_id`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `course_enrollments_ibfk_1` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `course_enrollments_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `course_enrollments`
+--
+
+LOCK TABLES `course_enrollments` WRITE;
+/*!40000 ALTER TABLE `course_enrollments` DISABLE KEYS */;
+/*!40000 ALTER TABLE `course_enrollments` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `course_features`
+--
+
+DROP TABLE IF EXISTS `course_features`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `course_features` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `course_id` int(11) NOT NULL,
+  `feature_type` enum('text','image','pdf') NOT NULL,
+  `feature_value` text DEFAULT NULL,
+  `content` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `course_id` (`course_id`),
+  CONSTRAINT `course_features_ibfk_1` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `course_features`
+--
+
+LOCK TABLES `course_features` WRITE;
+/*!40000 ALTER TABLE `course_features` DISABLE KEYS */;
+INSERT INTO `course_features` VALUES
+(1,1,'text','Lifetime access with certificate',NULL,'2025-08-06 18:13:49'),
+(2,1,'text','Lifetime access with certificate',NULL,'2025-08-06 18:14:18');
+/*!40000 ALTER TABLE `course_features` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `course_files`
+--
+
+DROP TABLE IF EXISTS `course_files`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `course_files` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `course_id` int(11) DEFAULT NULL,
+  `file_name` varchar(255) DEFAULT NULL,
+  `file_type` varchar(50) DEFAULT NULL,
+  `file_path` text DEFAULT NULL,
+  `uploaded_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `course_id` (`course_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `course_files`
+--
+
+LOCK TABLES `course_files` WRITE;
+/*!40000 ALTER TABLE `course_files` DISABLE KEYS */;
+INSERT INTO `course_files` VALUES
+(1,1,'32-HCL-Technologies-Denmark-Apps_0 (1).pdf','application/pdf','uploads\\course_materials\\1753465705488-32-HCL-Technologies-Denmark-Apps_0 (1).pdf','2025-07-25 17:48:25'),
+(2,1,'32-HCL-Technologies-Denmark-Apps_0 (1).pdf','application/pdf','uploads\\course_materials\\1754504043452-32-HCL-Technologies-Denmark-Apps_0 (1).pdf','2025-08-06 18:14:03');
+/*!40000 ALTER TABLE `course_files` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `course_reviews`
+--
+
+DROP TABLE IF EXISTS `course_reviews`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `course_reviews` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `course_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `rating` decimal(2,1) NOT NULL CHECK (`rating` between 0 and 5),
+  `review` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `course_id` (`course_id`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `course_reviews_ibfk_1` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `course_reviews_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `course_reviews`
+--
+
+LOCK TABLES `course_reviews` WRITE;
+/*!40000 ALTER TABLE `course_reviews` DISABLE KEYS */;
+/*!40000 ALTER TABLE `course_reviews` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `courses`
+--
+
+DROP TABLE IF EXISTS `courses`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `courses` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `title` varchar(255) NOT NULL,
+  `description` text DEFAULT NULL,
+  `start_date` date DEFAULT NULL,
+  `end_date` date DEFAULT NULL,
+  `duration` varchar(100) DEFAULT NULL,
+  `meet_link` varchar(255) DEFAULT NULL,
+  `price` decimal(10,2) DEFAULT 0.00,
+  `status` enum('upcoming','ongoing','completed') NOT NULL DEFAULT 'upcoming',
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `course_image` varchar(255) DEFAULT NULL,
+  `image_url` text DEFAULT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `creator_role` int(11) DEFAULT 2,
+  `expert_id` int(11) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT NULL,
+  `updated_by` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `created_by` (`created_by`),
+  CONSTRAINT `courses_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `courses`
+--
+
+LOCK TABLES `courses` WRITE;
+/*!40000 ALTER TABLE `courses` DISABLE KEYS */;
+INSERT INTO `courses` VALUES
+(1,'AI Bootcamp','Learn AI','2025-08-01','2025-08-10','13 days','',22.50,'upcoming',1,'/uploads/course_images/1754982436178-client-dashboard.jpg',NULL,3,2,3,'2025-08-06 18:08:41','2025-08-12 13:07:16',4),
+(2,'AI Bootcamp	','Learn AI','2025-08-01','2025-08-10','10 days','',0.00,'upcoming',1,'/uploads/course_images/1754980738802-eCipher-July-36-Final-1.jpg',NULL,4,1,5,'2025-08-12 06:38:59',NULL,NULL);
+/*!40000 ALTER TABLE `courses` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `expert_education`
+--
+
+DROP TABLE IF EXISTS `expert_education`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `expert_education` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) DEFAULT NULL,
+  `degree` varchar(255) DEFAULT NULL,
+  `institution` varchar(255) DEFAULT NULL,
+  `graduation_year` year(4) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `expert_education_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `expert_education`
+--
+
+LOCK TABLES `expert_education` WRITE;
+/*!40000 ALTER TABLE `expert_education` DISABLE KEYS */;
+INSERT INTO `expert_education` VALUES
+(1,3,'MBA','XYZ University',2018);
+/*!40000 ALTER TABLE `expert_education` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `expert_experiences`
+--
+
+DROP TABLE IF EXISTS `expert_experiences`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `expert_experiences` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `job_title` varchar(255) DEFAULT NULL,
+  `company` varchar(255) DEFAULT NULL,
+  `start_date` date DEFAULT NULL,
+  `end_date` date DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `expert_experiences_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `expert_experiences`
+--
+
+LOCK TABLES `expert_experiences` WRITE;
+/*!40000 ALTER TABLE `expert_experiences` DISABLE KEYS */;
+INSERT INTO `expert_experiences` VALUES
+(1,3,'Coach','ABC','2020-01-01','2022-12-31','2025-08-05 17:05:27');
+/*!40000 ALTER TABLE `expert_experiences` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `expert_languages`
+--
+
+DROP TABLE IF EXISTS `expert_languages`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `expert_languages` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `expert_id` int(11) NOT NULL,
+  `language` varchar(100) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `expert_id` (`expert_id`),
+  CONSTRAINT `expert_languages_ibfk_1` FOREIGN KEY (`expert_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `expert_languages`
+--
+
+LOCK TABLES `expert_languages` WRITE;
+/*!40000 ALTER TABLE `expert_languages` DISABLE KEYS */;
+INSERT INTO `expert_languages` VALUES
+(7,3,'English'),
+(8,3,'French');
+/*!40000 ALTER TABLE `expert_languages` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `expert_profiles`
+--
+
+DROP TABLE IF EXISTS `expert_profiles`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `expert_profiles` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `headline` text DEFAULT NULL,
+  `bio` text DEFAULT NULL,
+  `languages` varchar(255) DEFAULT NULL,
+  `graduated` tinyint(1) DEFAULT 0,
+  `stripe_account_id` varchar(255) DEFAULT NULL,
+  `public_url_slug` varchar(100) DEFAULT NULL,
+  `total_sessions_completed` int(11) DEFAULT 0,
+  `is_verified` tinyint(1) DEFAULT 0,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `user_id` (`user_id`),
+  UNIQUE KEY `public_url_slug` (`public_url_slug`),
+  CONSTRAINT `expert_profiles_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `expert_profiles`
+--
+
+LOCK TABLES `expert_profiles` WRITE;
+/*!40000 ALTER TABLE `expert_profiles` DISABLE KEYS */;
+INSERT INTO `expert_profiles` VALUES
+(1,3,'Senior Data Scientist','Expert in ML, NLP, and AI strategy.',NULL,0,NULL,NULL,0,0),
+(6,5,NULL,NULL,NULL,0,NULL,NULL,0,0);
+/*!40000 ALTER TABLE `expert_profiles` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `expert_reviews`
+--
+
+DROP TABLE IF EXISTS `expert_reviews`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `expert_reviews` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `service_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `rating` decimal(2,1) NOT NULL CHECK (`rating` between 1 and 5),
+  `review` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_review` (`service_id`,`user_id`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `expert_reviews_ibfk_1` FOREIGN KEY (`service_id`) REFERENCES `expert_services` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `expert_reviews_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `expert_reviews`
+--
+
+LOCK TABLES `expert_reviews` WRITE;
+/*!40000 ALTER TABLE `expert_reviews` DISABLE KEYS */;
+/*!40000 ALTER TABLE `expert_reviews` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `expert_service_categories`
+--
+
+DROP TABLE IF EXISTS `expert_service_categories`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `expert_service_categories` (
+  `service_id` int(11) NOT NULL,
+  `category_id` int(11) NOT NULL,
+  PRIMARY KEY (`service_id`,`category_id`),
+  KEY `idx_esc_category` (`category_id`),
+  CONSTRAINT `fk_esc_category` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_esc_service` FOREIGN KEY (`service_id`) REFERENCES `expert_services` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `expert_service_categories`
+--
+
+LOCK TABLES `expert_service_categories` WRITE;
+/*!40000 ALTER TABLE `expert_service_categories` DISABLE KEYS */;
+INSERT INTO `expert_service_categories` VALUES
+(1,1);
+/*!40000 ALTER TABLE `expert_service_categories` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `expert_services`
+--
+
+DROP TABLE IF EXISTS `expert_services`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `expert_services` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `description` text DEFAULT NULL,
+  `price` decimal(10,2) DEFAULT NULL,
+  `image` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `is_consultation` tinyint(1) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `expert_services`
+--
+
+LOCK TABLES `expert_services` WRITE;
+/*!40000 ALTER TABLE `expert_services` DISABLE KEYS */;
+INSERT INTO `expert_services` VALUES
+(1,3,'Resume Coaching','Expert help on resume',19.99,'/uploads/service_images/image-1754423016143-225351101.jpg','2025-08-05 19:21:28','2025-08-05 19:43:36',0),
+(2,3,'Resume Coaching','Expert help on resume',49.99,'/uploads/service_images/image-1754569451107-952051340.jpg','2025-08-07 12:24:11','2025-08-07 12:24:11',0);
+/*!40000 ALTER TABLE `expert_services` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `expert_skills`
+--
+
+DROP TABLE IF EXISTS `expert_skills`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `expert_skills` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `expert_id` int(11) NOT NULL,
+  `skill_id` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_skill_per_expert` (`expert_id`,`skill_id`),
+  KEY `skill_id` (`skill_id`),
+  CONSTRAINT `expert_skills_ibfk_1` FOREIGN KEY (`expert_id`) REFERENCES `users` (`id`),
+  CONSTRAINT `expert_skills_ibfk_2` FOREIGN KEY (`skill_id`) REFERENCES `skills` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `expert_skills`
+--
+
+LOCK TABLES `expert_skills` WRITE;
+/*!40000 ALTER TABLE `expert_skills` DISABLE KEYS */;
+INSERT INTO `expert_skills` VALUES
+(11,3,1),
+(12,3,2),
+(13,3,3),
+(14,3,4);
+/*!40000 ALTER TABLE `expert_skills` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `expert_time_slots`
+--
+
+DROP TABLE IF EXISTS `expert_time_slots`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `expert_time_slots` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `expert_id` int(11) NOT NULL,
+  `start_time` datetime NOT NULL,
+  `end_time` datetime NOT NULL,
+  `is_booked` tinyint(1) DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_expert_slot` (`expert_id`,`start_time`),
+  KEY `idx_expert_time` (`expert_id`,`start_time`),
+  CONSTRAINT `expert_time_slots_ibfk_1` FOREIGN KEY (`expert_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=105 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `expert_time_slots`
+--
+
+LOCK TABLES `expert_time_slots` WRITE;
+/*!40000 ALTER TABLE `expert_time_slots` DISABLE KEYS */;
+INSERT INTO `expert_time_slots` VALUES
+(1,3,'2025-08-15 10:00:00','2025-08-15 11:00:00',0,'2025-08-09 21:20:55'),
+(2,3,'2025-08-11 09:00:00','2025-08-11 10:00:00',0,'2025-08-10 07:02:01'),
+(3,3,'2025-08-11 10:00:00','2025-08-11 11:00:00',0,'2025-08-10 07:02:01'),
+(4,3,'2025-08-11 11:00:00','2025-08-11 12:00:00',0,'2025-08-10 07:02:01'),
+(5,3,'2025-08-11 12:00:00','2025-08-11 13:00:00',0,'2025-08-10 07:02:01'),
+(6,3,'2025-08-18 09:00:00','2025-08-18 10:00:00',1,'2025-08-10 07:02:01'),
+(7,3,'2025-08-18 10:00:00','2025-08-18 11:00:00',1,'2025-08-10 07:02:01'),
+(8,3,'2025-08-18 11:00:00','2025-08-18 12:00:00',1,'2025-08-10 07:02:01'),
+(9,3,'2025-08-18 12:00:00','2025-08-18 13:00:00',0,'2025-08-10 07:02:01'),
+(10,3,'2025-08-25 09:00:00','2025-08-25 10:00:00',0,'2025-08-10 07:02:01'),
+(11,3,'2025-08-25 10:00:00','2025-08-25 11:00:00',0,'2025-08-10 07:02:01'),
+(12,3,'2025-08-25 11:00:00','2025-08-25 12:00:00',0,'2025-08-10 07:02:01'),
+(13,3,'2025-08-25 12:00:00','2025-08-25 13:00:00',0,'2025-08-10 07:02:01'),
+(14,3,'2025-08-11 15:00:00','2025-08-11 16:00:00',0,'2025-08-10 07:02:01'),
+(15,3,'2025-08-11 16:00:00','2025-08-11 17:00:00',0,'2025-08-10 07:02:01'),
+(16,3,'2025-08-11 17:00:00','2025-08-11 18:00:00',0,'2025-08-10 07:02:01'),
+(17,3,'2025-08-18 15:00:00','2025-08-18 16:00:00',0,'2025-08-10 07:02:01'),
+(18,3,'2025-08-18 16:00:00','2025-08-18 17:00:00',0,'2025-08-10 07:02:01'),
+(19,3,'2025-08-18 17:00:00','2025-08-18 18:00:00',0,'2025-08-10 07:02:01'),
+(20,3,'2025-08-25 15:00:00','2025-08-25 16:00:00',0,'2025-08-10 07:02:01'),
+(21,3,'2025-08-25 16:00:00','2025-08-25 17:00:00',0,'2025-08-10 07:02:01'),
+(22,3,'2025-08-25 17:00:00','2025-08-25 18:00:00',0,'2025-08-10 07:02:01'),
+(23,3,'2025-08-13 10:00:00','2025-08-13 11:00:00',0,'2025-08-10 07:02:01'),
+(24,3,'2025-08-13 11:00:00','2025-08-13 12:00:00',0,'2025-08-10 07:02:01'),
+(25,3,'2025-08-20 10:00:00','2025-08-20 11:00:00',0,'2025-08-10 07:02:01'),
+(26,3,'2025-08-20 11:00:00','2025-08-20 12:00:00',0,'2025-08-10 07:02:01'),
+(27,3,'2025-08-27 10:00:00','2025-08-27 11:00:00',0,'2025-08-10 07:02:01'),
+(28,3,'2025-08-27 11:00:00','2025-08-27 12:00:00',0,'2025-08-10 07:02:01'),
+(29,3,'2025-08-15 09:00:00','2025-08-15 10:00:00',0,'2025-08-10 07:02:01'),
+(30,3,'2025-08-15 11:00:00','2025-08-15 12:00:00',1,'2025-08-10 07:02:01'),
+(31,3,'2025-08-15 12:00:00','2025-08-15 13:00:00',0,'2025-08-10 07:02:01'),
+(32,3,'2025-08-15 13:00:00','2025-08-15 14:00:00',0,'2025-08-10 07:02:01'),
+(33,3,'2025-08-15 14:00:00','2025-08-15 15:00:00',0,'2025-08-10 07:02:01'),
+(34,3,'2025-08-15 15:00:00','2025-08-15 16:00:00',0,'2025-08-10 07:02:01'),
+(35,3,'2025-08-15 16:00:00','2025-08-15 17:00:00',0,'2025-08-10 07:02:01'),
+(36,3,'2025-08-22 09:00:00','2025-08-22 10:00:00',0,'2025-08-10 07:02:01'),
+(37,3,'2025-08-22 10:00:00','2025-08-22 11:00:00',0,'2025-08-10 07:02:01'),
+(38,3,'2025-08-22 11:00:00','2025-08-22 12:00:00',0,'2025-08-10 07:02:01'),
+(39,3,'2025-08-22 12:00:00','2025-08-22 13:00:00',0,'2025-08-10 07:02:01'),
+(40,3,'2025-08-22 13:00:00','2025-08-22 14:00:00',0,'2025-08-10 07:02:01'),
+(41,3,'2025-08-22 14:00:00','2025-08-22 15:00:00',0,'2025-08-10 07:02:01'),
+(42,3,'2025-08-22 15:00:00','2025-08-22 16:00:00',0,'2025-08-10 07:02:01'),
+(43,3,'2025-08-22 16:00:00','2025-08-22 17:00:00',0,'2025-08-10 07:02:01'),
+(44,3,'2025-08-29 09:00:00','2025-08-29 10:00:00',0,'2025-08-10 07:02:01'),
+(45,3,'2025-08-29 10:00:00','2025-08-29 11:00:00',0,'2025-08-10 07:02:01'),
+(46,3,'2025-08-29 11:00:00','2025-08-29 12:00:00',0,'2025-08-10 07:02:01'),
+(47,3,'2025-08-29 12:00:00','2025-08-29 13:00:00',0,'2025-08-10 07:02:01'),
+(48,3,'2025-08-29 13:00:00','2025-08-29 14:00:00',0,'2025-08-10 07:02:01'),
+(49,3,'2025-08-29 14:00:00','2025-08-29 15:00:00',0,'2025-08-10 07:02:01'),
+(50,3,'2025-08-29 15:00:00','2025-08-29 16:00:00',0,'2025-08-10 07:02:01'),
+(51,3,'2025-08-29 16:00:00','2025-08-29 17:00:00',0,'2025-08-10 07:02:01');
+/*!40000 ALTER TABLE `expert_time_slots` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `expert_weekly_availability`
+--
+
+DROP TABLE IF EXISTS `expert_weekly_availability`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `expert_weekly_availability` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `expert_id` int(11) NOT NULL,
+  `day_of_week` enum('Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday') NOT NULL,
+  `start_time` time NOT NULL,
+  `end_time` time NOT NULL,
+  `duration_minutes` int(11) NOT NULL DEFAULT 30,
+  `buffer_minutes` int(11) NOT NULL DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_expert_dow_window` (`expert_id`,`day_of_week`,`start_time`,`end_time`),
+  CONSTRAINT `expert_weekly_availability_ibfk_1` FOREIGN KEY (`expert_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `expert_weekly_availability`
+--
+
+LOCK TABLES `expert_weekly_availability` WRITE;
+/*!40000 ALTER TABLE `expert_weekly_availability` DISABLE KEYS */;
+INSERT INTO `expert_weekly_availability` VALUES
+(1,3,'Saturday','14:00:00','16:30:00',30,10,'2025-08-08 19:29:17'),
+(2,3,'Saturday','10:00:00','14:00:00',30,0,'2025-08-08 20:50:48');
+/*!40000 ALTER TABLE `expert_weekly_availability` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `expert_weekly_templates`
+--
+
+DROP TABLE IF EXISTS `expert_weekly_templates`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `expert_weekly_templates` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `expert_id` int(11) NOT NULL,
+  `day_of_week` enum('Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday') NOT NULL,
+  `start_time` time NOT NULL,
+  `end_time` time NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_expert_dow` (`expert_id`,`day_of_week`),
+  CONSTRAINT `expert_weekly_templates_ibfk_1` FOREIGN KEY (`expert_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `expert_weekly_templates`
+--
+
+LOCK TABLES `expert_weekly_templates` WRITE;
+/*!40000 ALTER TABLE `expert_weekly_templates` DISABLE KEYS */;
+INSERT INTO `expert_weekly_templates` VALUES
+(1,3,'Monday','09:00:00','13:00:00','2025-08-10 07:01:33'),
+(2,3,'Monday','15:00:00','18:00:00','2025-08-10 07:01:33'),
+(3,3,'Wednesday','10:00:00','12:00:00','2025-08-10 07:01:33'),
+(4,3,'Friday','09:00:00','17:00:00','2025-08-10 07:01:33');
+/*!40000 ALTER TABLE `expert_weekly_templates` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `general_profiles`
+--
+
+DROP TABLE IF EXISTS `general_profiles`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `general_profiles` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `full_name` varchar(100) DEFAULT NULL,
+  `phone` varchar(20) DEFAULT NULL,
+  `interests` text DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `user_id` (`user_id`),
+  CONSTRAINT `general_profiles_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `general_profiles`
+--
+
+LOCK TABLES `general_profiles` WRITE;
+/*!40000 ALTER TABLE `general_profiles` DISABLE KEYS */;
+/*!40000 ALTER TABLE `general_profiles` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `industries`
+--
+
+DROP TABLE IF EXISTS `industries`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `industries` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `name` (`name`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `industries`
+--
+
+LOCK TABLES `industries` WRITE;
+/*!40000 ALTER TABLE `industries` DISABLE KEYS */;
+INSERT INTO `industries` VALUES
+(2,'Business'),
+(1,'Updated Industry');
+/*!40000 ALTER TABLE `industries` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `meeting_participants`
+--
+
+DROP TABLE IF EXISTS `meeting_participants`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `meeting_participants` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `meeting_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `role` enum('host','participant') DEFAULT 'participant',
+  `status` enum('invited','accepted','declined','left') DEFAULT 'accepted',
+  `reminder_sent` tinyint(1) DEFAULT 0,
+  `joined_at` datetime DEFAULT NULL,
+  `left_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_meeting_user` (`meeting_id`,`user_id`),
+  KEY `idx_mp_meeting` (`meeting_id`),
+  KEY `idx_mp_user` (`user_id`),
+  CONSTRAINT `meeting_participants_ibfk_1` FOREIGN KEY (`meeting_id`) REFERENCES `meetings` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `meeting_participants_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `meeting_participants`
+--
+
+LOCK TABLES `meeting_participants` WRITE;
+/*!40000 ALTER TABLE `meeting_participants` DISABLE KEYS */;
+INSERT INTO `meeting_participants` VALUES
+(1,6,3,'host','accepted',0,NULL,NULL),
+(2,6,4,'participant','accepted',0,NULL,NULL);
+/*!40000 ALTER TABLE `meeting_participants` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `meetings`
+--
+
+DROP TABLE IF EXISTS `meetings`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `meetings` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `order_id` int(11) NOT NULL,
+  `expert_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `slot_id` int(11) NOT NULL,
+  `start_time` datetime NOT NULL,
+  `end_time` datetime NOT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `provider` enum('livekit','zoom','meet') DEFAULT 'livekit',
+  `room_name` varchar(128) NOT NULL,
+  `join_url_user` varchar(255) DEFAULT NULL,
+  `join_url_expert` varchar(255) DEFAULT NULL,
+  `status` enum('upcoming','ongoing','completed','cancelled') NOT NULL DEFAULT 'upcoming',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `meeting_type` enum('one-on-one','group') NOT NULL DEFAULT 'one-on-one',
+  `video_tool` enum('jitsi','webrtc','livekit') NOT NULL DEFAULT 'livekit',
+  `meet_type` enum('audio','video') NOT NULL DEFAULT 'video',
+  `timezone` varchar(100) NOT NULL DEFAULT 'UTC',
+  `live_room_name` varchar(255) DEFAULT NULL,
+  `is_live` tinyint(1) NOT NULL DEFAULT 0,
+  `reminder_sent` tinyint(1) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_order` (`order_id`),
+  KEY `slot_id` (`slot_id`),
+  KEY `idx_meeting_expert_time` (`expert_id`,`start_time`),
+  KEY `idx_meetings_created_by` (`created_by`),
+  CONSTRAINT `fk_meetings_creator` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `meetings_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `service_orders` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `meetings_ibfk_2` FOREIGN KEY (`slot_id`) REFERENCES `expert_time_slots` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `meetings`
+--
+
+LOCK TABLES `meetings` WRITE;
+/*!40000 ALTER TABLE `meetings` DISABLE KEYS */;
+INSERT INTO `meetings` VALUES
+(3,1,3,3,6,'2025-08-18 09:00:00','2025-08-18 10:00:00',NULL,'livekit','room_2a118618-89e4-4bc9-bc0f-8aff03eda2fc','/meet/join/room_2a118618-89e4-4bc9-bc0f-8aff03eda2fc?as=user','/meet/join/room_2a118618-89e4-4bc9-bc0f-8aff03eda2fc?as=expert','','2025-08-10 07:47:52','one-on-one','livekit','video','UTC',NULL,0,0),
+(4,3,3,3,7,'2025-08-18 10:00:00','2025-08-18 11:00:00',NULL,'livekit','room_6b304630-692a-49a5-8cec-e5d96e9835f5','/meet/join/room_6b304630-692a-49a5-8cec-e5d96e9835f5?as=user','/meet/join/room_6b304630-692a-49a5-8cec-e5d96e9835f5?as=expert','','2025-08-10 07:50:26','one-on-one','livekit','video','UTC',NULL,0,0),
+(5,5,3,4,8,'2025-08-18 11:00:00','2025-08-18 12:00:00',NULL,'livekit','room_56dbff05-1a15-416c-9577-ad04d2851035','/meet/join/room_56dbff05-1a15-416c-9577-ad04d2851035?as=user','/meet/join/room_56dbff05-1a15-416c-9577-ad04d2851035?as=expert','','2025-08-11 19:21:19','one-on-one','livekit','video','UTC',NULL,0,0),
+(6,6,3,4,30,'2025-08-15 11:00:00','2025-08-15 12:00:00',NULL,'livekit','room_915e28fc-6b01-4470-b983-0ea9f59d54ab','/meet/join/room_915e28fc-6b01-4470-b983-0ea9f59d54ab?as=user','/meet/join/room_915e28fc-6b01-4470-b983-0ea9f59d54ab?as=expert','upcoming','2025-08-14 19:44:30','one-on-one','livekit','video','UTC',NULL,0,0);
+/*!40000 ALTER TABLE `meetings` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `message_reads`
+--
+
+DROP TABLE IF EXISTS `message_reads`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `message_reads` (
+  `message_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `read_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`message_id`,`user_id`),
+  KEY `fk_mread_user` (`user_id`),
+  CONSTRAINT `fk_mread_message` FOREIGN KEY (`message_id`) REFERENCES `messages` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_mread_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `message_reads`
+--
+
+LOCK TABLES `message_reads` WRITE;
+/*!40000 ALTER TABLE `message_reads` DISABLE KEYS */;
+/*!40000 ALTER TABLE `message_reads` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `messages`
+--
+
+DROP TABLE IF EXISTS `messages`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `messages` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `chat_id` int(11) NOT NULL,
+  `sender_id` int(11) NOT NULL,
+  `content` text DEFAULT NULL,
+  `attachment` varchar(255) DEFAULT NULL,
+  `file_url` text DEFAULT NULL,
+  `is_read` tinyint(1) NOT NULL DEFAULT 0,
+  `is_deleted` tinyint(1) NOT NULL DEFAULT 0,
+  `edited_at` datetime DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_chat_created` (`chat_id`,`created_at`),
+  KEY `idx_sender` (`sender_id`),
+  CONSTRAINT `fk_messages_chat` FOREIGN KEY (`chat_id`) REFERENCES `chats` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_messages_sender` FOREIGN KEY (`sender_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `messages`
+--
+
+LOCK TABLES `messages` WRITE;
+/*!40000 ALTER TABLE `messages` DISABLE KEYS */;
+INSERT INTO `messages` VALUES
+(1,1,4,'hi',NULL,NULL,0,0,NULL,NULL,'2025-08-12 09:51:36'),
+(2,1,4,'how are yuo?',NULL,NULL,0,0,NULL,NULL,'2025-08-12 09:51:47'),
+(3,1,4,'where are you?',NULL,NULL,0,0,NULL,NULL,'2025-08-12 10:35:41'),
+(4,1,4,'tui koi',NULL,NULL,0,0,NULL,NULL,'2025-08-12 10:39:02');
+/*!40000 ALTER TABLE `messages` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `pages`
+--
+
+DROP TABLE IF EXISTS `pages`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `pages` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(120) NOT NULL,
+  `path` varchar(255) DEFAULT NULL,
+  `icon` varchar(64) DEFAULT NULL,
+  `order_num` int(11) NOT NULL DEFAULT 999,
+  `is_menu` tinyint(1) NOT NULL DEFAULT 1,
+  `parent_id` int(11) DEFAULT NULL,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_pages_path` (`path`),
+  KEY `idx_pages_parent` (`parent_id`),
+  CONSTRAINT `fk_pages_parent` FOREIGN KEY (`parent_id`) REFERENCES `pages` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `pages`
+--
+
+LOCK TABLES `pages` WRITE;
+/*!40000 ALTER TABLE `pages` DISABLE KEYS */;
+INSERT INTO `pages` VALUES
+(1,'Dashboard','/dashboard','layout-dashboard',1,1,NULL,1,'2025-08-13 08:39:39','2025-08-13 08:39:39'),
+(2,'Expert Dashboard','/expert/dashboard','layout-dashboard',2,1,NULL,1,'2025-08-13 08:39:39','2025-08-13 20:14:52'),
+(3,'Resume Review','/resume','file-check',3,1,NULL,1,'2025-08-13 08:39:39','2025-08-13 08:39:39'),
+(4,'Courses & Events','/course-events','monitor-play',4,1,NULL,1,'2025-08-13 08:39:39','2025-08-14 03:29:46'),
+(5,'Service Hub','/services','briefcase',5,1,NULL,1,'2025-08-13 08:39:39','2025-08-13 08:39:39'),
+(6,'Find an Expert','/find-an-expert','graduation-cap',6,1,NULL,1,'2025-08-13 08:39:39','2025-08-14 03:33:09'),
+(7,'My Network','/my-network','earth',7,1,NULL,1,'2025-08-13 08:39:39','2025-08-14 03:34:20'),
+(8,'Messages','/messages','messages-square',8,1,NULL,1,'2025-08-13 08:39:39','2025-08-14 03:35:54'),
+(9,'Coaching Session','/meetings','calendar-days',9,1,NULL,1,'2025-08-13 08:39:39','2025-08-14 03:37:32'),
+(10,'Job Board','/jobs','list',10,1,NULL,1,'2025-08-13 08:39:39','2025-08-13 08:39:39'),
+(11,'Payments','/payments','credit-card',11,1,NULL,1,'2025-08-13 08:39:39','2025-08-13 08:39:39'),
+(12,'Settings','/settings','settings',12,1,NULL,1,'2025-08-13 08:39:39','2025-08-13 08:39:39'),
+(16,'Admin Setting','/admin-setting','calendar-cog',16,1,NULL,1,'2025-08-13 19:40:46','2025-08-13 20:49:31'),
+(17,'Page List','/menu-page-list','layout-panel-top',1,1,16,1,'2025-08-13 19:44:02','2025-08-13 20:47:41'),
+(18,'Role List','/user-role-list','globe-lock',2,1,16,1,'2025-08-13 19:45:14','2025-08-13 20:47:12'),
+(19,'Role Permission','/role-page-access','shield-alert',2,1,16,1,'2025-08-13 19:46:08','2025-08-13 20:48:13'),
+(20,'Category List','/category-list','clipboard-list',6,1,16,1,'2025-08-13 20:44:05','2025-08-13 20:44:05');
+/*!40000 ALTER TABLE `pages` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `password_reset_tokens`
+--
+
+DROP TABLE IF EXISTS `password_reset_tokens`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `password_reset_tokens` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `token_hash` char(64) NOT NULL,
+  `expires_at` datetime NOT NULL,
+  `used` tinyint(1) DEFAULT 0,
+  `used_at` datetime DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `token_hash` (`token_hash`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `fk_prt_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `password_reset_tokens`
+--
+
+LOCK TABLES `password_reset_tokens` WRITE;
+/*!40000 ALTER TABLE `password_reset_tokens` DISABLE KEYS */;
+INSERT INTO `password_reset_tokens` VALUES
+(1,3,'0991a70f7bab68a19f284834d7cb94525979f29becb22c472ec474035dd7593b','2025-08-10 15:54:30',0,NULL,'2025-08-10 08:54:30');
+/*!40000 ALTER TABLE `password_reset_tokens` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `payment_webhook_events`
+--
+
+DROP TABLE IF EXISTS `payment_webhook_events`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `payment_webhook_events` (
+  `id` varchar(191) NOT NULL,
+  `provider` enum('stripe') NOT NULL,
+  `received_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `payment_webhook_events`
+--
+
+LOCK TABLES `payment_webhook_events` WRITE;
+/*!40000 ALTER TABLE `payment_webhook_events` DISABLE KEYS */;
+/*!40000 ALTER TABLE `payment_webhook_events` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `role_page_permissions`
+--
+
+DROP TABLE IF EXISTS `role_page_permissions`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `role_page_permissions` (
+  `role_id` int(11) NOT NULL,
+  `page_id` int(11) NOT NULL,
+  `can_view` tinyint(1) NOT NULL DEFAULT 0,
+  `can_create` tinyint(1) NOT NULL DEFAULT 0,
+  `can_update` tinyint(1) NOT NULL DEFAULT 0,
+  `can_delete` tinyint(1) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`role_id`,`page_id`),
+  KEY `fk_rpp_page` (`page_id`),
+  CONSTRAINT `fk_rpp_page` FOREIGN KEY (`page_id`) REFERENCES `pages` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_rpp_role` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `role_page_permissions`
+--
+
+LOCK TABLES `role_page_permissions` WRITE;
+/*!40000 ALTER TABLE `role_page_permissions` DISABLE KEYS */;
+INSERT INTO `role_page_permissions` VALUES
+(1,1,1,1,0,0),
+(1,4,1,1,0,0),
+(1,5,1,1,0,0),
+(1,6,1,1,0,0),
+(1,7,1,0,0,0),
+(1,8,1,1,1,1),
+(1,9,1,1,1,1),
+(1,11,1,0,1,0),
+(1,12,1,1,1,1),
+(1,16,1,1,1,1),
+(1,17,1,1,1,1),
+(1,18,1,1,1,1),
+(1,19,1,1,1,1),
+(1,20,1,1,1,1),
+(2,2,1,0,0,0),
+(2,4,1,1,1,1),
+(2,5,1,1,1,1),
+(2,6,1,1,1,1),
+(2,7,1,1,1,1),
+(2,8,1,0,0,0),
+(2,9,1,0,0,0),
+(2,11,1,1,1,1),
+(2,12,1,1,1,1),
+(5,1,1,0,0,0),
+(5,4,1,0,0,0),
+(5,5,1,0,0,0),
+(5,6,1,0,0,0),
+(5,7,1,0,0,0),
+(5,8,1,0,0,0),
+(5,9,1,0,0,0),
+(5,11,1,0,0,0),
+(5,12,1,0,0,0);
+/*!40000 ALTER TABLE `role_page_permissions` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `roles`
+--
+
+DROP TABLE IF EXISTS `roles`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `roles` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(50) NOT NULL,
+  `slug` varchar(60) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `name` (`name`)
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `roles`
+--
+
+LOCK TABLES `roles` WRITE;
+/*!40000 ALTER TABLE `roles` DISABLE KEYS */;
+INSERT INTO `roles` VALUES
+(1,'Administrator','admin','2025-08-13 08:37:05','2025-08-13 08:39:13'),
+(2,'Expert','expert','2025-08-13 08:37:05','2025-08-13 08:38:20'),
+(4,'Reviewer','reviewer','2025-08-13 08:37:55','2025-08-13 08:37:55'),
+(5,'User','user','2025-08-13 08:37:55','2025-08-13 08:37:55');
+/*!40000 ALTER TABLE `roles` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `service_orders`
+--
+
+DROP TABLE IF EXISTS `service_orders`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `service_orders` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `expert_id` int(11) NOT NULL,
+  `service_id` int(11) NOT NULL,
+  `amount` decimal(10,2) NOT NULL,
+  `currency` varchar(10) DEFAULT 'USD',
+  `status` enum('pending','paid','cancelled','refunded') NOT NULL DEFAULT 'pending',
+  `notes` text DEFAULT NULL,
+  `payment_ref` varchar(100) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `slot_id` int(11) DEFAULT NULL,
+  `payment_status` enum('Pending','Paid','Failed') DEFAULT 'Pending',
+  `meeting_id` int(11) DEFAULT NULL,
+  `stripe_payment_intent_id` varchar(255) DEFAULT NULL,
+  `stripe_charge_id` varchar(255) DEFAULT NULL,
+  `stripe_invoice_id` varchar(255) DEFAULT NULL,
+  `payment_method_id` varchar(255) DEFAULT NULL,
+  `receipt_url` text DEFAULT NULL,
+  `hosted_invoice_url` text DEFAULT NULL,
+  `invoice_pdf_url` text DEFAULT NULL,
+  `card_brand` varchar(50) DEFAULT NULL,
+  `card_last4` varchar(10) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_user` (`user_id`),
+  KEY `idx_expert` (`expert_id`),
+  KEY `idx_status_created` (`status`,`created_at`),
+  KEY `idx_service_orders_slot` (`slot_id`),
+  KEY `idx_service_orders_payment_status` (`payment_status`),
+  KEY `idx_service_orders_meeting_id` (`meeting_id`),
+  CONSTRAINT `service_orders_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `service_orders_ibfk_2` FOREIGN KEY (`expert_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=37 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `service_orders`
+--
+
+LOCK TABLES `service_orders` WRITE;
+/*!40000 ALTER TABLE `service_orders` DISABLE KEYS */;
+INSERT INTO `service_orders` VALUES
+(1,3,3,1,19.99,'USD','pending',NULL,NULL,'2025-08-09 19:46:16','2025-08-12 07:39:13',NULL,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(2,3,3,1,19.99,'USD','pending','Please prepare documents before meeting',NULL,'2025-08-09 21:00:15','2025-08-09 21:00:15',NULL,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(3,3,3,1,19.99,'USD','pending','Please review my resume before call',NULL,'2025-08-10 07:49:06','2025-08-12 07:39:13',NULL,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(4,4,3,1,19.99,'USD','pending','Please review my resume before call',NULL,'2025-08-11 15:28:11','2025-08-11 15:28:11',NULL,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(5,4,3,1,19.99,'USD','paid','Please review my resume before call','manual-OK-123','2025-08-11 19:18:52','2025-08-11 19:21:19',8,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(6,4,3,2,49.99,'USD','paid',NULL,'cs_test_b1LoAVIvITXyG6V25dVzM3umMBp52sogmnb03z0E4rTFOmR37d2FDXPbjU','2025-08-14 19:43:49','2025-08-14 19:44:31',30,'Paid',6,'pi_3Rw74X3RqEMUJuhk0anuzhlI','ch_3Rw74X3RqEMUJuhk01SLvTEy','in_1Rw74Z3RqEMUJuhkQLBAVt8v','pm_1Rw74W3RqEMUJuhkJyT3K4ug','https://pay.stripe.com/receipts/invoices/CAcaFwoVYWNjdF8xUnZ6bW0zUnFFTVVKdWhrKJ_5-MQGMgZICvWPGLU6LBYcH4C7KtuUlx8ao70PpsJsm_cqARnHUbhflXr_0R88izE56N_v7j_DoWpX?s=ap','https://invoice.stripe.com/i/acct_1Rvzmm3RqEMUJuhk/test_YWNjdF8xUnZ6bW0zUnFFTVVKdWhrLF9TcnFtellRZkRZN1BaRjUwbURoSXVrS2hzZXRvcWFxLDE0NTc0MTQ3MQ0200Lr0j6PZH?s=ap','https://pay.stripe.com/invoice/acct_1Rvzmm3RqEMUJuhk/test_YWNjdF8xUnZ6bW0zUnFFTVVKdWhrLF9TcnFtellRZkRZN1BaRjUwbURoSXVrS2hzZXRvcWFxLDE0NTc0MTQ3MQ0200Lr0j6PZH/pdf?s=ap','visa','4242'),
+(7,4,3,2,49.99,'USD','pending',NULL,NULL,'2025-08-14 20:50:02','2025-08-14 20:50:02',1,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(8,4,3,2,49.99,'USD','pending',NULL,NULL,'2025-08-14 20:50:02','2025-08-14 20:50:02',1,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(9,4,3,2,49.99,'USD','pending',NULL,NULL,'2025-08-14 20:54:03','2025-08-14 20:54:03',1,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(10,4,3,2,49.99,'USD','pending',NULL,NULL,'2025-08-14 20:54:03','2025-08-14 20:54:03',1,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(11,4,3,2,49.99,'USD','pending',NULL,NULL,'2025-08-14 20:58:04','2025-08-14 20:58:04',1,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(12,4,3,1,19.99,'USD','pending',NULL,NULL,'2025-08-15 05:08:53','2025-08-15 05:08:53',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(13,4,3,1,19.99,'USD','pending',NULL,NULL,'2025-08-15 05:08:53','2025-08-15 05:08:53',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(14,4,3,1,19.99,'USD','pending',NULL,NULL,'2025-08-15 05:09:17','2025-08-15 05:09:17',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(15,4,3,1,19.99,'USD','pending',NULL,NULL,'2025-08-15 05:09:17','2025-08-15 05:09:17',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(16,4,3,1,19.99,'USD','pending',NULL,NULL,'2025-08-15 05:11:04','2025-08-15 05:11:04',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(17,4,3,1,19.99,'USD','pending',NULL,NULL,'2025-08-15 05:11:20','2025-08-15 05:11:20',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(18,4,3,1,19.99,'USD','pending',NULL,NULL,'2025-08-15 05:11:20','2025-08-15 05:11:20',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(19,4,3,1,19.99,'USD','pending',NULL,NULL,'2025-08-15 05:11:50','2025-08-15 05:11:50',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(20,4,3,1,19.99,'USD','pending',NULL,NULL,'2025-08-15 05:11:50','2025-08-15 05:11:50',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(21,4,3,1,19.99,'USD','pending',NULL,NULL,'2025-08-15 05:14:16','2025-08-15 05:14:16',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(22,4,3,1,19.99,'USD','pending',NULL,NULL,'2025-08-15 05:14:23','2025-08-15 05:14:23',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(23,4,3,1,19.99,'USD','pending',NULL,NULL,'2025-08-15 05:14:23','2025-08-15 05:14:23',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(24,4,3,1,19.99,'USD','pending',NULL,NULL,'2025-08-15 05:15:18','2025-08-15 05:15:18',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(25,4,3,1,19.99,'USD','pending',NULL,NULL,'2025-08-15 05:15:25','2025-08-15 05:15:25',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(26,4,3,1,19.99,'USD','pending',NULL,NULL,'2025-08-15 05:15:25','2025-08-15 05:15:25',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(27,4,3,1,19.99,'USD','pending',NULL,NULL,'2025-08-15 05:16:24','2025-08-15 05:16:24',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(28,4,3,1,19.99,'USD','pending',NULL,NULL,'2025-08-15 05:16:32','2025-08-15 05:16:32',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(29,4,3,1,19.99,'USD','pending',NULL,NULL,'2025-08-15 05:16:32','2025-08-15 05:16:32',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(30,4,3,1,19.99,'USD','pending',NULL,NULL,'2025-08-15 05:17:28','2025-08-15 05:17:28',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(31,4,3,1,19.99,'USD','pending',NULL,NULL,'2025-08-15 05:18:07','2025-08-15 05:18:07',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(32,4,3,1,19.99,'USD','pending',NULL,NULL,'2025-08-15 05:20:22','2025-08-15 05:20:22',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(33,4,3,1,19.99,'USD','pending',NULL,NULL,'2025-08-15 05:20:47','2025-08-15 05:20:47',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(34,4,3,1,19.99,'USD','pending',NULL,NULL,'2025-08-15 05:22:37','2025-08-15 05:22:37',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(35,4,3,1,19.99,'USD','pending',NULL,NULL,'2025-08-15 05:22:56','2025-08-15 05:22:56',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(36,4,3,1,19.99,'USD','pending',NULL,NULL,'2025-08-15 05:23:11','2025-08-15 05:23:11',32,'Pending',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
+/*!40000 ALTER TABLE `service_orders` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `service_reviews`
+--
+
+DROP TABLE IF EXISTS `service_reviews`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `service_reviews` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `service_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `rating` int(11) DEFAULT NULL CHECK (`rating` between 1 and 5),
+  `review` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_review` (`service_id`,`user_id`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `service_reviews_ibfk_1` FOREIGN KEY (`service_id`) REFERENCES `expert_services` (`id`),
+  CONSTRAINT `service_reviews_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `service_reviews`
+--
+
+LOCK TABLES `service_reviews` WRITE;
+/*!40000 ALTER TABLE `service_reviews` DISABLE KEYS */;
+INSERT INTO `service_reviews` VALUES
+(1,1,3,4,'Very helpful session!','2025-08-05 19:44:44');
+/*!40000 ALTER TABLE `service_reviews` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `skills`
+--
+
+DROP TABLE IF EXISTS `skills`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `skills` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `name` (`name`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `skills`
+--
+
+LOCK TABLES `skills` WRITE;
+/*!40000 ALTER TABLE `skills` DISABLE KEYS */;
+INSERT INTO `skills` VALUES
+(3,'AI Strategy'),
+(4,'NodeJS'),
+(1,'Python'),
+(2,'TensorFlow');
+/*!40000 ALTER TABLE `skills` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `user_connections`
+--
+
+DROP TABLE IF EXISTS `user_connections`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_connections` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `connected_user_id` int(11) NOT NULL,
+  `status` enum('pending','connected','rejected') DEFAULT 'pending',
+  `created_at` datetime DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_connection` (`user_id`,`connected_user_id`),
+  KEY `connected_user_id` (`connected_user_id`),
+  CONSTRAINT `user_connections_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `user_connections_ibfk_2` FOREIGN KEY (`connected_user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `user_connections`
+--
+
+LOCK TABLES `user_connections` WRITE;
+/*!40000 ALTER TABLE `user_connections` DISABLE KEYS */;
+INSERT INTO `user_connections` VALUES
+(2,3,5,'pending','2025-08-07 01:38:16','2025-08-07 01:38:16'),
+(3,3,4,'pending','2025-08-08 20:15:45','2025-08-08 20:15:45'),
+(4,3,1,'pending','2025-08-08 21:16:24','2025-08-08 21:16:24');
+/*!40000 ALTER TABLE `user_connections` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `user_industries`
+--
+
+DROP TABLE IF EXISTS `user_industries`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_industries` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) DEFAULT NULL,
+  `industry_id` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`),
+  KEY `industry_id` (`industry_id`),
+  CONSTRAINT `user_industries_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `user_industries_ibfk_2` FOREIGN KEY (`industry_id`) REFERENCES `industries` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `user_industries`
+--
+
+LOCK TABLES `user_industries` WRITE;
+/*!40000 ALTER TABLE `user_industries` DISABLE KEYS */;
+INSERT INTO `user_industries` VALUES
+(1,1,1),
+(2,2,1),
+(5,4,1),
+(6,4,2),
+(19,5,1),
+(20,3,1),
+(21,3,2);
+/*!40000 ALTER TABLE `user_industries` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `user_roles`
+--
+
+DROP TABLE IF EXISTS `user_roles`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_roles` (
+  `user_id` int(11) NOT NULL,
+  `role_id` int(11) NOT NULL,
+  PRIMARY KEY (`user_id`,`role_id`),
+  KEY `role_id` (`role_id`),
+  CONSTRAINT `fk_user_roles_role` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `user_roles`
+--
+
+LOCK TABLES `user_roles` WRITE;
+/*!40000 ALTER TABLE `user_roles` DISABLE KEYS */;
+INSERT INTO `user_roles` VALUES
+(1,1),
+(1,2),
+(3,2),
+(4,1);
+/*!40000 ALTER TABLE `user_roles` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `users`
+--
+
+DROP TABLE IF EXISTS `users`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `users` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `email` varchar(255) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `password_changed_at` datetime DEFAULT NULL,
+  `role_id` int(11) NOT NULL,
+  `profile_photo` text DEFAULT NULL,
+  `city` varchar(100) DEFAULT NULL,
+  `state` varchar(100) DEFAULT NULL,
+  `country` varchar(100) DEFAULT NULL,
+  `status` enum('active','inactive') DEFAULT 'active',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `first_name` varchar(100) DEFAULT NULL,
+  `last_name` varchar(100) DEFAULT NULL,
+  `is_verified` tinyint(1) DEFAULT 0,
+  `location` varchar(255) DEFAULT NULL,
+  `timezone` varchar(100) DEFAULT NULL,
+  `stripe_customer_id` varchar(255) DEFAULT NULL,
+  `stripe_default_payment_method` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `email` (`email`),
+  KEY `role_id` (`role_id`),
+  CONSTRAINT `users_ibfk_1` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `users`
+--
+
+LOCK TABLES `users` WRITE;
+/*!40000 ALTER TABLE `users` DISABLE KEYS */;
+INSERT INTO `users` VALUES
+(1,'abutaleb142@gmail.com','$2a$10$PAJBvQi/P/XLdFJWwEvO8OqOMlYPT6E8yuGDlY5vbDuWM1P3L4smu',NULL,2,NULL,NULL,NULL,NULL,'active','2025-08-05 07:05:07','2025-08-08 15:16:10','Mohammad Abu','Taleb',0,NULL,NULL,NULL,NULL),
+(2,'mustafizur142@gmail.com','$2a$10$xgiljheLPBWwAzwCVQ/ECudaISBdwvG9kSmATC8IpqlPEazNJRkPO',NULL,1,NULL,NULL,NULL,NULL,'active','2025-08-05 07:07:41','2025-08-05 07:07:41','Mustafizur','Rahman',0,NULL,NULL,NULL,NULL),
+(3,'imranhossen1119999@gmail.com','$2a$10$gHsVq1qLWS65hjd6D7ufDOTMka4bzln7vrcdUJZmkfF.Sxq94LEUG','2025-08-10 14:52:23',2,'/uploads/profile_photos/1754658876634-B-32491 copy.jpg','Vancouver','BC','Canada','active','2025-08-05 07:14:34','2025-08-10 08:52:23','Munsi Imran','Hossen',1,'Vancouver, BC','America/Vancouver',NULL,NULL),
+(4,'admin@example.com','$2a$10$BNkZhxIFJ3qRC5pHbOdTKe8w5G7Fm/oE6NrVnuWad/NpjSuG0BA6K',NULL,1,NULL,'Torento','Torento','Canada','active','2025-08-05 07:20:47','2025-08-14 21:42:48','System','Admin',1,NULL,NULL,'cus_Srql9qnzJPpwCc','pm_1Rw8v33RqEMUJuhkSAN3rnay'),
+(5,'admin2@example.com','$2a$10$GwSLMgsCmCen/9Gqw5mIM.OLgHB7xjx4abIH0QwDqn0Pp.w7k2ntC',NULL,2,NULL,NULL,NULL,NULL,'active','2025-08-06 09:32:28','2025-08-06 09:32:28','System 2','Admin',0,NULL,NULL,NULL,NULL);
+/*!40000 ALTER TABLE `users` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Temporary table structure for view `vw_chat_last_message`
+--
+
+DROP TABLE IF EXISTS `vw_chat_last_message`;
+/*!50001 DROP VIEW IF EXISTS `vw_chat_last_message`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8mb4;
+/*!50001 CREATE VIEW `vw_chat_last_message` AS SELECT
+ 1 AS `chat_id`,
+  1 AS `last_message_id`,
+  1 AS `sender_id`,
+  1 AS `content`,
+  1 AS `file_url`,
+  1 AS `attachment`,
+  1 AS `last_message_at` */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `vw_user_chat_unread`
+--
+
+DROP TABLE IF EXISTS `vw_user_chat_unread`;
+/*!50001 DROP VIEW IF EXISTS `vw_user_chat_unread`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8mb4;
+/*!50001 CREATE VIEW `vw_user_chat_unread` AS SELECT
+ 1 AS `user_id`,
+  1 AS `chat_id`,
+  1 AS `unread_count` */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Final view structure for view `vw_chat_last_message`
+--
+
+/*!50001 DROP VIEW IF EXISTS `vw_chat_last_message`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
+/*!50001 VIEW `vw_chat_last_message` AS select `m`.`chat_id` AS `chat_id`,`m`.`id` AS `last_message_id`,`m`.`sender_id` AS `sender_id`,`m`.`content` AS `content`,`m`.`file_url` AS `file_url`,`m`.`attachment` AS `attachment`,`m`.`created_at` AS `last_message_at` from (`messages` `m` join (select `messages`.`chat_id` AS `chat_id`,max(`messages`.`created_at`) AS `max_created` from `messages` group by `messages`.`chat_id`) `t` on(`t`.`chat_id` = `m`.`chat_id` and `t`.`max_created` = `m`.`created_at`)) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `vw_user_chat_unread`
+--
+
+/*!50001 DROP VIEW IF EXISTS `vw_user_chat_unread`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
+/*!50001 VIEW `vw_user_chat_unread` AS select `cp`.`user_id` AS `user_id`,`m`.`chat_id` AS `chat_id`,count(0) AS `unread_count` from ((`chat_participants` `cp` join `messages` `m` on(`m`.`chat_id` = `cp`.`chat_id` and `m`.`sender_id` <> `cp`.`user_id`)) left join `message_reads` `mr` on(`mr`.`message_id` = `m`.`id` and `mr`.`user_id` = `cp`.`user_id`)) where `mr`.`message_id` is null group by `cp`.`user_id`,`m`.`chat_id` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+-- Dump completed on 2025-08-15  5:29:53

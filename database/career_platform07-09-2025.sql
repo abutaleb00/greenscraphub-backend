@@ -1,0 +1,3284 @@
+-- phpMyAdmin SQL Dump
+-- version 5.2.1
+-- https://www.phpmyadmin.net/
+--
+-- Host: 127.0.0.1
+-- Generation Time: Aug 26, 2025 at 09:59 AM
+-- Server version: 10.4.32-MariaDB
+-- PHP Version: 8.0.30
+
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
+
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
+
+--
+-- Database: `new_career_platform`
+--
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `auth_revoked_tokens`
+--
+
+CREATE TABLE `auth_revoked_tokens` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `token_hash` char(64) NOT NULL,
+  `user_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `expires_at` datetime NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `categories`
+--
+
+CREATE TABLE `categories` (
+  `id` int(11) NOT NULL,
+  `name` varchar(120) NOT NULL,
+  `slug` varchar(160) NOT NULL,
+  `description` text DEFAULT NULL,
+  `is_active` tinyint(1) DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `categories`
+--
+
+INSERT INTO `categories` (`id`, `name`, `slug`, `description`, `is_active`, `created_at`) VALUES
+(1, 'Interview Prep 2', 'interview-prep-2', 'Mock interviews, feedback and drills', 1, '2025-08-12 04:15:38'),
+(2, 'Web Development', 'web-development', 'HTML, CSS, JS, frameworks', 1, '2025-08-16 15:11:39'),
+(3, 'Mobile Development', 'mobile-development', 'iOS, Android, cross-platform', 1, '2025-08-16 15:11:39'),
+(4, 'Data Science', 'data-science', 'Analytics, Python, SQL, visualization', 1, '2025-08-16 15:11:39'),
+(5, 'AI & Machine Learning', 'ai-ml', 'ML, DL, LLMs, MLOps', 1, '2025-08-16 15:11:39'),
+(6, 'Cloud & DevOps', 'cloud-devops', 'AWS, Azure, GCP, CI/CD, containers', 1, '2025-08-16 15:11:39'),
+(7, 'Cybersecurity', 'cybersecurity', 'Security, networks, ethical hacking', 1, '2025-08-16 15:11:39'),
+(8, 'Programming Languages', 'programming-languages', 'JS/TS, Python, Java, C#, Go, Rust', 1, '2025-08-16 15:11:39'),
+(9, 'Design & UX', 'design-ux', 'UI/UX, product design, Figma', 1, '2025-08-16 15:11:39'),
+(10, 'Product Management', 'product-management', 'Roadmaps, discovery, delivery', 1, '2025-08-16 15:11:39'),
+(11, 'Business & Entrepreneurship', 'business-entrepreneurship', 'Strategy, ops, startups', 1, '2025-08-16 15:11:39'),
+(12, 'Marketing', 'marketing', 'Digital, content, SEO/SEM', 1, '2025-08-16 15:11:39'),
+(13, 'Finance & Accounting', 'finance-accounting', 'FP&A, bookkeeping, investing', 1, '2025-08-16 15:11:39'),
+(14, 'Career Development', 'career-development', 'Interviews, resumes, soft skills', 1, '2025-08-16 15:11:39'),
+(15, 'Personal Productivity', 'personal-productivity', 'Time management, tools, habits', 1, '2025-08-16 15:11:39'),
+(16, 'New Category 2', 'new-category-2', 'This is for demo', 1, '2025-08-17 14:11:40');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `chats`
+--
+
+CREATE TABLE `chats` (
+  `id` int(11) NOT NULL,
+  `is_group` tinyint(1) NOT NULL DEFAULT 0,
+  `name` varchar(100) DEFAULT NULL,
+  `photo` varchar(255) DEFAULT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `chats`
+--
+
+INSERT INTO `chats` (`id`, `is_group`, `name`, `photo`, `created_by`, `created_at`, `updated_at`) VALUES
+(1, 0, NULL, NULL, 4, '2025-08-12 15:44:42', '2025-08-12 15:44:42'),
+(2, 0, NULL, NULL, 4, '2025-08-12 15:54:17', '2025-08-12 15:54:17'),
+(3, 0, NULL, NULL, 1, '2025-08-18 00:33:24', '2025-08-18 00:33:24'),
+(4, 0, NULL, NULL, 3, '2025-08-20 08:37:46', '2025-08-20 08:37:46');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `chat_participants`
+--
+
+CREATE TABLE `chat_participants` (
+  `chat_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `joined_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `typing` tinyint(1) NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `chat_participants`
+--
+
+INSERT INTO `chat_participants` (`chat_id`, `user_id`, `joined_at`, `typing`) VALUES
+(1, 2, '2025-08-12 15:44:42', 0),
+(1, 4, '2025-08-12 15:44:42', 0),
+(2, 3, '2025-08-12 15:54:17', 0),
+(2, 4, '2025-08-12 15:54:17', 0),
+(3, 1, '2025-08-18 00:33:24', 0),
+(3, 3, '2025-08-18 00:33:24', 0),
+(4, 3, '2025-08-20 08:37:46', 0),
+(4, 5, '2025-08-20 08:37:46', 0);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `chat_reads`
+--
+
+CREATE TABLE `chat_reads` (
+  `chat_id` bigint(20) NOT NULL,
+  `user_id` bigint(20) NOT NULL,
+  `last_read_message_id` bigint(20) NOT NULL DEFAULT 0,
+  `read_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `chat_reads`
+--
+
+INSERT INTO `chat_reads` (`chat_id`, `user_id`, `last_read_message_id`, `read_at`) VALUES
+(2, 3, 35, '2025-08-20 13:24:23'),
+(2, 4, 37, '2025-08-20 13:30:04'),
+(3, 1, 23, '2025-08-20 10:11:27'),
+(3, 3, 17, '2025-08-17 18:42:42');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `coaching_assignments`
+--
+
+CREATE TABLE `coaching_assignments` (
+  `id` int(11) NOT NULL,
+  `enrollment_id` int(11) NOT NULL,
+  `step_seq` int(11) NOT NULL,
+  `title` varchar(200) NOT NULL,
+  `instructions` text DEFAULT NULL,
+  `due_at` datetime DEFAULT NULL,
+  `status` enum('open','submitted','reviewed','overdue') DEFAULT 'open'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `coaching_assignments`
+--
+
+INSERT INTO `coaching_assignments` (`id`, `enrollment_id`, `step_seq`, `title`, `instructions`, `due_at`, `status`) VALUES
+(1, 1, 1, 'Intake & Goals', 'Define goals & baseline', '2025-08-20 00:00:00', 'reviewed'),
+(2, 1, 3, 'Self-paced', '', '2025-09-03 00:00:00', 'open');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `coaching_assignment_versions`
+--
+
+CREATE TABLE `coaching_assignment_versions` (
+  `id` int(11) NOT NULL,
+  `assignment_id` int(11) NOT NULL,
+  `seq` int(11) NOT NULL,
+  `submitted_by` int(11) NOT NULL,
+  `submitted_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `text` longtext DEFAULT NULL,
+  `links_json` text DEFAULT NULL,
+  `files_json` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `coaching_bookings`
+--
+
+CREATE TABLE `coaching_bookings` (
+  `id` int(11) NOT NULL,
+  `enrollment_id` int(11) NOT NULL,
+  `step_seq` int(11) NOT NULL,
+  `meeting_id` int(11) NOT NULL,
+  `status` enum('scheduled','completed','no_show','rescheduled') DEFAULT 'scheduled'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `coaching_bookings`
+--
+
+INSERT INTO `coaching_bookings` (`id`, `enrollment_id`, `step_seq`, `meeting_id`, `status`) VALUES
+(1, 1, 2, 0, 'scheduled'),
+(2, 1, 4, 0, 'scheduled');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `coaching_enrollments`
+--
+
+CREATE TABLE `coaching_enrollments` (
+  `id` int(11) NOT NULL,
+  `client_id` int(11) NOT NULL,
+  `coach_id` int(11) NOT NULL,
+  `template_id` int(11) NOT NULL,
+  `start_date` date NOT NULL,
+  `status` enum('active','paused','completed','cancelled') DEFAULT 'active',
+  `next_step_seq` int(11) DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `coaching_enrollments`
+--
+
+INSERT INTO `coaching_enrollments` (`id`, `client_id`, `coach_id`, `template_id`, `start_date`, `status`, `next_step_seq`, `created_at`) VALUES
+(1, 5, 3, 1, '2025-08-22', 'active', 1, '2025-08-22 15:46:43');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `coaching_orders`
+--
+
+CREATE TABLE `coaching_orders` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `template_id` int(11) NOT NULL,
+  `amount` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `currency` varchar(10) NOT NULL DEFAULT 'USD',
+  `status` enum('pending','paid','failed','cancelled') NOT NULL DEFAULT 'pending',
+  `payment_status` enum('pending','paid','failed','cancelled') NOT NULL DEFAULT 'pending',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `coaching_orders`
+--
+
+INSERT INTO `coaching_orders` (`id`, `user_id`, `template_id`, `amount`, `currency`, `status`, `payment_status`, `created_at`, `updated_at`) VALUES
+(1, 3, 1, 499.00, 'USD', 'pending', 'pending', '2025-08-22 17:43:23', '2025-08-22 17:43:23'),
+(2, 3, 1, 499.00, 'USD', 'pending', 'pending', '2025-08-22 17:43:23', '2025-08-22 17:43:23'),
+(3, 3, 3, 20.00, 'USD', 'pending', 'pending', '2025-08-23 14:10:01', '2025-08-23 14:10:01'),
+(4, 3, 3, 20.00, 'USD', 'pending', 'pending', '2025-08-23 14:10:01', '2025-08-23 14:10:01'),
+(5, 3, 2, 20.00, 'USD', 'pending', 'pending', '2025-08-23 14:29:03', '2025-08-23 14:29:03'),
+(6, 2, 3, 20.00, 'USD', 'pending', 'pending', '2025-08-24 08:55:52', '2025-08-24 08:55:52'),
+(7, 2, 3, 20.00, 'USD', 'pending', 'pending', '2025-08-24 08:55:52', '2025-08-24 08:55:52'),
+(8, 2, 2, 20.00, 'USD', 'pending', 'pending', '2025-08-24 09:49:05', '2025-08-24 09:49:05'),
+(9, 2, 2, 20.00, 'USD', 'pending', 'pending', '2025-08-24 09:49:05', '2025-08-24 09:49:05');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `coaching_program_slots`
+--
+
+CREATE TABLE `coaching_program_slots` (
+  `id` int(11) NOT NULL,
+  `template_id` int(11) NOT NULL,
+  `expert_id` int(11) DEFAULT NULL,
+  `start_time` datetime NOT NULL,
+  `end_time` datetime NOT NULL,
+  `capacity` int(11) NOT NULL DEFAULT 1,
+  `seats_taken` int(11) NOT NULL DEFAULT 0,
+  `status` enum('open','hidden','cancelled') NOT NULL DEFAULT 'open',
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `coaching_program_steps`
+--
+
+CREATE TABLE `coaching_program_steps` (
+  `id` int(11) NOT NULL,
+  `template_id` int(11) NOT NULL,
+  `seq` int(11) NOT NULL,
+  `step_type` enum('live','self_paced') NOT NULL,
+  `title` varchar(200) NOT NULL,
+  `description` text DEFAULT NULL,
+  `due_offset_days` int(11) DEFAULT NULL,
+  `required_submission` tinyint(1) DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `coaching_program_steps`
+--
+
+INSERT INTO `coaching_program_steps` (`id`, `template_id`, `seq`, `step_type`, `title`, `description`, `due_offset_days`, `required_submission`) VALUES
+(1, 1, 1, 'self_paced', 'Intake & Goals', 'Define goals & baseline', 2, 1),
+(2, 1, 2, 'live', 'Session 1: Kickoff', 'Review goals', NULL, NULL),
+(3, 1, 3, 'self_paced', 'Self-paced', '', 2, 1),
+(4, 1, 4, 'live', 'Session 2', '', NULL, NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `coaching_program_templates`
+--
+
+CREATE TABLE `coaching_program_templates` (
+  `id` int(11) NOT NULL,
+  `coach_id` int(11) NOT NULL,
+  `title` varchar(200) NOT NULL,
+  `price` decimal(10,2) NOT NULL,
+  `duration_months` enum('3','6','9','12') NOT NULL,
+  `cadence_weeks` tinyint(4) NOT NULL DEFAULT 2,
+  `total_live_sessions` tinyint(4) NOT NULL,
+  `summary` text DEFAULT NULL,
+  `is_active` tinyint(1) DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `slug` varchar(190) DEFAULT NULL,
+  `images_json` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`images_json`)),
+  `description` longtext DEFAULT NULL,
+  `currency` varchar(10) NOT NULL DEFAULT 'USD',
+  `cover_image` varchar(512) DEFAULT NULL,
+  `image` varchar(512) DEFAULT NULL,
+  `created_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `coaching_program_templates`
+--
+
+INSERT INTO `coaching_program_templates` (`id`, `coach_id`, `title`, `price`, `duration_months`, `cadence_weeks`, `total_live_sessions`, `summary`, `is_active`, `created_at`, `slug`, `images_json`, `description`, `currency`, `cover_image`, `image`, `created_by`, `updated_at`) VALUES
+(1, 2, 'Career Acceleration', 499.00, '3', 2, 12, 'Bi-weekly live sessions with self-paced work.', 1, '2025-08-22 15:45:30', NULL, NULL, NULL, 'USD', NULL, NULL, NULL, '2025-08-23 02:56:35'),
+(2, 3, 'This is long course', 20.00, '9', 2, 6, 'This is long course', 1, '2025-08-22 20:52:06', 'this-is-long-course', '[]', '<p>This is the sample data</p>', 'USD', '/uploads/coaching/1755930164873_2025-08-21_210359.png', '/uploads/coaching/1755930164873_2025-08-21_210359.png', NULL, '2025-08-23 12:49:40'),
+(3, 3, 'This is long course', 20.00, '', 2, 6, 'This is long course', 1, '2025-08-22 21:02:05', 'this-is-long-course-1', '[]', '<p>This is the sample data for the coaching program.</p>', 'USD', '/uploads/coaching/1755932077934_2025-08-19_160347.png', '/uploads/coaching/1755932077934_2025-08-19_160347.png', NULL, '2025-08-23 20:53:24'),
+(4, 3, 'Test 2', 15.00, '3', 2, 6, '', 0, '2025-08-22 21:04:10', 'test-2', '[]', NULL, 'USD', NULL, NULL, NULL, '2025-08-23 03:04:10');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `coaching_reminder_logs`
+--
+
+CREATE TABLE `coaching_reminder_logs` (
+  `id` int(11) NOT NULL,
+  `reminder_type` varchar(40) NOT NULL,
+  `ref_id` varchar(100) NOT NULL,
+  `recipient_email` varchar(190) NOT NULL,
+  `sent_at` datetime NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `coaching_sessions`
+--
+
+CREATE TABLE `coaching_sessions` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `enrollment_id` bigint(20) UNSIGNED NOT NULL,
+  `seq` int(11) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `kind` enum('assignment','session') NOT NULL DEFAULT 'session',
+  `duration_minutes` int(11) DEFAULT NULL,
+  `meeting_required` tinyint(1) NOT NULL DEFAULT 1,
+  `scheduled_start` datetime DEFAULT NULL,
+  `scheduled_end` datetime DEFAULT NULL,
+  `meeting_id` varchar(64) DEFAULT NULL,
+  `status` enum('unscheduled','scheduled','completed','cancelled','missed') NOT NULL DEFAULT 'unscheduled',
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `coaching_slot_holds`
+--
+
+CREATE TABLE `coaching_slot_holds` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `template_id` bigint(20) UNSIGNED NOT NULL,
+  `expert_id` bigint(20) UNSIGNED NOT NULL,
+  `user_id` bigint(20) UNSIGNED NOT NULL,
+  `start_time` datetime NOT NULL,
+  `end_time` datetime NOT NULL,
+  `expires_at` datetime NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `coaching_submissions`
+--
+
+CREATE TABLE `coaching_submissions` (
+  `id` int(11) NOT NULL,
+  `assignment_id` bigint(20) UNSIGNED NOT NULL,
+  `client_id` int(11) NOT NULL,
+  `submitted_at` datetime NOT NULL,
+  `files_json` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`files_json`)),
+  `notes` text DEFAULT NULL,
+  `status` enum('submitted','needs_changes','approved') DEFAULT 'submitted',
+  `reviewed_by` int(11) DEFAULT NULL,
+  `reviewed_at` datetime DEFAULT NULL,
+  `feedback` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `coaching_submissions`
+--
+
+INSERT INTO `coaching_submissions` (`id`, `assignment_id`, `client_id`, `submitted_at`, `files_json`, `notes`, `status`, `reviewed_by`, `reviewed_at`, `feedback`) VALUES
+(1, 1, 5, '2025-08-22 21:49:04', '[]', 'hello', 'approved', 3, '2025-08-22 21:49:44', 'Looks good.');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `coaching_template_categories`
+--
+
+CREATE TABLE `coaching_template_categories` (
+  `id` int(11) NOT NULL,
+  `template_id` int(11) NOT NULL,
+  `category_id` int(11) NOT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `coaching_template_categories`
+--
+
+INSERT INTO `coaching_template_categories` (`id`, `template_id`, `category_id`, `created_at`) VALUES
+(5, 4, 5, '2025-08-22 21:04:10'),
+(6, 4, 11, '2025-08-22 21:04:10'),
+(11, 2, 5, '2025-08-23 06:49:40'),
+(12, 2, 11, '2025-08-23 06:49:40'),
+(21, 3, 5, '2025-08-23 14:50:58'),
+(22, 3, 11, '2025-08-23 14:50:58');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `coaching_template_images`
+--
+
+CREATE TABLE `coaching_template_images` (
+  `id` int(11) NOT NULL,
+  `template_id` int(11) NOT NULL,
+  `image_url` varchar(1024) NOT NULL,
+  `sort_order` int(11) DEFAULT 1,
+  `is_cover` tinyint(1) DEFAULT 0,
+  `created_at` timestamp NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `coaching_template_steps`
+--
+
+CREATE TABLE `coaching_template_steps` (
+  `id` int(11) NOT NULL,
+  `template_id` int(11) NOT NULL,
+  `seq` int(11) NOT NULL DEFAULT 0,
+  `title` varchar(255) NOT NULL,
+  `description` mediumtext DEFAULT NULL,
+  `kind` enum('assignment','session') NOT NULL DEFAULT 'assignment',
+  `duration_weeks` int(11) DEFAULT NULL,
+  `meeting_required` tinyint(1) NOT NULL DEFAULT 0,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `coaching_template_steps`
+--
+
+INSERT INTO `coaching_template_steps` (`id`, `template_id`, `seq`, `title`, `description`, `kind`, `duration_weeks`, `meeting_required`, `created_at`, `updated_at`) VALUES
+(3, 4, 1, '1', NULL, 'assignment', 1, 0, '2025-08-23 03:04:10', '2025-08-23 03:04:10'),
+(4, 4, 2, '2', NULL, 'session', 1, 0, '2025-08-23 03:04:10', '2025-08-23 03:04:10'),
+(9, 2, 1, 'Introduction', NULL, 'assignment', 1, 0, '2025-08-23 12:49:40', '2025-08-23 12:49:40'),
+(10, 2, 2, 'Live Session', NULL, 'session', 1, 1, '2025-08-23 12:49:40', '2025-08-23 12:49:40'),
+(19, 3, 1, 'Assigment', NULL, 'assignment', 1, 0, '2025-08-23 20:50:58', '2025-08-23 20:50:58'),
+(20, 3, 2, 'Live Session', NULL, 'session', 1, 1, '2025-08-23 20:50:58', '2025-08-23 20:50:58');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `courses`
+--
+
+CREATE TABLE `courses` (
+  `id` int(11) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `slug` varchar(191) NOT NULL,
+  `description` text DEFAULT NULL,
+  `start_date` date DEFAULT NULL,
+  `end_date` date DEFAULT NULL,
+  `duration` varchar(100) DEFAULT NULL,
+  `meet_link` varchar(255) DEFAULT NULL,
+  `price` decimal(10,2) DEFAULT 0.00,
+  `status` enum('upcoming','ongoing','completed') NOT NULL DEFAULT 'upcoming',
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `course_image` varchar(255) DEFAULT NULL,
+  `image_url` text DEFAULT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `creator_role` int(11) DEFAULT 2,
+  `expert_id` int(11) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT NULL,
+  `updated_by` int(11) DEFAULT NULL,
+  `subtitle` varchar(255) DEFAULT NULL,
+  `level` enum('beginner','intermediate','advanced') DEFAULT 'beginner',
+  `language` varchar(64) DEFAULT 'English',
+  `currency` varchar(16) DEFAULT 'usd',
+  `estimated_hours` varchar(32) DEFAULT NULL,
+  `visibility` enum('public','unlisted','private') DEFAULT 'public',
+  `trailer_url` varchar(255) DEFAULT NULL,
+  `publish_state` enum('draft','published','archived') DEFAULT 'draft'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `courses`
+--
+
+INSERT INTO `courses` (`id`, `title`, `slug`, `description`, `start_date`, `end_date`, `duration`, `meet_link`, `price`, `status`, `is_active`, `course_image`, `image_url`, `created_by`, `creator_role`, `expert_id`, `created_at`, `updated_at`, `updated_by`, `subtitle`, `level`, `language`, `currency`, `estimated_hours`, `visibility`, `trailer_url`, `publish_state`) VALUES
+(4, 'Professional React Bootcamp', 'professional-react-bootcamp', '<p>Learn React with projects.</p>', NULL, NULL, NULL, NULL, 49.00, 'upcoming', 1, '/uploads/courses/thumbnails/1755345927822-2025-08-15_151724.png', NULL, 3, 2, 3, '2025-08-16 12:05:27', NULL, NULL, NULL, 'beginner', 'English', 'usd', NULL, 'public', NULL, 'published'),
+(5, 'Hello 2', 'hello', '<p>Hi</p><p>Hellow</p>', '1899-11-27', '1899-11-27', '', '', 20.00, 'upcoming', 1, '/uploads/courses/thumbnails/1755346349217-2025-08-15_193438.png', NULL, 3, 2, 3, '2025-08-16 12:12:29', '2025-08-16 21:46:12', NULL, 'hiii', 'beginner', 'English', 'usd', '9', 'public', 'www/youtube.com', 'published'),
+(14, 'Hellow', 'hellow', '<p>Hi</p>', '0000-00-00', '0000-00-00', '', '', 20.00, 'upcoming', 1, '/uploads/courses/thumbnails/1755443226730-bg.jpg', NULL, 1, 2, 1, '2025-08-17 15:07:06', '2025-08-17 21:09:47', NULL, 'fd', 'beginner', 'English', 'usd', '8', 'public', '', 'published'),
+(15, 'Digital Marketing Masterclass', 'digital-marketing-masterclass', '<p>In this course, you will learn how to build and optimize websites, run digital marketing campaigns, and apply real-world strategies to grow your business.</p>', '2025-08-20', '2025-08-21', '60', 'https://prosfata.com/experts', 90.00, 'upcoming', 0, '/uploads/courses/thumbnails/1755703407189-191113-happyyoungemployee-stock.jpg', NULL, 3, 2, 3, '2025-08-20 15:23:27', NULL, NULL, 'Digital Marketing', 'beginner', 'Spanish', 'usd', '2 hours', 'public', 'https://prosfata.com/experts', 'draft'),
+(16, 'Web Development Beginner to Advanced', 'web-development-beginner-to-advanced', '<p>In this course, you will learn how to build and optimize websites, run digital marketing campaigns, and apply real-world strategies to grow your business.</p>', '2025-08-20', '2025-08-21', '60 mins', 'https://prosfata.com/experts', 0.00, 'upcoming', 0, '/uploads/courses/thumbnails/1755703858969-online-courses.jpg', NULL, 3, 2, 3, '2025-08-20 15:30:58', NULL, NULL, 'Beginner to Advanced', 'beginner', 'English', 'usd', '1 hour', 'public', 'https://prosfata.com/experts', 'draft');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `course_categories`
+--
+
+CREATE TABLE `course_categories` (
+  `id` int(11) NOT NULL,
+  `course_id` int(11) NOT NULL,
+  `category_id` int(11) NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `course_categories`
+--
+
+INSERT INTO `course_categories` (`id`, `course_id`, `category_id`, `created_at`) VALUES
+(3, 5, 14, '2025-08-16 21:45:44');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `course_category_map`
+--
+
+CREATE TABLE `course_category_map` (
+  `course_id` int(11) NOT NULL,
+  `category_id` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `course_enrollments`
+--
+
+CREATE TABLE `course_enrollments` (
+  `id` int(11) NOT NULL,
+  `course_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `enrolled_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `completed_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `course_enrollments`
+--
+
+INSERT INTO `course_enrollments` (`id`, `course_id`, `user_id`, `enrolled_at`, `completed_at`) VALUES
+(2, 5, 1, '2025-08-16 18:49:42', NULL),
+(3, 5, 1, '2025-08-16 18:49:46', NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `course_features`
+--
+
+CREATE TABLE `course_features` (
+  `id` int(11) NOT NULL,
+  `course_id` int(11) NOT NULL,
+  `feature_type` enum('text','image','pdf') NOT NULL,
+  `feature_value` text DEFAULT NULL,
+  `content` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `course_files`
+--
+
+CREATE TABLE `course_files` (
+  `id` int(11) NOT NULL,
+  `course_id` int(11) DEFAULT NULL,
+  `file_name` varchar(255) DEFAULT NULL,
+  `file_type` varchar(50) DEFAULT NULL,
+  `file_path` text DEFAULT NULL,
+  `uploaded_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `course_files`
+--
+
+INSERT INTO `course_files` (`id`, `course_id`, `file_name`, `file_type`, `file_path`, `uploaded_at`) VALUES
+(1, 1, '32-HCL-Technologies-Denmark-Apps_0 (1).pdf', 'application/pdf', 'uploads\\course_materials\\1753465705488-32-HCL-Technologies-Denmark-Apps_0 (1).pdf', '2025-07-25 17:48:25'),
+(2, 1, '32-HCL-Technologies-Denmark-Apps_0 (1).pdf', 'application/pdf', 'uploads\\course_materials\\1754504043452-32-HCL-Technologies-Denmark-Apps_0 (1).pdf', '2025-08-06 18:14:03'),
+(3, 3, 'Sales Invoice - 1010.pdf', 'application/pdf', 'uploads/course_materials/1755332683112-Sales Invoice - 1010.pdf', '2025-08-16 08:24:43'),
+(4, 5, 'Maysha MalihaÂ Mou ( Borrower).pdf', 'application/pdf', '/uploads/courses/materials/1755347566826-maysha-maliha-mou-borrower.pdf', '2025-08-16 12:32:46'),
+(5, 5, 'Invoice-LMCAZGIW-0001.pdf', 'application/pdf', '/uploads/courses/materials/1755358147449-invoice-lmcazgiw-0001.pdf', '2025-08-16 15:29:07'),
+(6, 5, 'Invoice-LMCAZGIW-0001.pdf', 'application/pdf', '/uploads/courses/materials/1755359167008-invoice-lmcazgiw-0001.pdf', '2025-08-16 15:46:07'),
+(7, 14, 'Invoice-NHR24TMQ-0001 (1).pdf', 'application/pdf', '/uploads/courses/materials/1755443380731-invoice-nhr24tmq-0001-1.pdf', '2025-08-17 15:09:40'),
+(8, 14, 'Receipt-2168-1384.pdf', 'application/pdf', '/uploads/courses/materials/1755443380783-receipt-2168-1384.pdf', '2025-08-17 15:09:40');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `course_lessons`
+--
+
+CREATE TABLE `course_lessons` (
+  `id` int(11) NOT NULL,
+  `course_id` int(11) NOT NULL,
+  `title` varchar(200) NOT NULL,
+  `description` text DEFAULT NULL,
+  `video_url` varchar(255) DEFAULT NULL,
+  `is_free` tinyint(1) NOT NULL DEFAULT 0,
+  `order_no` int(11) NOT NULL DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `course_lessons`
+--
+
+INSERT INTO `course_lessons` (`id`, `course_id`, `title`, `description`, `video_url`, `is_free`, `order_no`, `created_at`, `updated_at`) VALUES
+(1, 5, 'Introduction', 'Welcome to the course!', '', 1, 1, '2025-08-16 12:13:11', '2025-08-16 12:13:11'),
+(2, 5, 'breaf', 'Hi\ngfgfdh', 'https://www.facebook.com', 0, 2, '2025-08-16 12:13:11', '2025-08-16 12:13:11'),
+(3, 5, 'Introduction', 'Welcome to the course!', '', 1, 1, '2025-08-16 15:28:57', '2025-08-16 15:28:57'),
+(4, 5, 'breaf', 'Hi\ngfgfdh', 'https://www.facebook.com', 0, 2, '2025-08-16 15:28:57', '2025-08-16 15:28:57'),
+(5, 5, 'Introduction', 'Welcome to the course!', '', 1, 1, '2025-08-16 15:31:52', '2025-08-16 15:31:52'),
+(6, 5, 'Introduction', 'Welcome to the course!', '', 1, 2, '2025-08-16 15:31:52', '2025-08-16 15:31:52'),
+(7, 5, 'breaf', 'Hi\ngfgfdh', 'https://www.facebook.com', 1, 3, '2025-08-16 15:31:52', '2025-08-16 15:31:52'),
+(8, 5, 'breaf', 'Hi\ngfgfdh', 'https://www.facebook.com', 0, 4, '2025-08-16 15:31:52', '2025-08-16 15:31:52'),
+(9, 5, 'Introduction', 'Welcome to the course!', '', 1, 1, '2025-08-16 15:45:55', '2025-08-16 15:45:55'),
+(10, 5, 'Introduction', 'Welcome to the course!', '', 1, 2, '2025-08-16 15:45:55', '2025-08-16 15:45:55'),
+(11, 5, 'Introduction', 'Welcome to the course!', '', 1, 3, '2025-08-16 15:45:55', '2025-08-16 15:45:55'),
+(12, 5, 'breaf', 'Hi\ngfgfdh', 'https://www.facebook.com', 0, 4, '2025-08-16 15:45:55', '2025-08-16 15:45:55'),
+(13, 5, 'breaf', 'Hi\ngfgfdh', 'https://www.facebook.com', 0, 5, '2025-08-16 15:45:55', '2025-08-16 15:45:55'),
+(14, 5, 'Introduction', 'Welcome to the course!', '', 1, 6, '2025-08-16 15:45:55', '2025-08-16 15:45:55'),
+(15, 5, 'breaf', 'Hi\ngfgfdh', 'https://www.facebook.com', 1, 7, '2025-08-16 15:45:55', '2025-08-16 15:45:55'),
+(16, 5, 'breaf', 'Hi\ngfgfdh', 'https://www.facebook.com', 0, 8, '2025-08-16 15:45:55', '2025-08-16 15:45:55'),
+(17, 14, 'Introduction', 'Welcome to the course!', 'https://www.youtube.com/watch?v=hZEm3gQ7jwI', 1, 1, '2025-08-17 15:09:08', '2025-08-17 15:09:08'),
+(18, 14, 'New Lesson 2', 'This thsi isdfgfdh gjshfk', '', 0, 2, '2025-08-17 15:09:08', '2025-08-17 15:09:08'),
+(19, 14, 'New Lesson', 'This thsi isdfgfdh gjshfk', '', 0, 3, '2025-08-17 15:09:08', '2025-08-17 15:09:08');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `course_materials`
+--
+
+CREATE TABLE `course_materials` (
+  `id` int(11) NOT NULL,
+  `course_id` int(11) NOT NULL,
+  `lesson_id` int(11) DEFAULT NULL,
+  `title` varchar(200) NOT NULL,
+  `file_path` varchar(255) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `course_orders`
+--
+
+CREATE TABLE `course_orders` (
+  `id` int(11) NOT NULL,
+  `course_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `amount` decimal(10,2) NOT NULL,
+  `currency` varchar(10) NOT NULL DEFAULT 'usd',
+  `provider` enum('stripe','paypal') NOT NULL DEFAULT 'stripe',
+  `status` enum('pending','paid','failed','refunded') NOT NULL DEFAULT 'pending',
+  `cancelled_at` datetime DEFAULT NULL,
+  `cancelled_by` int(11) DEFAULT NULL,
+  `cancelled_reason` varchar(255) DEFAULT NULL,
+  `provider_session_id` varchar(191) DEFAULT NULL,
+  `provider_payment_id` varchar(191) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `provider_payment_intent_id` varchar(255) DEFAULT NULL,
+  `provider_charge_id` varchar(255) DEFAULT NULL,
+  `provider_invoice_id` varchar(255) DEFAULT NULL,
+  `payment_method_id` varchar(255) DEFAULT NULL,
+  `receipt_url` text DEFAULT NULL,
+  `hosted_invoice_url` text DEFAULT NULL,
+  `invoice_pdf_url` text DEFAULT NULL,
+  `card_brand` varchar(32) DEFAULT NULL,
+  `card_last4` varchar(8) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `course_orders`
+--
+
+INSERT INTO `course_orders` (`id`, `course_id`, `user_id`, `amount`, `currency`, `provider`, `status`, `cancelled_at`, `cancelled_by`, `cancelled_reason`, `provider_session_id`, `provider_payment_id`, `created_at`, `updated_at`, `provider_payment_intent_id`, `provider_charge_id`, `provider_invoice_id`, `payment_method_id`, `receipt_url`, `hosted_invoice_url`, `invoice_pdf_url`, `card_brand`, `card_last4`) VALUES
+(1, 5, 1, 20.00, 'usd', 'stripe', 'paid', NULL, NULL, NULL, 'cs_test_a1c8615v1AvHRfG1Qz60ObOoCcPRKPlxKPGFPnAGaTSgo6cZOZyrINspkY', NULL, '2025-08-16 16:33:10', '2025-08-19 12:21:16', 'pi_3RwpAf3RqEMUJuhk0olhjg8r', 'ch_3RwpAf3RqEMUJuhk0qL72Jpw', NULL, 'pm_1RwpAe3RqEMUJuhkKbw2Kgvn', 'https://pay.stripe.com/receipts/payment/CAcaFwoVYWNjdF8xUnZ6bW0zUnFFTVVKdWhrKMelg8UGMgafYtUBTsM6LBYsKXon2CVykaVSAjCDiGipegx4eynm30SqyTnIZOPRW11RMOCrG_5lrKrI', NULL, NULL, 'visa', '4242');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `course_progress`
+--
+
+CREATE TABLE `course_progress` (
+  `id` int(11) NOT NULL,
+  `course_id` int(11) NOT NULL,
+  `lesson_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `is_completed` tinyint(1) NOT NULL DEFAULT 0,
+  `completed_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `course_progress`
+--
+
+INSERT INTO `course_progress` (`id`, `course_id`, `lesson_id`, `user_id`, `is_completed`, `completed_at`) VALUES
+(1, 5, 1, 1, 1, '2025-08-16 20:03:02'),
+(2, 5, 5, 1, 1, '2025-08-16 20:03:08'),
+(3, 5, 9, 1, 1, '2025-08-16 20:03:11'),
+(4, 5, 6, 1, 0, NULL),
+(5, 5, 10, 1, 0, NULL),
+(6, 5, 7, 1, 0, NULL),
+(7, 5, 16, 1, 1, '2025-08-16 20:03:34'),
+(8, 5, 15, 1, 1, '2025-08-16 20:03:33'),
+(9, 5, 14, 1, 1, '2025-08-16 20:03:31'),
+(10, 5, 13, 1, 1, '2025-08-16 20:03:30'),
+(11, 5, 12, 1, 1, '2025-08-16 20:03:28'),
+(12, 5, 8, 1, 1, '2025-08-16 20:03:26'),
+(13, 5, 11, 1, 1, '2025-08-16 20:14:33'),
+(17, 5, 2, 1, 1, '2025-08-17 14:54:31'),
+(20, 5, 3, 1, 1, '2025-08-16 20:03:06'),
+(55, 5, 4, 1, 1, '2025-08-17 14:54:32');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `course_reviews`
+--
+
+CREATE TABLE `course_reviews` (
+  `id` int(11) NOT NULL,
+  `course_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `rating` tinyint(3) UNSIGNED NOT NULL,
+  `comment` text DEFAULT NULL,
+  `review` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `course_reviews`
+--
+
+INSERT INTO `course_reviews` (`id`, `course_id`, `user_id`, `rating`, `comment`, `review`, `created_at`) VALUES
+(1, 5, 1, 5, 'good', NULL, '2025-08-16 19:43:24');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `expert_education`
+--
+
+CREATE TABLE `expert_education` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `degree` varchar(255) DEFAULT NULL,
+  `institution` varchar(255) DEFAULT NULL,
+  `graduation_year` year(4) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `expert_education`
+--
+
+INSERT INTO `expert_education` (`id`, `user_id`, `degree`, `institution`, `graduation_year`) VALUES
+(1, 3, 'MBA', 'XYZ University', '2018');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `expert_experiences`
+--
+
+CREATE TABLE `expert_experiences` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `job_title` varchar(255) DEFAULT NULL,
+  `company` varchar(255) DEFAULT NULL,
+  `start_date` date DEFAULT NULL,
+  `end_date` date DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `expert_experiences`
+--
+
+INSERT INTO `expert_experiences` (`id`, `user_id`, `job_title`, `company`, `start_date`, `end_date`, `created_at`) VALUES
+(1, 3, 'Coach', 'ABC', '2020-01-01', '2022-12-31', '2025-08-05 17:05:27');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `expert_languages`
+--
+
+CREATE TABLE `expert_languages` (
+  `id` int(11) NOT NULL,
+  `expert_id` int(11) NOT NULL,
+  `language` varchar(100) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `expert_languages`
+--
+
+INSERT INTO `expert_languages` (`id`, `expert_id`, `language`) VALUES
+(16, 5, 'EnglishHindi'),
+(19, 3, 'English'),
+(20, 3, 'French'),
+(22, 1, 'English');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `expert_profiles`
+--
+
+CREATE TABLE `expert_profiles` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `headline` text DEFAULT NULL,
+  `bio` text DEFAULT NULL,
+  `languages` varchar(255) DEFAULT NULL,
+  `graduated` tinyint(1) DEFAULT 0,
+  `stripe_account_id` varchar(255) DEFAULT NULL,
+  `public_url_slug` varchar(100) DEFAULT NULL,
+  `public_profile_url` varchar(255) DEFAULT NULL,
+  `total_sessions_completed` int(11) DEFAULT 0,
+  `is_verified` tinyint(1) DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `expert_profiles`
+--
+
+INSERT INTO `expert_profiles` (`id`, `user_id`, `headline`, `bio`, `languages`, `graduated`, `stripe_account_id`, `public_url_slug`, `public_profile_url`, `total_sessions_completed`, `is_verified`) VALUES
+(1, 3, 'Full-Stack Developer', '<p>Uploads <strong>photo first</strong>, then PUTs the JSON payload.</p><p>Keeps <strong>location</strong> in its own textarea so it’s easy to view/edit.</p><p>Prevents accidental nulls by falling back to the GET snapshot for any unset field.</p>', 'English', 0, NULL, NULL, 'https://prosfata.space/expert/imran-hossen', 0, 0),
+(6, 5, 'Senior Web Developer', '<p>You don’t need to touch your APIs. If you want the “Course” count to be precise, return total_services_offered (or a similar field) in /experts; the card already reads several possible names.</p>', NULL, 0, NULL, NULL, 'https://prosfata.space/expert/mr-alex-joe', 0, 0),
+(7, 4, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, 0),
+(8, 1, '', '', NULL, 0, NULL, NULL, 'https://prosfata.space/expert/mohammad-abu-taleb', 0, 0),
+(42, 6, '', '', NULL, 0, NULL, 'norman-musengimana', 'https://prosfata.space/expert/expert/norman-musengimana', 0, 0),
+(51, 2, '', '', NULL, 0, NULL, NULL, NULL, 0, 0);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `expert_reviews`
+--
+
+CREATE TABLE `expert_reviews` (
+  `id` int(11) NOT NULL,
+  `service_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `rating` decimal(2,1) NOT NULL CHECK (`rating` between 1 and 5),
+  `review` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `expert_services`
+--
+
+CREATE TABLE `expert_services` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `description` text DEFAULT NULL,
+  `price` decimal(10,2) DEFAULT NULL,
+  `image` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `is_consultation` tinyint(1) NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `expert_services`
+--
+
+INSERT INTO `expert_services` (`id`, `user_id`, `title`, `description`, `price`, `image`, `created_at`, `updated_at`, `is_consultation`) VALUES
+(1, 3, 'Resume Coaching', 'Expert help on resume', 19.99, '/uploads/service_images/image-1754423016143-225351101.jpg', '2025-08-05 19:21:28', '2025-08-05 19:43:36', 0),
+(2, 3, 'Resume Coaching', 'Expert help on resume', 49.99, '/uploads/service_images/image-1754569451107-952051340.jpg', '2025-08-07 12:24:11', '2025-08-07 12:24:11', 0),
+(3, 3, 'Interview Session Expert', '<p class=\"ql-align-justify\">Customer service executives are the backbone of companies, who often communicate with their customers. These specialists help businesses establish and maintain strong relationships with their customers and clients. Knowing more about this domain will help you decide whether you want to pursue this career.</p><p class=\"ql-align-justify\"><br></p><h2>Who is a Customer Service Executive?</h2><p class=\"ql-align-justify\">A customer service executive is a professional who is responsible for communicating the reasons and methods related to service expectations within an organization. These professionals are assigned several duties, including answering phone calls, responding to customer questions, and resolving customer issues. They are typically responsible for front-line responsibilities that have a direct impact on a company\'s customer experience. They may also supervise a team of customer care professionals and train them on how to handle consumer complaints.</p><p class=\"ql-align-justify\">On the other hand, some customer service jobs are suitable for freshers, which range across a broad spectrum of categories, including call centers, technology, hospitality, education, and finance.</p><h2>10 Most Asked Customer Service Interview Questions</h2><ol><li>What is Customer Service?</li><li><a href=\"https://www.simplilearn.com/how-to-introduce-yourself-in-a-job-interview-article\" rel=\"noopener noreferrer\" target=\"_blank\">Tell me about yourself.</a></li><li>How do you prioritize your work?</li><li>How do you handle difficult customers?</li><li>How would previous colleagues describe you?</li><li>What are your greatest strengths?</li><li>How do you cope under pressure?</li><li>What are the top 20 customer service skills?</li><li>&nbsp;What are your career goals?</li><li>How do you keep yourself motivated?</li></ol>', 29.00, '/uploads/service_images/image-1755266091630-124515018.png', '2025-08-15 13:27:36', '2025-08-15 13:54:51', 0),
+(4, 3, 'hh', '<p>fdhdfh</p>', 30.00, '/uploads/service_images/image-1755344110910-837517836.png', '2025-08-16 11:35:10', '2025-08-16 11:35:10', 0),
+(5, 3, 'Interview Session', '<p>1 to 1 interview preparation</p>', 10.00, '/uploads/service_images/image-1755441846854-913300727.jpg', '2025-08-17 14:44:06', '2025-08-17 14:44:06', 0),
+(6, 3, 'Web Application', '<p>Web Application</p>', 450.00, '/uploads/service_images/image-1755688325793-725001791.png', '2025-08-20 11:12:05', '2025-08-20 11:14:29', 0);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `expert_service_categories`
+--
+
+CREATE TABLE `expert_service_categories` (
+  `service_id` int(11) NOT NULL,
+  `category_id` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `expert_service_categories`
+--
+
+INSERT INTO `expert_service_categories` (`service_id`, `category_id`) VALUES
+(1, 1),
+(3, 1),
+(4, 1),
+(5, 1),
+(5, 5),
+(5, 7),
+(5, 13),
+(5, 14),
+(6, 2),
+(6, 3);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `expert_skills`
+--
+
+CREATE TABLE `expert_skills` (
+  `id` int(11) NOT NULL,
+  `expert_id` int(11) NOT NULL,
+  `skill_id` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `expert_skills`
+--
+
+INSERT INTO `expert_skills` (`id`, `expert_id`, `skill_id`) VALUES
+(31, 1, 4),
+(32, 1, 6),
+(27, 3, 4),
+(28, 3, 5),
+(23, 5, 4),
+(24, 5, 5);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `expert_time_slots`
+--
+
+CREATE TABLE `expert_time_slots` (
+  `id` int(11) NOT NULL,
+  `expert_id` int(11) NOT NULL,
+  `start_time` datetime NOT NULL,
+  `end_time` datetime NOT NULL,
+  `is_booked` tinyint(1) DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `expert_time_slots`
+--
+
+INSERT INTO `expert_time_slots` (`id`, `expert_id`, `start_time`, `end_time`, `is_booked`, `created_at`) VALUES
+(1, 3, '2025-08-15 10:00:00', '2025-08-15 11:00:00', 0, '2025-08-09 21:20:55'),
+(2, 3, '2025-08-11 09:00:00', '2025-08-11 10:00:00', 0, '2025-08-10 07:02:01'),
+(3, 3, '2025-08-11 10:00:00', '2025-08-11 11:00:00', 0, '2025-08-10 07:02:01'),
+(4, 3, '2025-08-11 11:00:00', '2025-08-11 12:00:00', 0, '2025-08-10 07:02:01'),
+(5, 3, '2025-08-11 12:00:00', '2025-08-11 13:00:00', 0, '2025-08-10 07:02:01'),
+(6, 3, '2025-08-18 09:00:00', '2025-08-18 10:00:00', 1, '2025-08-10 07:02:01'),
+(7, 3, '2025-08-18 10:00:00', '2025-08-18 11:00:00', 1, '2025-08-10 07:02:01'),
+(8, 3, '2025-08-18 11:00:00', '2025-08-18 12:00:00', 1, '2025-08-10 07:02:01'),
+(9, 3, '2025-08-18 12:00:00', '2025-08-18 13:00:00', 0, '2025-08-10 07:02:01'),
+(10, 3, '2025-08-25 09:00:00', '2025-08-25 10:00:00', 0, '2025-08-10 07:02:01'),
+(11, 3, '2025-08-25 10:00:00', '2025-08-25 11:00:00', 0, '2025-08-10 07:02:01'),
+(12, 3, '2025-08-25 11:00:00', '2025-08-25 12:00:00', 0, '2025-08-10 07:02:01'),
+(13, 3, '2025-08-25 12:00:00', '2025-08-25 13:00:00', 0, '2025-08-10 07:02:01'),
+(14, 3, '2025-08-11 15:00:00', '2025-08-11 16:00:00', 0, '2025-08-10 07:02:01'),
+(15, 3, '2025-08-11 16:00:00', '2025-08-11 17:00:00', 0, '2025-08-10 07:02:01'),
+(16, 3, '2025-08-11 17:00:00', '2025-08-11 18:00:00', 0, '2025-08-10 07:02:01'),
+(17, 3, '2025-08-18 15:00:00', '2025-08-18 16:00:00', 0, '2025-08-10 07:02:01'),
+(18, 3, '2025-08-18 16:00:00', '2025-08-18 17:00:00', 0, '2025-08-10 07:02:01'),
+(19, 3, '2025-08-18 17:00:00', '2025-08-18 18:00:00', 0, '2025-08-10 07:02:01'),
+(20, 3, '2025-08-25 15:00:00', '2025-08-25 16:00:00', 0, '2025-08-10 07:02:01'),
+(21, 3, '2025-08-25 16:00:00', '2025-08-25 17:00:00', 0, '2025-08-10 07:02:01'),
+(22, 3, '2025-08-25 17:00:00', '2025-08-25 18:00:00', 0, '2025-08-10 07:02:01'),
+(23, 3, '2025-08-13 10:00:00', '2025-08-13 11:00:00', 0, '2025-08-10 07:02:01'),
+(24, 3, '2025-08-13 11:00:00', '2025-08-13 12:00:00', 0, '2025-08-10 07:02:01'),
+(25, 3, '2025-08-20 10:00:00', '2025-08-20 11:00:00', 1, '2025-08-10 07:02:01'),
+(26, 3, '2025-08-20 11:00:00', '2025-08-20 12:00:00', 0, '2025-08-10 07:02:01'),
+(27, 3, '2025-08-27 10:00:00', '2025-08-27 11:00:00', 0, '2025-08-10 07:02:01'),
+(28, 3, '2025-08-27 11:00:00', '2025-08-27 12:00:00', 0, '2025-08-10 07:02:01'),
+(29, 3, '2025-08-15 09:00:00', '2025-08-15 10:00:00', 0, '2025-08-10 07:02:01'),
+(30, 3, '2025-08-15 11:00:00', '2025-08-15 12:00:00', 1, '2025-08-10 07:02:01'),
+(31, 3, '2025-08-15 12:00:00', '2025-08-15 13:00:00', 0, '2025-08-10 07:02:01'),
+(32, 3, '2025-08-15 13:00:00', '2025-08-15 14:00:00', 1, '2025-08-10 07:02:01'),
+(33, 3, '2025-08-15 14:00:00', '2025-08-15 15:00:00', 1, '2025-08-10 07:02:01'),
+(34, 3, '2025-08-15 15:00:00', '2025-08-15 16:00:00', 0, '2025-08-10 07:02:01'),
+(35, 3, '2025-08-15 16:00:00', '2025-08-15 17:00:00', 0, '2025-08-10 07:02:01'),
+(36, 3, '2025-08-22 09:00:00', '2025-08-22 10:00:00', 0, '2025-08-10 07:02:01'),
+(37, 3, '2025-08-22 10:00:00', '2025-08-22 11:00:00', 0, '2025-08-10 07:02:01'),
+(38, 3, '2025-08-22 11:00:00', '2025-08-22 12:00:00', 0, '2025-08-10 07:02:01'),
+(39, 3, '2025-08-22 12:00:00', '2025-08-22 13:00:00', 0, '2025-08-10 07:02:01'),
+(40, 3, '2025-08-22 13:00:00', '2025-08-22 14:00:00', 0, '2025-08-10 07:02:01'),
+(41, 3, '2025-08-22 14:00:00', '2025-08-22 15:00:00', 0, '2025-08-10 07:02:01'),
+(42, 3, '2025-08-22 15:00:00', '2025-08-22 16:00:00', 0, '2025-08-10 07:02:01'),
+(43, 3, '2025-08-22 16:00:00', '2025-08-22 17:00:00', 0, '2025-08-10 07:02:01'),
+(44, 3, '2025-08-29 09:00:00', '2025-08-29 10:00:00', 0, '2025-08-10 07:02:01'),
+(45, 3, '2025-08-29 10:00:00', '2025-08-29 11:00:00', 0, '2025-08-10 07:02:01'),
+(46, 3, '2025-08-29 11:00:00', '2025-08-29 12:00:00', 0, '2025-08-10 07:02:01'),
+(47, 3, '2025-08-29 12:00:00', '2025-08-29 13:00:00', 0, '2025-08-10 07:02:01'),
+(48, 3, '2025-08-29 13:00:00', '2025-08-29 14:00:00', 0, '2025-08-10 07:02:01'),
+(49, 3, '2025-08-29 14:00:00', '2025-08-29 15:00:00', 0, '2025-08-10 07:02:01'),
+(50, 3, '2025-08-29 15:00:00', '2025-08-29 16:00:00', 0, '2025-08-10 07:02:01'),
+(51, 3, '2025-08-29 16:00:00', '2025-08-29 17:00:00', 0, '2025-08-10 07:02:01'),
+(105, 3, '2025-09-01 09:00:00', '2025-09-01 10:00:00', 0, '2025-08-15 09:30:42'),
+(106, 3, '2025-09-01 10:00:00', '2025-09-01 11:00:00', 0, '2025-08-15 09:30:42'),
+(107, 3, '2025-09-01 11:00:00', '2025-09-01 12:00:00', 0, '2025-08-15 09:30:42'),
+(108, 3, '2025-09-01 12:00:00', '2025-09-01 13:00:00', 0, '2025-08-15 09:30:42'),
+(109, 3, '2025-09-08 09:00:00', '2025-09-08 10:00:00', 0, '2025-08-15 09:30:42'),
+(110, 3, '2025-09-08 10:00:00', '2025-09-08 11:00:00', 0, '2025-08-15 09:30:42'),
+(111, 3, '2025-09-08 11:00:00', '2025-09-08 12:00:00', 0, '2025-08-15 09:30:42'),
+(112, 3, '2025-09-08 12:00:00', '2025-09-08 13:00:00', 0, '2025-08-15 09:30:42'),
+(113, 3, '2025-09-15 09:00:00', '2025-09-15 10:00:00', 0, '2025-08-15 09:30:42'),
+(114, 3, '2025-09-15 10:00:00', '2025-09-15 11:00:00', 0, '2025-08-15 09:30:42'),
+(115, 3, '2025-09-15 11:00:00', '2025-09-15 12:00:00', 0, '2025-08-15 09:30:42'),
+(116, 3, '2025-09-15 12:00:00', '2025-09-15 13:00:00', 0, '2025-08-15 09:30:42'),
+(117, 3, '2025-09-22 09:00:00', '2025-09-22 10:00:00', 0, '2025-08-15 09:30:42'),
+(118, 3, '2025-09-22 10:00:00', '2025-09-22 11:00:00', 0, '2025-08-15 09:30:42'),
+(119, 3, '2025-09-22 11:00:00', '2025-09-22 12:00:00', 0, '2025-08-15 09:30:42'),
+(120, 3, '2025-09-22 12:00:00', '2025-09-22 13:00:00', 0, '2025-08-15 09:30:42'),
+(121, 3, '2025-09-29 09:00:00', '2025-09-29 10:00:00', 0, '2025-08-15 09:30:42'),
+(122, 3, '2025-09-29 10:00:00', '2025-09-29 11:00:00', 0, '2025-08-15 09:30:42'),
+(123, 3, '2025-09-29 11:00:00', '2025-09-29 12:00:00', 0, '2025-08-15 09:30:42'),
+(124, 3, '2025-09-29 12:00:00', '2025-09-29 13:00:00', 0, '2025-08-15 09:30:42'),
+(125, 3, '2025-09-01 17:00:00', '2025-09-01 18:00:00', 0, '2025-08-15 09:30:42'),
+(126, 3, '2025-09-08 17:00:00', '2025-09-08 18:00:00', 0, '2025-08-15 09:30:42'),
+(127, 3, '2025-09-15 17:00:00', '2025-09-15 18:00:00', 0, '2025-08-15 09:30:42'),
+(128, 3, '2025-09-22 17:00:00', '2025-09-22 18:00:00', 0, '2025-08-15 09:30:42'),
+(129, 3, '2025-09-29 17:00:00', '2025-09-29 18:00:00', 0, '2025-08-15 09:30:42'),
+(130, 3, '2025-09-03 10:00:00', '2025-09-03 11:00:00', 0, '2025-08-15 09:30:42'),
+(131, 3, '2025-09-03 11:00:00', '2025-09-03 12:00:00', 0, '2025-08-15 09:30:42'),
+(132, 3, '2025-09-10 10:00:00', '2025-09-10 11:00:00', 0, '2025-08-15 09:30:42'),
+(133, 3, '2025-09-10 11:00:00', '2025-09-10 12:00:00', 0, '2025-08-15 09:30:42'),
+(134, 3, '2025-09-17 10:00:00', '2025-09-17 11:00:00', 0, '2025-08-15 09:30:42'),
+(135, 3, '2025-09-17 11:00:00', '2025-09-17 12:00:00', 0, '2025-08-15 09:30:42'),
+(136, 3, '2025-09-24 10:00:00', '2025-09-24 11:00:00', 0, '2025-08-15 09:30:42'),
+(137, 3, '2025-09-24 11:00:00', '2025-09-24 12:00:00', 0, '2025-08-15 09:30:42'),
+(138, 3, '2025-09-05 09:00:00', '2025-09-05 10:00:00', 0, '2025-08-15 09:30:42'),
+(139, 3, '2025-09-05 10:00:00', '2025-09-05 11:00:00', 0, '2025-08-15 09:30:42'),
+(140, 3, '2025-09-05 11:00:00', '2025-09-05 12:00:00', 0, '2025-08-15 09:30:42'),
+(141, 3, '2025-09-05 12:00:00', '2025-09-05 13:00:00', 0, '2025-08-15 09:30:42'),
+(142, 3, '2025-09-05 13:00:00', '2025-09-05 14:00:00', 0, '2025-08-15 09:30:42'),
+(143, 3, '2025-09-05 14:00:00', '2025-09-05 15:00:00', 0, '2025-08-15 09:30:42'),
+(144, 3, '2025-09-05 15:00:00', '2025-09-05 16:00:00', 0, '2025-08-15 09:30:42'),
+(145, 3, '2025-09-05 16:00:00', '2025-09-05 17:00:00', 0, '2025-08-15 09:30:42'),
+(146, 3, '2025-09-12 09:00:00', '2025-09-12 10:00:00', 0, '2025-08-15 09:30:42'),
+(147, 3, '2025-09-12 10:00:00', '2025-09-12 11:00:00', 0, '2025-08-15 09:30:42'),
+(148, 3, '2025-09-12 11:00:00', '2025-09-12 12:00:00', 0, '2025-08-15 09:30:42'),
+(149, 3, '2025-09-12 12:00:00', '2025-09-12 13:00:00', 0, '2025-08-15 09:30:42'),
+(150, 3, '2025-09-12 13:00:00', '2025-09-12 14:00:00', 0, '2025-08-15 09:30:42'),
+(151, 3, '2025-09-12 14:00:00', '2025-09-12 15:00:00', 0, '2025-08-15 09:30:42'),
+(152, 3, '2025-09-12 15:00:00', '2025-09-12 16:00:00', 0, '2025-08-15 09:30:42'),
+(153, 3, '2025-09-12 16:00:00', '2025-09-12 17:00:00', 0, '2025-08-15 09:30:42'),
+(154, 3, '2025-09-19 09:00:00', '2025-09-19 10:00:00', 0, '2025-08-15 09:30:42'),
+(155, 3, '2025-09-19 10:00:00', '2025-09-19 11:00:00', 0, '2025-08-15 09:30:42'),
+(156, 3, '2025-09-19 11:00:00', '2025-09-19 12:00:00', 0, '2025-08-15 09:30:42'),
+(157, 3, '2025-09-19 12:00:00', '2025-09-19 13:00:00', 0, '2025-08-15 09:30:42'),
+(158, 3, '2025-09-19 13:00:00', '2025-09-19 14:00:00', 0, '2025-08-15 09:30:42'),
+(159, 3, '2025-09-19 14:00:00', '2025-09-19 15:00:00', 0, '2025-08-15 09:30:42'),
+(160, 3, '2025-09-19 15:00:00', '2025-09-19 16:00:00', 0, '2025-08-15 09:30:42'),
+(161, 3, '2025-09-19 16:00:00', '2025-09-19 17:00:00', 0, '2025-08-15 09:30:42'),
+(162, 3, '2025-09-26 09:00:00', '2025-09-26 10:00:00', 0, '2025-08-15 09:30:42'),
+(163, 3, '2025-09-26 10:00:00', '2025-09-26 11:00:00', 0, '2025-08-15 09:30:42'),
+(164, 3, '2025-09-26 11:00:00', '2025-09-26 12:00:00', 0, '2025-08-15 09:30:42'),
+(165, 3, '2025-09-26 12:00:00', '2025-09-26 13:00:00', 0, '2025-08-15 09:30:42'),
+(166, 3, '2025-09-26 13:00:00', '2025-09-26 14:00:00', 0, '2025-08-15 09:30:42'),
+(167, 3, '2025-09-26 14:00:00', '2025-09-26 15:00:00', 0, '2025-08-15 09:30:42'),
+(168, 3, '2025-09-26 15:00:00', '2025-09-26 16:00:00', 0, '2025-08-15 09:30:42'),
+(169, 3, '2025-09-26 16:00:00', '2025-09-26 17:00:00', 0, '2025-08-15 09:30:42'),
+(170, 3, '2025-08-30 03:00:00', '2025-08-30 04:00:00', 0, '2025-08-15 10:12:54'),
+(171, 1, '2025-08-24 11:00:00', '2025-08-24 12:00:00', 0, '2025-08-17 14:32:12'),
+(172, 1, '2025-08-31 11:00:00', '2025-08-31 12:00:00', 0, '2025-08-17 14:32:12'),
+(173, 1, '2025-08-18 14:00:00', '2025-08-18 15:00:00', 0, '2025-08-17 14:32:12'),
+(174, 1, '2025-08-25 14:00:00', '2025-08-25 15:00:00', 0, '2025-08-17 14:32:12'),
+(175, 1, '2025-08-17 18:00:00', '2025-08-17 19:00:00', 0, '2025-08-17 14:32:49'),
+(176, 1, '2025-08-24 18:00:00', '2025-08-24 19:00:00', 0, '2025-08-17 14:32:49'),
+(177, 1, '2025-08-31 18:00:00', '2025-08-31 19:00:00', 0, '2025-08-17 14:32:49'),
+(182, 1, '2025-09-07 11:00:00', '2025-09-07 12:00:00', 0, '2025-08-17 14:33:11'),
+(183, 1, '2025-09-14 11:00:00', '2025-09-14 12:00:00', 0, '2025-08-17 14:33:11'),
+(184, 1, '2025-09-21 11:00:00', '2025-09-21 12:00:00', 0, '2025-08-17 14:33:11'),
+(185, 1, '2025-09-28 11:00:00', '2025-09-28 12:00:00', 0, '2025-08-17 14:33:11'),
+(186, 1, '2025-09-01 14:00:00', '2025-09-01 15:00:00', 0, '2025-08-17 14:33:11'),
+(187, 1, '2025-09-08 14:00:00', '2025-09-08 15:00:00', 0, '2025-08-17 14:33:11'),
+(188, 1, '2025-09-15 14:00:00', '2025-09-15 15:00:00', 0, '2025-08-17 14:33:11'),
+(189, 1, '2025-09-22 14:00:00', '2025-09-22 15:00:00', 0, '2025-08-17 14:33:11'),
+(190, 1, '2025-09-29 14:00:00', '2025-09-29 15:00:00', 0, '2025-08-17 14:33:11'),
+(191, 1, '2025-09-07 18:00:00', '2025-09-07 19:00:00', 0, '2025-08-17 14:33:11'),
+(192, 1, '2025-09-14 18:00:00', '2025-09-14 19:00:00', 0, '2025-08-17 14:33:11'),
+(193, 1, '2025-09-21 18:00:00', '2025-09-21 19:00:00', 0, '2025-08-17 14:33:11'),
+(194, 1, '2025-09-28 18:00:00', '2025-09-28 19:00:00', 0, '2025-08-17 14:33:11');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `expert_weekly_availability`
+--
+
+CREATE TABLE `expert_weekly_availability` (
+  `id` int(11) NOT NULL,
+  `expert_id` int(11) NOT NULL,
+  `day_of_week` enum('Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday') NOT NULL,
+  `start_time` time NOT NULL,
+  `end_time` time NOT NULL,
+  `duration_minutes` int(11) NOT NULL DEFAULT 30,
+  `buffer_minutes` int(11) NOT NULL DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `expert_weekly_availability`
+--
+
+INSERT INTO `expert_weekly_availability` (`id`, `expert_id`, `day_of_week`, `start_time`, `end_time`, `duration_minutes`, `buffer_minutes`, `created_at`) VALUES
+(1, 3, 'Saturday', '14:00:00', '16:30:00', 30, 10, '2025-08-08 19:29:17'),
+(2, 3, 'Saturday', '10:00:00', '14:00:00', 30, 0, '2025-08-08 20:50:48');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `expert_weekly_templates`
+--
+
+CREATE TABLE `expert_weekly_templates` (
+  `id` int(11) NOT NULL,
+  `expert_id` int(11) NOT NULL,
+  `day_of_week` enum('Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday') NOT NULL,
+  `start_time` time NOT NULL,
+  `end_time` time NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `expert_weekly_templates`
+--
+
+INSERT INTO `expert_weekly_templates` (`id`, `expert_id`, `day_of_week`, `start_time`, `end_time`, `created_at`) VALUES
+(1, 3, 'Monday', '09:00:00', '13:00:00', '2025-08-10 07:01:33'),
+(2, 3, 'Monday', '17:00:00', '18:00:00', '2025-08-10 07:01:33'),
+(3, 3, 'Wednesday', '10:00:00', '12:00:00', '2025-08-10 07:01:33'),
+(4, 3, 'Friday', '09:00:00', '17:00:00', '2025-08-10 07:01:33'),
+(5, 1, 'Sunday', '11:00:00', '12:00:00', '2025-08-17 14:31:17'),
+(6, 1, 'Monday', '14:00:00', '15:00:00', '2025-08-17 14:31:41'),
+(7, 1, 'Sunday', '18:00:00', '19:00:00', '2025-08-17 14:32:47');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `general_profiles`
+--
+
+CREATE TABLE `general_profiles` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `full_name` varchar(100) DEFAULT NULL,
+  `phone` varchar(20) DEFAULT NULL,
+  `interests` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `industries`
+--
+
+CREATE TABLE `industries` (
+  `id` int(11) NOT NULL,
+  `name` varchar(100) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `industries`
+--
+
+INSERT INTO `industries` (`id`, `name`) VALUES
+(2, 'Business'),
+(1, 'Updated Industry');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `meetings`
+--
+
+CREATE TABLE `meetings` (
+  `id` int(11) NOT NULL,
+  `order_id` int(11) NOT NULL,
+  `expert_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `slot_id` int(11) NOT NULL,
+  `start_time` datetime NOT NULL,
+  `end_time` datetime NOT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `provider` enum('livekit','zoom','meet') DEFAULT 'livekit',
+  `room_name` varchar(128) NOT NULL,
+  `join_url_user` varchar(255) DEFAULT NULL,
+  `join_url_expert` varchar(255) DEFAULT NULL,
+  `status` enum('upcoming','ongoing','completed','cancelled','expired') NOT NULL DEFAULT 'upcoming',
+  `started_at` datetime DEFAULT NULL,
+  `ended_at` datetime DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `meeting_type` enum('one-on-one','group') NOT NULL DEFAULT 'one-on-one',
+  `video_tool` enum('jitsi','webrtc','livekit') NOT NULL DEFAULT 'livekit',
+  `meet_type` enum('audio','video') NOT NULL DEFAULT 'video',
+  `timezone` varchar(100) NOT NULL DEFAULT 'UTC',
+  `live_room_name` varchar(255) DEFAULT NULL,
+  `is_live` tinyint(1) NOT NULL DEFAULT 0,
+  `reminder_sent` tinyint(1) NOT NULL DEFAULT 0,
+  `reminder_30_sent` tinyint(1) NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `meetings`
+--
+
+INSERT INTO `meetings` (`id`, `order_id`, `expert_id`, `user_id`, `slot_id`, `start_time`, `end_time`, `created_by`, `provider`, `room_name`, `join_url_user`, `join_url_expert`, `status`, `started_at`, `ended_at`, `created_at`, `meeting_type`, `video_tool`, `meet_type`, `timezone`, `live_room_name`, `is_live`, `reminder_sent`, `reminder_30_sent`) VALUES
+(3, 1, 3, 3, 6, '2025-08-18 09:00:00', '2025-08-18 10:00:00', NULL, 'livekit', 'room_2a118618-89e4-4bc9-bc0f-8aff03eda2fc', '/meet/join/room_2a118618-89e4-4bc9-bc0f-8aff03eda2fc?as=user', '/meet/join/room_2a118618-89e4-4bc9-bc0f-8aff03eda2fc?as=expert', 'completed', NULL, NULL, '2025-08-10 07:47:52', 'one-on-one', 'livekit', 'video', 'UTC', NULL, 0, 0, 0),
+(4, 3, 3, 3, 7, '2025-08-18 10:00:00', '2025-08-18 11:00:00', NULL, 'livekit', 'room_6b304630-692a-49a5-8cec-e5d96e9835f5', '/meet/join/room_6b304630-692a-49a5-8cec-e5d96e9835f5?as=user', '/meet/join/room_6b304630-692a-49a5-8cec-e5d96e9835f5?as=expert', 'expired', NULL, NULL, '2025-08-10 07:50:26', 'one-on-one', 'livekit', 'video', 'UTC', NULL, 0, 0, 0),
+(5, 5, 3, 4, 8, '2025-08-18 11:00:00', '2025-08-18 12:00:00', NULL, 'livekit', 'room_56dbff05-1a15-416c-9577-ad04d2851035', '/meet/join/room_56dbff05-1a15-416c-9577-ad04d2851035?as=user', '/meet/join/room_56dbff05-1a15-416c-9577-ad04d2851035?as=expert', '', NULL, NULL, '2025-08-11 19:21:19', 'one-on-one', 'livekit', 'video', 'UTC', NULL, 0, 0, 0),
+(6, 6, 3, 4, 30, '2025-08-15 11:00:00', '2025-08-15 12:00:00', NULL, 'livekit', 'room_915e28fc-6b01-4470-b983-0ea9f59d54ab', '/meet/join/room_915e28fc-6b01-4470-b983-0ea9f59d54ab?as=user', '/meet/join/room_915e28fc-6b01-4470-b983-0ea9f59d54ab?as=expert', 'completed', NULL, NULL, '2025-08-14 19:44:30', 'one-on-one', 'livekit', 'video', 'UTC', NULL, 0, 0, 0),
+(7, 36, 3, 4, 32, '2025-08-15 13:00:00', '2025-08-15 14:00:00', NULL, 'livekit', 'room_79c13df8-f57a-44ed-96d3-fe860a2e0e55', '/meet/join/room_79c13df8-f57a-44ed-96d3-fe860a2e0e55?as=user', '/meet/join/room_79c13df8-f57a-44ed-96d3-fe860a2e0e55?as=expert', '', NULL, NULL, '2025-08-16 06:52:01', 'one-on-one', 'livekit', 'video', 'UTC', NULL, 0, 0, 0),
+(8, 39, 3, 3, 33, '2025-08-15 14:00:00', '2025-08-15 15:00:00', NULL, 'livekit', 'room_bfe280da-3afd-4c47-9df4-a5c9fa7eb8db', '/meet/join/room_bfe280da-3afd-4c47-9df4-a5c9fa7eb8db?as=user', '/meet/join/room_bfe280da-3afd-4c47-9df4-a5c9fa7eb8db?as=expert', '', NULL, NULL, '2025-08-16 07:40:16', 'one-on-one', 'livekit', 'video', 'UTC', NULL, 0, 0, 0),
+(9, 41, 3, 5, 25, '2025-08-20 10:00:00', '2025-08-20 11:00:00', NULL, 'livekit', 'room_5e4b73d9-5c8e-40b4-8629-e799524dc106', '/meet/join/room_5e4b73d9-5c8e-40b4-8629-e799524dc106?as=user', '/meet/join/room_5e4b73d9-5c8e-40b4-8629-e799524dc106?as=expert', 'completed', NULL, NULL, '2025-08-19 14:29:59', 'one-on-one', 'livekit', 'video', 'UTC', NULL, 0, 0, 0);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `meeting_attendance_sessions`
+--
+
+CREATE TABLE `meeting_attendance_sessions` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `meeting_id` int(11) DEFAULT NULL,
+  `room_name` varchar(191) NOT NULL,
+  `participant_sid` varchar(191) NOT NULL,
+  `identity` varchar(191) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `role` varchar(50) DEFAULT NULL,
+  `joined_at` datetime NOT NULL,
+  `last_seen_at` datetime DEFAULT NULL,
+  `left_at` datetime DEFAULT NULL,
+  `duration_seconds` int(10) UNSIGNED DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `meeting_attendance_sessions`
+--
+
+INSERT INTO `meeting_attendance_sessions` (`id`, `meeting_id`, `room_name`, `participant_sid`, `identity`, `user_id`, `role`, `joined_at`, `last_seen_at`, `left_at`, `duration_seconds`, `created_at`, `updated_at`) VALUES
+(1, 6, 'room_915e28fc-6b01-4470-b983-0ea9f59d54ab', 'PA_icWLWoohnwML', '3', 3, 'expert', '2025-08-18 12:17:28', NULL, NULL, NULL, '2025-08-18 12:17:28', '2025-08-18 12:17:28'),
+(2, 6, 'room_915e28fc-6b01-4470-b983-0ea9f59d54ab', 'PA_uqL5KsGRzftE', '3', 3, 'expert', '2025-08-18 12:17:54', NULL, '2025-08-18 12:18:22', 28, '2025-08-18 12:17:54', '2025-08-18 12:18:22'),
+(3, 3, 'room_2a118618-89e4-4bc9-bc0f-8aff03eda2fc', 'PA_YSAUAEBJhQAz', '3', 3, 'expert', '2025-08-18 12:18:39', NULL, NULL, NULL, '2025-08-18 12:18:39', '2025-08-18 12:18:39'),
+(4, 9, 'room_5e4b73d9-5c8e-40b4-8629-e799524dc106', 'PA_UwzDYxSiexcF', '3', 3, 'expert', '2025-08-20 13:11:44', '2025-08-20 13:11:44', '2025-08-20 13:11:44', 0, '2025-08-20 13:11:44', '2025-08-20 13:14:00'),
+(5, 9, 'room_5e4b73d9-5c8e-40b4-8629-e799524dc106', 'PA_sZu4hEb3cbNw', '3', 3, 'expert', '2025-08-20 13:12:39', '2025-08-20 13:12:39', '2025-08-20 13:12:39', 0, '2025-08-20 13:12:39', '2025-08-20 13:15:00'),
+(6, 9, 'room_5e4b73d9-5c8e-40b4-8629-e799524dc106', 'PA_fLjfUdyDPU9B', '3', 3, 'expert', '2025-08-20 13:21:53', '2025-08-20 13:21:53', '2025-08-20 13:21:53', 0, '2025-08-20 13:21:53', '2025-08-20 13:24:00');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `meeting_messages`
+--
+
+CREATE TABLE `meeting_messages` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `meeting_id` bigint(20) UNSIGNED NOT NULL,
+  `room_name` varchar(191) NOT NULL,
+  `sender_user_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `sender_identity` varchar(191) NOT NULL,
+  `text` text NOT NULL,
+  `msg_ts` bigint(20) UNSIGNED NOT NULL,
+  `text_hash` char(64) NOT NULL,
+  `raw` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`raw`)),
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `meeting_participants`
+--
+
+CREATE TABLE `meeting_participants` (
+  `id` int(11) NOT NULL,
+  `meeting_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `role` enum('host','participant') DEFAULT 'participant',
+  `status` enum('invited','accepted','declined','left') DEFAULT 'accepted',
+  `reminder_sent` tinyint(1) DEFAULT 0,
+  `joined_at` datetime DEFAULT NULL,
+  `left_at` datetime DEFAULT NULL,
+  `invited_by` int(11) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `meeting_participants`
+--
+
+INSERT INTO `meeting_participants` (`id`, `meeting_id`, `user_id`, `role`, `status`, `reminder_sent`, `joined_at`, `left_at`, `invited_by`, `created_at`) VALUES
+(1, 6, 3, 'host', 'accepted', 0, NULL, NULL, NULL, '2025-08-15 17:50:00'),
+(2, 6, 4, 'participant', 'accepted', 0, NULL, NULL, NULL, '2025-08-15 17:50:00'),
+(3, 7, 3, 'host', 'accepted', 0, NULL, NULL, NULL, '2025-08-16 06:52:01'),
+(4, 7, 4, 'participant', 'accepted', 0, NULL, NULL, NULL, '2025-08-16 06:52:01'),
+(7, 9, 3, 'host', 'accepted', 0, NULL, NULL, NULL, '2025-08-19 14:29:59'),
+(8, 9, 5, 'participant', 'accepted', 0, NULL, NULL, NULL, '2025-08-19 14:29:59');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `meeting_reminders`
+--
+
+CREATE TABLE `meeting_reminders` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `meeting_id` bigint(20) UNSIGNED NOT NULL,
+  `user_id` bigint(20) UNSIGNED NOT NULL,
+  `kind` varchar(32) NOT NULL,
+  `status` varchar(16) NOT NULL,
+  `sent_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `error_text` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `messages`
+--
+
+CREATE TABLE `messages` (
+  `id` int(11) NOT NULL,
+  `chat_id` int(11) NOT NULL,
+  `sender_id` int(11) NOT NULL,
+  `content` text DEFAULT NULL,
+  `attachment` varchar(255) DEFAULT NULL,
+  `file_url` text DEFAULT NULL,
+  `is_read` tinyint(1) NOT NULL DEFAULT 0,
+  `is_deleted` tinyint(1) NOT NULL DEFAULT 0,
+  `edited_at` datetime DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `messages`
+--
+
+INSERT INTO `messages` (`id`, `chat_id`, `sender_id`, `content`, `attachment`, `file_url`, `is_read`, `is_deleted`, `edited_at`, `deleted_at`, `created_at`) VALUES
+(1, 1, 4, 'hi', NULL, NULL, 0, 0, NULL, NULL, '2025-08-12 09:51:36'),
+(2, 1, 4, 'how are yuo?', NULL, NULL, 0, 0, NULL, NULL, '2025-08-12 09:51:47'),
+(3, 1, 4, 'where are you?', NULL, NULL, 0, 0, NULL, NULL, '2025-08-12 10:35:41'),
+(4, 1, 4, 'tui koi', NULL, NULL, 0, 0, NULL, NULL, '2025-08-12 10:39:02'),
+(5, 2, 4, 'hi', NULL, NULL, 0, 0, NULL, NULL, '2025-08-17 11:39:23'),
+(6, 1, 4, 'hgf', NULL, NULL, 0, 0, NULL, NULL, '2025-08-17 11:59:52'),
+(7, 1, 4, 'dsgdg', NULL, NULL, 0, 0, NULL, NULL, '2025-08-17 12:08:32'),
+(8, 1, 4, 'how are you?', NULL, NULL, 0, 0, NULL, NULL, '2025-08-17 12:21:33'),
+(9, 2, 3, 'how are you?', NULL, NULL, 0, 0, NULL, NULL, '2025-08-17 13:13:24'),
+(10, 2, 4, 'I\'m fine', NULL, NULL, 0, 0, NULL, NULL, '2025-08-17 13:14:05'),
+(11, 2, 3, 'Hi', NULL, NULL, 0, 0, NULL, NULL, '2025-08-17 15:13:03'),
+(12, 2, 3, 'helodsgsfd', NULL, NULL, 0, 0, NULL, NULL, '2025-08-17 15:13:15'),
+(13, 3, 1, 'hi', NULL, NULL, 0, 0, NULL, NULL, '2025-08-17 18:34:07'),
+(14, 3, 3, 'How ae you?', NULL, NULL, 0, 0, NULL, NULL, '2025-08-17 18:34:50'),
+(15, 3, 3, 'hi', NULL, NULL, 0, 0, NULL, NULL, '2025-08-17 18:42:16'),
+(16, 3, 3, 'How are you?', NULL, NULL, 0, 0, NULL, NULL, '2025-08-17 18:42:23'),
+(17, 3, 1, 'file', NULL, NULL, 0, 0, NULL, NULL, '2025-08-17 18:42:42'),
+(18, 3, 3, 'hhh', NULL, NULL, 0, 0, NULL, NULL, '2025-08-17 18:42:54'),
+(19, 2, 3, 'hhi', NULL, NULL, 0, 0, NULL, NULL, '2025-08-17 18:43:31'),
+(20, 3, 3, 'okay', NULL, NULL, 0, 0, NULL, NULL, '2025-08-17 18:51:38'),
+(21, 3, 3, NULL, NULL, 'http://localhost:5000/uploads/chat/130c4306cecd275d5d891dbf2c42425c.png', 0, 0, NULL, NULL, '2025-08-17 18:57:40'),
+(22, 3, 3, 'See the attachment', NULL, 'http://localhost:5000/uploads/chat/113485e437eedfdc19935256f19b6558.pdf', 0, 0, NULL, NULL, '2025-08-17 19:05:26'),
+(23, 3, 3, 'Please knock me when available ', NULL, NULL, 0, 0, NULL, NULL, '2025-08-18 06:14:50'),
+(24, 2, 3, 'Hey', NULL, NULL, 0, 0, NULL, NULL, '2025-08-20 06:13:23'),
+(25, 2, 3, 'are you there?', NULL, NULL, 0, 0, NULL, NULL, '2025-08-20 06:13:31'),
+(26, 2, 4, 'yes', NULL, NULL, 0, 0, NULL, NULL, '2025-08-20 06:16:50'),
+(27, 2, 3, 'what are you doing now?', NULL, NULL, 0, 0, NULL, NULL, '2025-08-20 06:53:11'),
+(28, 1, 4, 'Hello from Insomnia', NULL, NULL, 0, 0, NULL, NULL, '2025-08-20 08:42:54'),
+(29, 2, 3, 'hi', NULL, NULL, 0, 0, NULL, NULL, '2025-08-20 12:07:59'),
+(30, 2, 3, 'munsi', NULL, NULL, 0, 0, NULL, NULL, '2025-08-20 12:08:06'),
+(31, 2, 3, 'how are you', NULL, NULL, 0, 0, NULL, NULL, '2025-08-20 12:08:19'),
+(32, 4, 3, 'hi', NULL, NULL, 0, 0, NULL, NULL, '2025-08-20 13:22:42'),
+(33, 4, 3, NULL, NULL, 'http://api.prosfata.space/uploads/chat/4d4fb65f074194381b8fe10a8ef89b94.png', 0, 0, NULL, NULL, '2025-08-20 13:23:02'),
+(34, 4, 3, 'Are are you?', NULL, NULL, 0, 0, NULL, NULL, '2025-08-20 13:23:17'),
+(35, 2, 4, 'hey', NULL, NULL, 0, 0, NULL, NULL, '2025-08-20 13:24:16'),
+(36, 2, 3, 'ab ku kkhk ', NULL, NULL, 0, 0, NULL, NULL, '2025-08-20 13:24:56'),
+(37, 2, 3, NULL, NULL, 'http://api.prosfata.space/uploads/chat/982ac7165f31f43a2da7e4223c929cb1.png', 0, 0, NULL, NULL, '2025-08-20 13:29:14');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `message_reads`
+--
+
+CREATE TABLE `message_reads` (
+  `message_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `read_at` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `message_reads`
+--
+
+INSERT INTO `message_reads` (`message_id`, `user_id`, `read_at`) VALUES
+(5, 3, '2025-08-17 19:13:16'),
+(5, 4, '2025-08-17 19:13:42'),
+(9, 3, '2025-08-17 19:14:05'),
+(9, 4, '2025-08-17 19:13:42'),
+(10, 3, '2025-08-17 19:14:05'),
+(10, 4, '2025-08-17 21:13:03'),
+(11, 3, '2025-08-20 06:16:51'),
+(11, 4, '2025-08-17 21:13:03'),
+(12, 3, '2025-08-20 06:16:51'),
+(12, 4, '2025-08-17 22:21:48'),
+(13, 1, '2025-08-18 00:34:50'),
+(13, 3, '2025-08-18 00:34:43'),
+(14, 1, '2025-08-18 00:34:50'),
+(14, 3, '2025-08-18 00:42:42'),
+(15, 1, '2025-08-18 00:42:16'),
+(15, 3, '2025-08-18 00:42:42'),
+(16, 1, '2025-08-18 00:42:23'),
+(16, 3, '2025-08-18 00:42:42'),
+(17, 1, '2025-08-18 00:42:54'),
+(17, 3, '2025-08-18 00:42:42'),
+(18, 1, '2025-08-18 00:42:54'),
+(19, 3, '2025-08-20 06:16:51'),
+(19, 4, '2025-08-20 06:16:45'),
+(20, 1, '2025-08-18 00:51:38'),
+(21, 1, '2025-08-18 01:00:39'),
+(22, 1, '2025-08-18 01:05:26'),
+(23, 1, '2025-08-20 10:11:27'),
+(24, 3, '2025-08-20 06:16:51'),
+(24, 4, '2025-08-20 06:16:45'),
+(25, 3, '2025-08-20 06:16:51'),
+(25, 4, '2025-08-20 06:16:45'),
+(26, 3, '2025-08-20 06:16:51'),
+(26, 4, '2025-08-20 13:24:13'),
+(27, 3, '2025-08-20 13:24:23'),
+(27, 4, '2025-08-20 13:24:13'),
+(29, 3, '2025-08-20 13:24:23'),
+(29, 4, '2025-08-20 13:24:13'),
+(30, 3, '2025-08-20 13:24:23'),
+(30, 4, '2025-08-20 13:24:13'),
+(31, 3, '2025-08-20 13:24:23'),
+(31, 4, '2025-08-20 13:24:13'),
+(35, 3, '2025-08-20 13:24:23'),
+(35, 4, '2025-08-20 13:24:56'),
+(36, 4, '2025-08-20 13:24:56'),
+(37, 4, '2025-08-20 13:29:14');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `notifications`
+--
+
+CREATE TABLE `notifications` (
+  `id` bigint(20) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `type` varchar(50) NOT NULL,
+  `title` varchar(180) NOT NULL,
+  `body` text DEFAULT NULL,
+  `link` varchar(255) DEFAULT NULL,
+  `is_read` tinyint(1) NOT NULL DEFAULT 0,
+  `read_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `meta` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`meta`))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `notifications`
+--
+
+INSERT INTO `notifications` (`id`, `user_id`, `type`, `title`, `body`, `link`, `is_read`, `read_at`, `created_at`, `meta`) VALUES
+(1, 1, 'meeting_reminder', 'Your meeting starts soon', 'Join the call in 15 minutes', 'http://localhost:5173/meetings/123', 0, NULL, '2025-08-20 18:53:52', NULL),
+(2, 4, 'meeting_reminder', 'Your meeting starts soon', 'Join the call in 15 minutes', 'http://localhost:5173/meetings/123', 1, '2025-08-20 19:42:01', '2025-08-20 19:02:35', NULL),
+(3, 4, 'meeting_reminder', 'Your meeting starts soon', 'Join the call in 15 minutes', 'http://localhost:5173/meetings/123', 0, NULL, '2025-08-20 19:42:28', NULL),
+(4, 4, 'meeting_reminder', 'Your meeting starts soon', 'Join the call in 15 minutes', 'http://localhost:5173/meetings/123', 0, NULL, '2025-08-20 19:42:44', NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `notification_settings`
+--
+
+CREATE TABLE `notification_settings` (
+  `user_id` int(11) NOT NULL,
+  `push_enabled` tinyint(1) NOT NULL DEFAULT 1,
+  `email_enabled` tinyint(1) NOT NULL DEFAULT 1,
+  `message_mentions` tinyint(1) NOT NULL DEFAULT 1,
+  `meeting_reminders` tinyint(1) NOT NULL DEFAULT 1,
+  `course_payments` tinyint(1) NOT NULL DEFAULT 1,
+  `service_suggestions` tinyint(1) NOT NULL DEFAULT 0,
+  `promotions` tinyint(1) NOT NULL DEFAULT 0,
+  `service_updates` tinyint(1) NOT NULL DEFAULT 1,
+  `subscription_renewals` tinyint(1) NOT NULL DEFAULT 1,
+  `feedback_requests` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `notification_settings`
+--
+
+INSERT INTO `notification_settings` (`user_id`, `push_enabled`, `email_enabled`, `message_mentions`, `meeting_reminders`, `course_payments`, `service_suggestions`, `promotions`, `service_updates`, `subscription_renewals`, `feedback_requests`, `created_at`, `updated_at`) VALUES
+(1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, '2025-08-20 18:53:52', '2025-08-20 18:53:52'),
+(4, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, '2025-08-20 19:02:35', '2025-08-20 19:37:48');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `pages`
+--
+
+CREATE TABLE `pages` (
+  `id` int(11) NOT NULL,
+  `name` varchar(120) NOT NULL,
+  `path` varchar(255) DEFAULT NULL,
+  `icon` varchar(64) DEFAULT NULL,
+  `order_num` int(11) NOT NULL DEFAULT 999,
+  `is_menu` tinyint(1) NOT NULL DEFAULT 1,
+  `parent_id` int(11) DEFAULT NULL,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `pages`
+--
+
+INSERT INTO `pages` (`id`, `name`, `path`, `icon`, `order_num`, `is_menu`, `parent_id`, `is_active`, `created_at`, `updated_at`) VALUES
+(1, 'Dashboard', '/dashboard', 'layout-dashboard', 1, 1, NULL, 1, '2025-08-13 08:39:39', '2025-08-13 08:39:39'),
+(2, 'Expert Dashboard', '/expert/dashboard', 'layout-dashboard', 2, 1, NULL, 1, '2025-08-13 08:39:39', '2025-08-13 20:14:52'),
+(3, 'Resume Review', '/resume', 'file-check', 3, 1, NULL, 1, '2025-08-13 08:39:39', '2025-08-13 08:39:39'),
+(4, 'Courses & Events', '/course-events', 'monitor-play', 4, 1, NULL, 1, '2025-08-13 08:39:39', '2025-08-14 03:29:46'),
+(5, 'Service Hub', '/services', 'briefcase', 5, 1, NULL, 1, '2025-08-13 08:39:39', '2025-08-13 08:39:39'),
+(6, 'Find an Expert', '/find-an-expert', 'graduation-cap', 6, 1, NULL, 1, '2025-08-13 08:39:39', '2025-08-14 03:33:09'),
+(7, 'My Network', '/my-network', 'earth', 7, 1, NULL, 1, '2025-08-13 08:39:39', '2025-08-14 03:34:20'),
+(8, 'Messages', '/messages', 'messages-square', 8, 1, NULL, 1, '2025-08-13 08:39:39', '2025-08-14 03:35:54'),
+(9, 'Coaching Session', '/meetings', 'calendar-days', 9, 1, NULL, 1, '2025-08-13 08:39:39', '2025-08-14 03:37:32'),
+(10, 'Job Board', '/jobs', 'list', 10, 1, NULL, 1, '2025-08-13 08:39:39', '2025-08-13 08:39:39'),
+(11, 'Payments', '/payments', 'credit-card', 11, 1, NULL, 1, '2025-08-13 08:39:39', '2025-08-13 08:39:39'),
+(12, 'Settings', '/settings', 'settings', 12, 1, NULL, 1, '2025-08-13 08:39:39', '2025-08-13 08:39:39'),
+(16, 'Admin Setting', '/admin-setting', 'calendar-cog', 16, 1, NULL, 1, '2025-08-13 19:40:46', '2025-08-13 20:49:31'),
+(17, 'Page List', '/menu-page-list', 'layout-panel-top', 1, 1, 16, 1, '2025-08-13 19:44:02', '2025-08-13 20:47:41'),
+(18, 'Role List', '/user-role-list', 'globe-lock', 2, 1, 16, 1, '2025-08-13 19:45:14', '2025-08-13 20:47:12'),
+(19, 'Role Permission', '/role-page-access', 'shield-alert', 2, 1, 16, 1, '2025-08-13 19:46:08', '2025-08-13 20:48:13'),
+(20, 'Category List', '/category-list', 'clipboard-list', 6, 1, 16, 1, '2025-08-13 20:44:05', '2025-08-13 20:44:05'),
+(21, 'My Availability', '/my-availability', 'timer-reset', 999, 1, 6, 1, '2025-08-15 06:34:08', '2025-08-15 06:34:08'),
+(22, 'Create Services', '/services/create', 'package-plus', 999, 1, 5, 1, '2025-08-15 13:17:22', '2025-08-15 13:17:22'),
+(23, 'My Services', '/my-services', 'shopping-cart', 1, 1, 5, 1, '2025-08-15 13:19:45', '2025-08-15 13:22:21'),
+(24, 'All Experts', '/find-an-expert', 'book-open-text', 1, 1, 6, 1, '2025-08-15 15:04:15', '2025-08-15 15:04:15'),
+(25, 'All Services', '/services', 'gift', 1, 1, 5, 1, '2025-08-15 16:37:45', '2025-08-15 16:37:45'),
+(26, 'All Courses & Events', '/course-events', 'calendar-sync', 1, 1, 4, 1, '2025-08-16 06:51:35', '2025-08-16 06:51:35'),
+(27, 'Create New Course', '/course-events/create', 'diamond-plus', 3, 1, 4, 1, '2025-08-16 07:15:04', '2025-08-16 07:15:04'),
+(28, 'My Courses', '/my-courses', 'school', 2, 1, 4, 1, '2025-08-16 07:15:58', '2025-08-16 07:15:58'),
+(29, 'My Courses', '/learning', 'book-open-check', 3, 1, 30, 1, '2025-08-17 05:08:25', '2025-08-19 08:53:29'),
+(30, 'My Accounts', '/', 'baggage-claim', 9, 1, NULL, 1, '2025-08-19 08:52:24', '2025-08-19 13:38:17'),
+(31, 'My Meeting History', '/meetings/history/my', 'calendar-days', 3, 1, 30, 1, '2025-08-19 08:55:31', '2025-08-19 13:39:51'),
+(32, 'Services Meeting History', '/meetings/history/expert', 'calendar-clock', 6, 1, 30, 1, '2025-08-19 13:41:27', '2025-08-19 13:41:27'),
+(33, 'Experts Meeting History', '/meetings/history/admin', 'calendar-search', 7, 1, 30, 1, '2025-08-19 13:42:09', '2025-08-19 13:42:09'),
+(34, 'Coaching', '/coaching/catalog', 'book-open-check', 8, 1, NULL, 1, '2025-08-23 14:05:45', '2025-08-23 20:39:52'),
+(35, 'All Coaching Programs', '/coaching/catalog', 'notebook-text', 1, 1, 34, 1, '2025-08-23 14:07:02', '2025-08-23 20:41:51'),
+(36, 'My Programs', '/coaching/my-programs', 'list-ordered', 2, 1, 34, 1, '2025-08-23 14:08:51', '2025-08-23 20:42:34'),
+(37, 'Create Program', '/coaching/programs/new', 'plus-circle', 3, 1, 34, 1, '2025-08-23 20:43:29', '2025-08-23 20:43:29'),
+(38, 'My Availability', '/my-availability', 'calendar-clock', 4, 1, 34, 1, '2025-08-23 20:44:56', '2025-08-23 20:44:56'),
+(39, 'Reviews (Assignments)', '/coaching/review', 'clipboard-list', 5, 1, 34, 1, '2025-08-23 20:45:59', '2025-08-23 20:45:59'),
+(40, 'Meetings (Expert)', '/meetings/history/expert', 'clock', 6, 1, 34, 1, '2025-08-23 20:46:52', '2025-08-23 20:46:52'),
+(41, 'Browse Programs', '/coaching/catalog', 'notebook-text', 7, 1, 34, 1, '2025-08-23 20:48:35', '2025-08-23 20:48:35'),
+(42, 'My Enrollments', '/coaching/enrollments', 'user-round', 8, 1, 34, 1, '2025-08-23 20:49:25', '2025-08-23 20:49:25'),
+(43, 'Schedule Sessions', '/coaching/schedule', 'calendar-range', 9, 1, 34, 1, '2025-08-23 20:50:16', '2025-08-23 20:50:16'),
+(44, 'Roadmap & Assignments', '/coaching/assignments', 'list-ordered', 10, 1, 34, 1, '2025-08-23 20:51:33', '2025-08-23 20:51:33'),
+(45, 'My Meetings', '/meetings/history/my', 'clock', 11, 1, 34, 1, '2025-08-23 20:52:36', '2025-08-23 20:52:36'),
+(46, 'User Management', '/admin/users', 'user-round-cog', 3, 1, 16, 1, '2025-08-24 07:50:39', '2025-08-24 07:50:39');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `password_reset_tokens`
+--
+
+CREATE TABLE `password_reset_tokens` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `token_hash` char(64) NOT NULL,
+  `expires_at` datetime NOT NULL,
+  `used` tinyint(1) DEFAULT 0,
+  `used_at` datetime DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `password_reset_tokens`
+--
+
+INSERT INTO `password_reset_tokens` (`id`, `user_id`, `token_hash`, `expires_at`, `used`, `used_at`, `created_at`) VALUES
+(1, 3, '0991a70f7bab68a19f284834d7cb94525979f29becb22c472ec474035dd7593b', '2025-08-10 15:54:30', 0, NULL, '2025-08-10 08:54:30');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `payment_webhook_events`
+--
+
+CREATE TABLE `payment_webhook_events` (
+  `id` varchar(191) NOT NULL,
+  `provider` enum('stripe') NOT NULL,
+  `received_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `roles`
+--
+
+CREATE TABLE `roles` (
+  `id` int(11) NOT NULL,
+  `name` varchar(50) NOT NULL,
+  `slug` varchar(60) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `roles`
+--
+
+INSERT INTO `roles` (`id`, `name`, `slug`, `created_at`, `updated_at`) VALUES
+(1, 'Administrator', 'admin', '2025-08-13 08:37:05', '2025-08-13 08:39:13'),
+(2, 'Expert', 'expert', '2025-08-13 08:37:05', '2025-08-13 08:38:20'),
+(4, 'Reviewer', 'reviewer', '2025-08-13 08:37:55', '2025-08-13 08:37:55'),
+(5, 'User', 'user', '2025-08-13 08:37:55', '2025-08-13 08:37:55');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `role_page_permissions`
+--
+
+CREATE TABLE `role_page_permissions` (
+  `role_id` int(11) NOT NULL,
+  `page_id` int(11) NOT NULL,
+  `can_view` tinyint(1) NOT NULL DEFAULT 0,
+  `can_create` tinyint(1) NOT NULL DEFAULT 0,
+  `can_update` tinyint(1) NOT NULL DEFAULT 0,
+  `can_delete` tinyint(1) NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `role_page_permissions`
+--
+
+INSERT INTO `role_page_permissions` (`role_id`, `page_id`, `can_view`, `can_create`, `can_update`, `can_delete`) VALUES
+(1, 1, 1, 1, 0, 0),
+(1, 4, 1, 1, 0, 0),
+(1, 5, 1, 1, 0, 0),
+(1, 6, 1, 1, 0, 0),
+(1, 7, 1, 0, 0, 0),
+(1, 8, 1, 1, 1, 1),
+(1, 9, 1, 1, 1, 1),
+(1, 11, 1, 0, 1, 0),
+(1, 12, 1, 1, 1, 1),
+(1, 16, 1, 1, 1, 1),
+(1, 17, 1, 1, 1, 1),
+(1, 18, 1, 1, 1, 1),
+(1, 19, 1, 1, 1, 1),
+(1, 20, 1, 1, 1, 1),
+(1, 21, 1, 1, 1, 1),
+(1, 22, 1, 1, 1, 1),
+(1, 23, 1, 1, 1, 1),
+(1, 24, 1, 1, 1, 1),
+(1, 25, 1, 1, 1, 1),
+(1, 26, 1, 1, 0, 0),
+(1, 28, 1, 1, 0, 0),
+(1, 29, 1, 1, 1, 1),
+(1, 30, 1, 1, 1, 1),
+(1, 31, 1, 1, 1, 1),
+(1, 33, 1, 1, 1, 1),
+(1, 46, 1, 1, 1, 1),
+(2, 1, 1, 0, 0, 0),
+(2, 4, 1, 1, 1, 1),
+(2, 5, 1, 1, 1, 1),
+(2, 6, 1, 1, 1, 1),
+(2, 7, 1, 1, 1, 1),
+(2, 8, 1, 1, 1, 1),
+(2, 9, 1, 1, 1, 1),
+(2, 11, 1, 1, 1, 1),
+(2, 12, 1, 1, 1, 1),
+(2, 21, 1, 1, 1, 1),
+(2, 22, 1, 1, 1, 1),
+(2, 23, 1, 1, 1, 1),
+(2, 24, 1, 1, 1, 1),
+(2, 25, 1, 1, 1, 1),
+(2, 26, 1, 1, 0, 0),
+(2, 28, 1, 1, 1, 1),
+(2, 29, 1, 1, 1, 1),
+(2, 30, 1, 1, 1, 0),
+(2, 31, 1, 1, 1, 1),
+(2, 32, 1, 1, 1, 1),
+(2, 34, 1, 1, 1, 1),
+(2, 35, 1, 1, 1, 1),
+(2, 36, 1, 1, 1, 1),
+(2, 37, 1, 1, 1, 1),
+(2, 38, 1, 1, 1, 1),
+(2, 39, 1, 1, 1, 1),
+(2, 40, 1, 1, 1, 1),
+(5, 1, 1, 0, 0, 0),
+(5, 4, 1, 0, 0, 0),
+(5, 5, 1, 0, 0, 0),
+(5, 6, 1, 0, 0, 0),
+(5, 7, 1, 0, 0, 0),
+(5, 8, 1, 0, 0, 0),
+(5, 9, 1, 0, 0, 0),
+(5, 11, 1, 0, 0, 0),
+(5, 12, 1, 0, 0, 0),
+(5, 29, 1, 0, 0, 0),
+(5, 30, 1, 1, 1, 1),
+(5, 31, 1, 0, 0, 0),
+(5, 34, 1, 1, 1, 1),
+(5, 41, 1, 1, 1, 1),
+(5, 42, 1, 1, 1, 1),
+(5, 43, 1, 1, 1, 1),
+(5, 44, 1, 1, 1, 1),
+(5, 45, 1, 1, 1, 1);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `service_orders`
+--
+
+CREATE TABLE `service_orders` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `expert_id` int(11) NOT NULL,
+  `service_id` int(11) NOT NULL,
+  `amount` decimal(10,2) NOT NULL,
+  `currency` varchar(10) DEFAULT 'USD',
+  `status` enum('pending','paid','cancelled','refunded') NOT NULL DEFAULT 'pending',
+  `cancelled_at` datetime DEFAULT NULL,
+  `cancelled_by` int(11) DEFAULT NULL,
+  `cancelled_reason` varchar(255) DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `payment_ref` varchar(100) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `slot_id` int(11) DEFAULT NULL,
+  `payment_status` enum('Pending','Paid','Failed') DEFAULT 'Pending',
+  `meeting_id` int(11) DEFAULT NULL,
+  `stripe_payment_intent_id` varchar(255) DEFAULT NULL,
+  `stripe_charge_id` varchar(255) DEFAULT NULL,
+  `stripe_invoice_id` varchar(255) DEFAULT NULL,
+  `payment_method_id` varchar(255) DEFAULT NULL,
+  `receipt_url` text DEFAULT NULL,
+  `hosted_invoice_url` text DEFAULT NULL,
+  `invoice_pdf_url` text DEFAULT NULL,
+  `card_brand` varchar(50) DEFAULT NULL,
+  `card_last4` varchar(10) DEFAULT NULL,
+  `is_pending` tinyint(1) GENERATED ALWAYS AS (`status` = 'pending') STORED
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `service_orders`
+--
+
+INSERT INTO `service_orders` (`id`, `user_id`, `expert_id`, `service_id`, `amount`, `currency`, `status`, `cancelled_at`, `cancelled_by`, `cancelled_reason`, `notes`, `payment_ref`, `created_at`, `updated_at`, `slot_id`, `payment_status`, `meeting_id`, `stripe_payment_intent_id`, `stripe_charge_id`, `stripe_invoice_id`, `payment_method_id`, `receipt_url`, `hosted_invoice_url`, `invoice_pdf_url`, `card_brand`, `card_last4`) VALUES
+(1, 3, 3, 1, 19.99, 'USD', 'pending', NULL, NULL, NULL, NULL, NULL, '2025-08-09 19:46:16', '2025-08-19 13:03:15', NULL, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(2, 3, 3, 1, 19.99, 'USD', 'cancelled', NULL, NULL, NULL, 'Please prepare documents before meeting', NULL, '2025-08-09 21:00:15', '2025-08-15 05:44:16', NULL, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(3, 3, 3, 1, 19.99, 'USD', 'pending', NULL, NULL, NULL, 'Please review my resume before call', NULL, '2025-08-10 07:49:06', '2025-08-12 07:39:13', NULL, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(4, 4, 3, 1, 19.99, 'USD', 'pending', NULL, NULL, NULL, 'Please review my resume before call', NULL, '2025-08-11 15:28:11', '2025-08-11 15:28:11', NULL, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(5, 4, 3, 1, 19.99, 'USD', 'paid', NULL, NULL, NULL, 'Please review my resume before call', 'manual-OK-123', '2025-08-11 19:18:52', '2025-08-11 19:21:19', 8, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(6, 4, 3, 2, 49.99, 'USD', 'paid', NULL, NULL, NULL, NULL, 'cs_test_b1LoAVIvITXyG6V25dVzM3umMBp52sogmnb03z0E4rTFOmR37d2FDXPbjU', '2025-08-14 19:43:49', '2025-08-14 19:44:31', 30, 'Paid', 6, 'pi_3Rw74X3RqEMUJuhk0anuzhlI', 'ch_3Rw74X3RqEMUJuhk01SLvTEy', 'in_1Rw74Z3RqEMUJuhkQLBAVt8v', 'pm_1Rw74W3RqEMUJuhkJyT3K4ug', 'https://pay.stripe.com/receipts/invoices/CAcaFwoVYWNjdF8xUnZ6bW0zUnFFTVVKdWhrKJ_5-MQGMgZICvWPGLU6LBYcH4C7KtuUlx8ao70PpsJsm_cqARnHUbhflXr_0R88izE56N_v7j_DoWpX?s=ap', 'https://invoice.stripe.com/i/acct_1Rvzmm3RqEMUJuhk/test_YWNjdF8xUnZ6bW0zUnFFTVVKdWhrLF9TcnFtellRZkRZN1BaRjUwbURoSXVrS2hzZXRvcWFxLDE0NTc0MTQ3MQ0200Lr0j6PZH?s=ap', 'https://pay.stripe.com/invoice/acct_1Rvzmm3RqEMUJuhk/test_YWNjdF8xUnZ6bW0zUnFFTVVKdWhrLF9TcnFtellRZkRZN1BaRjUwbURoSXVrS2hzZXRvcWFxLDE0NTc0MTQ3MQ0200Lr0j6PZH/pdf?s=ap', 'visa', '4242'),
+(7, 4, 3, 2, 49.99, 'USD', 'cancelled', NULL, NULL, NULL, NULL, NULL, '2025-08-14 20:50:02', '2025-08-15 05:44:16', 1, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(8, 4, 3, 2, 49.99, 'USD', 'cancelled', NULL, NULL, NULL, NULL, NULL, '2025-08-14 20:50:02', '2025-08-15 05:44:16', 1, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(9, 4, 3, 2, 49.99, 'USD', 'cancelled', NULL, NULL, NULL, NULL, NULL, '2025-08-14 20:54:03', '2025-08-15 05:44:16', 1, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(10, 4, 3, 2, 49.99, 'USD', 'cancelled', NULL, NULL, NULL, NULL, NULL, '2025-08-14 20:54:03', '2025-08-15 05:44:16', 1, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(11, 4, 3, 2, 49.99, 'USD', 'pending', NULL, NULL, NULL, NULL, NULL, '2025-08-14 20:58:04', '2025-08-14 20:58:04', 1, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(12, 4, 3, 1, 19.99, 'USD', 'cancelled', NULL, NULL, NULL, NULL, NULL, '2025-08-15 05:08:53', '2025-08-15 05:44:16', 32, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(13, 4, 3, 1, 19.99, 'USD', 'cancelled', NULL, NULL, NULL, NULL, NULL, '2025-08-15 05:08:53', '2025-08-15 05:44:16', 32, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(14, 4, 3, 1, 19.99, 'USD', 'cancelled', NULL, NULL, NULL, NULL, NULL, '2025-08-15 05:09:17', '2025-08-15 05:44:16', 32, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(15, 4, 3, 1, 19.99, 'USD', 'cancelled', NULL, NULL, NULL, NULL, NULL, '2025-08-15 05:09:17', '2025-08-15 05:44:16', 32, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(16, 4, 3, 1, 19.99, 'USD', 'cancelled', NULL, NULL, NULL, NULL, NULL, '2025-08-15 05:11:04', '2025-08-15 05:44:16', 32, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(17, 4, 3, 1, 19.99, 'USD', 'cancelled', NULL, NULL, NULL, NULL, NULL, '2025-08-15 05:11:20', '2025-08-15 05:44:16', 32, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(18, 4, 3, 1, 19.99, 'USD', 'cancelled', NULL, NULL, NULL, NULL, NULL, '2025-08-15 05:11:20', '2025-08-15 05:44:16', 32, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(19, 4, 3, 1, 19.99, 'USD', 'cancelled', NULL, NULL, NULL, NULL, NULL, '2025-08-15 05:11:50', '2025-08-15 05:44:16', 32, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(20, 4, 3, 1, 19.99, 'USD', 'cancelled', NULL, NULL, NULL, NULL, NULL, '2025-08-15 05:11:50', '2025-08-15 05:44:16', 32, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(21, 4, 3, 1, 19.99, 'USD', 'cancelled', NULL, NULL, NULL, NULL, NULL, '2025-08-15 05:14:16', '2025-08-15 05:44:16', 32, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(22, 4, 3, 1, 19.99, 'USD', 'cancelled', NULL, NULL, NULL, NULL, NULL, '2025-08-15 05:14:23', '2025-08-15 05:44:16', 32, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(23, 4, 3, 1, 19.99, 'USD', 'cancelled', NULL, NULL, NULL, NULL, NULL, '2025-08-15 05:14:23', '2025-08-15 05:44:16', 32, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(24, 4, 3, 1, 19.99, 'USD', 'cancelled', NULL, NULL, NULL, NULL, NULL, '2025-08-15 05:15:18', '2025-08-15 05:44:16', 32, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(25, 4, 3, 1, 19.99, 'USD', 'cancelled', NULL, NULL, NULL, NULL, NULL, '2025-08-15 05:15:25', '2025-08-15 05:44:16', 32, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(26, 4, 3, 1, 19.99, 'USD', 'cancelled', NULL, NULL, NULL, NULL, NULL, '2025-08-15 05:15:25', '2025-08-15 05:44:16', 32, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(27, 4, 3, 1, 19.99, 'USD', 'cancelled', NULL, NULL, NULL, NULL, NULL, '2025-08-15 05:16:24', '2025-08-15 05:44:16', 32, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(28, 4, 3, 1, 19.99, 'USD', 'cancelled', NULL, NULL, NULL, NULL, NULL, '2025-08-15 05:16:32', '2025-08-15 05:44:16', 32, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(29, 4, 3, 1, 19.99, 'USD', 'cancelled', NULL, NULL, NULL, NULL, NULL, '2025-08-15 05:16:32', '2025-08-15 05:44:16', 32, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(30, 4, 3, 1, 19.99, 'USD', 'cancelled', NULL, NULL, NULL, NULL, NULL, '2025-08-15 05:17:28', '2025-08-15 05:44:16', 32, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(31, 4, 3, 1, 19.99, 'USD', 'cancelled', NULL, NULL, NULL, NULL, NULL, '2025-08-15 05:18:07', '2025-08-15 05:44:16', 32, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(32, 4, 3, 1, 19.99, 'USD', 'cancelled', NULL, NULL, NULL, NULL, NULL, '2025-08-15 05:20:22', '2025-08-15 05:44:16', 32, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(33, 4, 3, 1, 19.99, 'USD', 'cancelled', NULL, NULL, NULL, NULL, NULL, '2025-08-15 05:20:47', '2025-08-15 05:44:16', 32, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(34, 4, 3, 1, 19.99, 'USD', 'cancelled', NULL, NULL, NULL, NULL, NULL, '2025-08-15 05:22:37', '2025-08-15 05:44:16', 32, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(35, 4, 3, 1, 19.99, 'USD', 'cancelled', NULL, NULL, NULL, NULL, NULL, '2025-08-15 05:22:56', '2025-08-15 05:44:16', 32, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(36, 4, 3, 1, 19.99, 'USD', 'paid', NULL, NULL, NULL, NULL, 'cs_test_b1BjCsbtM1eKde8bGgWzwjnzaVuTdIUNIvtrHsqb1ixFs7fmwClld3JFm2', '2025-08-15 05:23:11', '2025-08-16 06:52:01', 32, 'Paid', 7, 'pi_3Rwdxw3RqEMUJuhk16iUcsFO', 'ch_3Rwdxw3RqEMUJuhk1skTjrTj', 'in_1Rwdxy3RqEMUJuhk8wFdoR26', 'pm_1Rw8v33RqEMUJuhkSAN3rnay', 'https://pay.stripe.com/receipts/invoices/CAcaFwoVYWNjdF8xUnZ6bW0zUnFFTVVKdWhrKJHVgMUGMgY-mXdTyFg6LBbUju_CRnKhkFVpdmSmtfDftvzB_cnmcOmRND5HAKuaeESvVH3AJyJutevz?s=ap', 'https://invoice.stripe.com/i/acct_1Rvzmm3RqEMUJuhk/test_YWNjdF8xUnZ6bW0zUnFFTVVKdWhrLF9Tc09sWkYwbFd6bHBRZGc1dHlJa0FhQzhxbkt2U3c2LDE0NTg2NzkyMQ0200PyLgYrV9?s=ap', 'https://pay.stripe.com/invoice/acct_1Rvzmm3RqEMUJuhk/test_YWNjdF8xUnZ6bW0zUnFFTVVKdWhrLF9Tc09sWkYwbFd6bHBRZGc1dHlJa0FhQzhxbkt2U3c2LDE0NTg2NzkyMQ0200PyLgYrV9/pdf?s=ap', 'visa', '4242'),
+(37, 4, 3, 1, 19.99, 'USD', 'pending', NULL, NULL, NULL, NULL, NULL, '2025-08-15 05:53:23', '2025-08-15 05:53:23', 1, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(38, 3, 3, 1, 19.99, 'USD', 'pending', NULL, NULL, NULL, NULL, NULL, '2025-08-15 10:41:09', '2025-08-15 10:41:09', 32, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(39, 3, 3, 1, 19.99, 'USD', 'paid', NULL, NULL, NULL, NULL, 'cs_test_b1IfjVcKdWYKloyjDwmFJhkMU8PodwgYd5Z4xPVHctH1i39lbT587v0Z2p', '2025-08-15 10:49:46', '2025-08-16 07:40:17', 33, 'Paid', 8, 'pi_3Rweii3RqEMUJuhk1h6lUhVW', 'py_3Rweii3RqEMUJuhk10AMjbFM', 'in_1Rwein3RqEMUJuhkZXfYXxju', 'pm_1Rweih3RqEMUJuhk6S8OpnPk', 'https://pay.stripe.com/receipts/invoices/CAcaFwoVYWNjdF8xUnZ6bW0zUnFFTVVKdWhrKOHrgMUGMgYxprV3KCk6LBazZnimaArZJKcifiFYOWNGZzGCPFniVCKGn0dilPIHGQc1U0JlMlBoo8Ah?s=ap', 'https://invoice.stripe.com/i/acct_1Rvzmm3RqEMUJuhk/test_YWNjdF8xUnZ6bW0zUnFFTVVKdWhrLF9Tc1BYQ09rWlZsUDhhajRCTks0dzQyb2ZzTnV0U3FzLDE0NTg3MDgxNw0200aR5rRjxu?s=ap', 'https://pay.stripe.com/invoice/acct_1Rvzmm3RqEMUJuhk/test_YWNjdF8xUnZ6bW0zUnFFTVVKdWhrLF9Tc1BYQ09rWlZsUDhhajRCTks0dzQyb2ZzTnV0U3FzLDE0NTg3MDgxNw0200aR5rRjxu/pdf?s=ap', NULL, NULL),
+(40, 1, 3, 2, 49.99, 'USD', 'cancelled', '2025-08-19 18:00:29', NULL, NULL, NULL, NULL, '2025-08-17 14:14:40', '2025-08-19 12:00:29', 25, '', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(41, 5, 3, 5, 10.00, 'USD', 'paid', NULL, NULL, NULL, NULL, 'cs_test_b1Shqp1eXsYWmqIH6jUbiivRrpfREcPwCkSKG67w7HXmJY98oe8qDHNxiS', '2025-08-19 14:29:27', '2025-08-19 14:29:59', 25, 'Paid', 9, 'pi_3RxqXu3RqEMUJuhk1oDIHDsE', 'ch_3RxqXu3RqEMUJuhk1yg0Bymq', 'in_1RxqXx3RqEMUJuhkiSq8kAJZ', 'pm_1RxqXt3RqEMUJuhkFNGx2BXH', 'https://pay.stripe.com/receipts/invoices/CAcaFwoVYWNjdF8xUnZ6bW0zUnFFTVVKdWhrKOeUksUGMgY0JGwVynQ6LBaZ0A4_dS77YzavX7_UKXW4vEC4EEWWnm6FKQ7zwrH_1yPnnHWQovX-SHdQ?s=ap', 'https://invoice.stripe.com/i/acct_1Rvzmm3RqEMUJuhk/test_YWNjdF8xUnZ6bW0zUnFFTVVKdWhrLF9TdGRwZXUxSEx3SUJhN3I4MEdic05uQm1maDVuQmRaLDE0NjE1NDU5OQ0200IubaNjyA?s=ap', 'https://pay.stripe.com/invoice/acct_1Rvzmm3RqEMUJuhk/test_YWNjdF8xUnZ6bW0zUnFFTVVKdWhrLF9TdGRwZXUxSEx3SUJhN3I4MEdic05uQm1maDVuQmRaLDE0NjE1NDU5OQ0200IubaNjyA/pdf?s=ap', 'visa', '4242'),
+(42, 1, 3, 5, 10.00, 'USD', 'pending', NULL, NULL, NULL, NULL, NULL, '2025-08-20 06:07:25', '2025-08-20 06:07:25', 36, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(43, 1, 3, 5, 10.00, 'USD', 'pending', NULL, NULL, NULL, NULL, NULL, '2025-08-20 06:07:25', '2025-08-20 06:07:25', 36, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(44, 3, 3, 6, 450.00, 'USD', 'pending', NULL, NULL, NULL, NULL, NULL, '2025-08-20 11:22:24', '2025-08-20 11:22:24', 37, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(45, 3, 3, 6, 450.00, 'USD', 'pending', NULL, NULL, NULL, NULL, NULL, '2025-08-20 11:22:24', '2025-08-20 11:22:24', 37, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `service_reviews`
+--
+
+CREATE TABLE `service_reviews` (
+  `id` int(11) NOT NULL,
+  `service_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `rating` int(11) DEFAULT NULL CHECK (`rating` between 1 and 5),
+  `review` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `service_reviews`
+--
+
+INSERT INTO `service_reviews` (`id`, `service_id`, `user_id`, `rating`, `review`, `created_at`) VALUES
+(1, 1, 3, 4, 'Very helpful session!', '2025-08-05 19:44:44');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `skills`
+--
+
+CREATE TABLE `skills` (
+  `id` int(11) NOT NULL,
+  `name` varchar(100) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `skills`
+--
+
+INSERT INTO `skills` (`id`, `name`) VALUES
+(3, 'AI Strategy'),
+(4, 'NodeJS'),
+(1, 'Python'),
+(5, 'ReactJs'),
+(6, 'RwactJS'),
+(2, 'TensorFlow');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `users`
+--
+
+CREATE TABLE `users` (
+  `id` int(11) NOT NULL,
+  `email` varchar(255) NOT NULL,
+  `phone_number` varchar(32) DEFAULT NULL,
+  `date_of_birth` date DEFAULT NULL,
+  `password` varchar(255) NOT NULL,
+  `password_changed_at` datetime DEFAULT NULL,
+  `role_id` int(11) NOT NULL,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `profile_photo` text DEFAULT NULL,
+  `city` varchar(100) DEFAULT NULL,
+  `state` varchar(100) DEFAULT NULL,
+  `country` varchar(100) DEFAULT NULL,
+  `status` enum('active','inactive') DEFAULT 'active',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `first_name` varchar(100) DEFAULT NULL,
+  `last_name` varchar(100) DEFAULT NULL,
+  `is_verified` tinyint(1) DEFAULT 0,
+  `location` varchar(255) DEFAULT NULL,
+  `timezone` varchar(100) DEFAULT NULL,
+  `stripe_customer_id` varchar(255) DEFAULT NULL,
+  `stripe_default_payment_method` varchar(255) DEFAULT NULL,
+  `public_slug` varchar(120) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `users`
+--
+
+INSERT INTO `users` (`id`, `email`, `phone_number`, `date_of_birth`, `password`, `password_changed_at`, `role_id`, `is_active`, `profile_photo`, `city`, `state`, `country`, `status`, `created_at`, `updated_at`, `first_name`, `last_name`, `is_verified`, `location`, `timezone`, `stripe_customer_id`, `stripe_default_payment_method`, `public_slug`) VALUES
+(1, 'abutaleb142@gmail.com', NULL, NULL, '$2a$10$RXiuogRf0xrA8eXRgDZblektWOnKCuL3r1kJIINLYa0CGCdo8Ymeu', '2025-08-20 10:13:13', 2, 1, '/uploads/profile_photos/1755444112126-david-kazi.jpg', '', '', '', 'active', '2025-08-05 07:05:07', '2025-08-20 10:13:13', 'Mohammad Abu', 'Taleb', 0, '', '', 'cus_Sst8O2EL92yt2P', 'pm_1Rx7N83RqEMUJuhkQY14JnBc', 'mohammad-abu-taleb'),
+(2, 'mustafizur142@gmail.com', '019287543', '1991-07-15', '$2a$10$ytBh93tBsRM6TrGiXNvxrusnXfUvQ/NpTSeFErcDLXjYTgGgYG/Rq', NULL, 5, 1, '/uploads/profile_photos/1756021977140-Ahmed.jpg', 'Dhaka', 'Dhaka', 'Bangladesh', 'active', '2025-08-05 07:07:41', '2025-08-24 09:49:10', 'Mustafizur', 'Rahman', 0, 'Jessore Road', 'Asia/Dhaka', 'cus_SvRQWVuL5yfBEp', NULL, NULL),
+(3, 'imranhossen1119999@gmail.com', NULL, NULL, '$2a$10$gHsVq1qLWS65hjd6D7ufDOTMka4bzln7vrcdUJZmkfF.Sxq94LEUG', '2025-08-10 14:52:23', 2, 1, '/uploads/profile_photos/1755436770738-Rashed Islam.jpg', 'Jessore', 'Jessore', 'Bangladesh', 'active', '2025-08-05 07:14:34', '2025-08-18 20:58:59', 'Imran', 'Hossen', 1, 'Jessore mani Road', 'Asia/Dhaka', 'cus_Ss5IuKQ2Wybk0m', NULL, 'imran-hossen'),
+(4, 'admin@example.com', NULL, NULL, '$2a$10$BNkZhxIFJ3qRC5pHbOdTKe8w5G7Fm/oE6NrVnuWad/NpjSuG0BA6K', NULL, 1, 1, '/uploads/profile_photos/1755436336446-david-kazi.jpg', 'Dhaka 2', 'Dhaka', 'Bangladesh', 'active', '2025-08-05 07:20:47', '2025-08-20 20:52:06', 'MOHAMMAD', 'TALEB', 1, 'Dhaka, Dhaka', 'Asia/Dhaka', 'cus_Srql9qnzJPpwCc', 'pm_1Rw8v33RqEMUJuhkSAN3rnay', NULL),
+(5, 'admin2@example.com', NULL, NULL, '$2a$10$GwSLMgsCmCen/9Gqw5mIM.OLgHB7xjx4abIH0QwDqn0Pp.w7k2ntC', NULL, 2, 1, '/uploads/profile_photos/1755289622403-apon.jpg', 'San Frincisco', 'CA', 'United States', 'active', '2025-08-06 09:32:28', '2025-08-19 14:29:32', 'Mr Alex', 'Joe', 0, 'San Frincisco, CA', 'Pacific/Midway', 'cus_StdplrRRlszAZY', NULL, 'mr-alex-joe'),
+(6, 'norman@prosfata.com', NULL, NULL, '$2a$10$G8DjmKt2dWsDeWbturM08OGWiXotVLogO36C.7brX3BBDVA4Pm7Um', NULL, 2, 1, '/uploads/profile_photos/1755697808535-norman.png', '', '', '', 'active', '2025-08-20 13:49:12', '2025-08-20 13:50:09', 'Norman', 'Musengimana', 0, '', '', NULL, NULL, 'norman-musengimana');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `user_connections`
+--
+
+CREATE TABLE `user_connections` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `connected_user_id` int(11) NOT NULL,
+  `status` enum('pending','connected','rejected') DEFAULT 'pending',
+  `created_at` datetime DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `user_connections`
+--
+
+INSERT INTO `user_connections` (`id`, `user_id`, `connected_user_id`, `status`, `created_at`, `updated_at`) VALUES
+(3, 3, 4, 'pending', '2025-08-08 20:15:45', '2025-08-08 20:15:45'),
+(4, 3, 1, 'pending', '2025-08-08 21:16:24', '2025-08-08 21:16:24'),
+(5, 3, 3, 'pending', '2025-08-15 19:48:51', '2025-08-15 19:48:51'),
+(6, 3, 5, 'pending', '2025-08-15 19:49:32', '2025-08-15 19:49:32'),
+(7, 4, 5, 'pending', '2025-08-16 04:38:18', '2025-08-16 04:38:18'),
+(8, 4, 3, 'pending', '2025-08-16 04:38:19', '2025-08-16 04:38:19'),
+(9, 4, 1, 'pending', '2025-08-20 06:17:07', '2025-08-20 06:17:07'),
+(10, 1, 5, 'pending', '2025-08-20 10:11:15', '2025-08-20 10:11:15'),
+(11, 1, 3, 'pending', '2025-08-20 10:11:16', '2025-08-20 10:11:16'),
+(12, 6, 5, 'pending', '2025-08-20 13:52:12', '2025-08-20 13:52:12'),
+(13, 6, 3, 'pending', '2025-08-20 13:52:13', '2025-08-20 13:52:13'),
+(14, 6, 1, 'pending', '2025-08-20 13:52:15', '2025-08-20 13:52:15');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `user_industries`
+--
+
+CREATE TABLE `user_industries` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `industry_id` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `user_industries`
+--
+
+INSERT INTO `user_industries` (`id`, `user_id`, `industry_id`) VALUES
+(30, 3, 2),
+(32, 1, 1),
+(34, 6, 2),
+(35, 2, 1);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `user_roles`
+--
+
+CREATE TABLE `user_roles` (
+  `user_id` int(11) NOT NULL,
+  `role_id` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `user_roles`
+--
+
+INSERT INTO `user_roles` (`user_id`, `role_id`) VALUES
+(1, 1),
+(1, 2),
+(3, 2),
+(4, 1);
+
+-- --------------------------------------------------------
+
+--
+-- Stand-in structure for view `vw_chat_last_message`
+-- (See below for the actual view)
+--
+CREATE TABLE `vw_chat_last_message` (
+`chat_id` int(11)
+,`last_message_id` int(11)
+,`sender_id` int(11)
+,`content` text
+,`file_url` text
+,`attachment` varchar(255)
+,`last_message_at` timestamp
+);
+
+-- --------------------------------------------------------
+
+--
+-- Stand-in structure for view `vw_user_chat_unread`
+-- (See below for the actual view)
+--
+CREATE TABLE `vw_user_chat_unread` (
+`user_id` int(11)
+,`chat_id` int(11)
+,`unread_count` bigint(21)
+);
+
+-- --------------------------------------------------------
+
+--
+-- Structure for view `vw_chat_last_message`
+--
+DROP TABLE IF EXISTS `vw_chat_last_message`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `vw_chat_last_message`  AS SELECT `m`.`chat_id` AS `chat_id`, `m`.`id` AS `last_message_id`, `m`.`sender_id` AS `sender_id`, `m`.`content` AS `content`, `m`.`file_url` AS `file_url`, `m`.`attachment` AS `attachment`, `m`.`created_at` AS `last_message_at` FROM (`messages` `m` join (select `messages`.`chat_id` AS `chat_id`,max(`messages`.`created_at`) AS `max_created` from `messages` group by `messages`.`chat_id`) `t` on(`t`.`chat_id` = `m`.`chat_id` and `t`.`max_created` = `m`.`created_at`)) ;
+
+-- --------------------------------------------------------
+
+--
+-- Structure for view `vw_user_chat_unread`
+--
+DROP TABLE IF EXISTS `vw_user_chat_unread`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `vw_user_chat_unread`  AS SELECT `cp`.`user_id` AS `user_id`, `m`.`chat_id` AS `chat_id`, count(0) AS `unread_count` FROM ((`chat_participants` `cp` join `messages` `m` on(`m`.`chat_id` = `cp`.`chat_id` and `m`.`sender_id` <> `cp`.`user_id`)) left join `message_reads` `mr` on(`mr`.`message_id` = `m`.`id` and `mr`.`user_id` = `cp`.`user_id`)) WHERE `mr`.`message_id` is null GROUP BY `cp`.`user_id`, `m`.`chat_id` ;
+
+--
+-- Indexes for dumped tables
+--
+
+--
+-- Indexes for table `auth_revoked_tokens`
+--
+ALTER TABLE `auth_revoked_tokens`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `token_hash` (`token_hash`),
+  ADD KEY `expires_at` (`expires_at`),
+  ADD KEY `user_id` (`user_id`);
+
+--
+-- Indexes for table `categories`
+--
+ALTER TABLE `categories`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `slug` (`slug`),
+  ADD UNIQUE KEY `uq_categories_name` (`name`),
+  ADD KEY `idx_categories_active` (`is_active`);
+
+--
+-- Indexes for table `chats`
+--
+ALTER TABLE `chats`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `created_by` (`created_by`);
+
+--
+-- Indexes for table `chat_participants`
+--
+ALTER TABLE `chat_participants`
+  ADD PRIMARY KEY (`chat_id`,`user_id`),
+  ADD UNIQUE KEY `uq_chat_user` (`chat_id`,`user_id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
+-- Indexes for table `chat_reads`
+--
+ALTER TABLE `chat_reads`
+  ADD PRIMARY KEY (`chat_id`,`user_id`),
+  ADD KEY `idx_read_last` (`chat_id`,`last_read_message_id`);
+
+--
+-- Indexes for table `coaching_assignments`
+--
+ALTER TABLE `coaching_assignments`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_ca_enrollment_status_due` (`enrollment_id`,`status`,`due_at`);
+
+--
+-- Indexes for table `coaching_assignment_versions`
+--
+ALTER TABLE `coaching_assignment_versions`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uniq_assignment_seq` (`assignment_id`,`seq`),
+  ADD KEY `idx_assignment` (`assignment_id`),
+  ADD KEY `fk_cav_user` (`submitted_by`);
+
+--
+-- Indexes for table `coaching_bookings`
+--
+ALTER TABLE `coaching_bookings`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_cb_enrollment_step` (`enrollment_id`,`step_seq`);
+
+--
+-- Indexes for table `coaching_enrollments`
+--
+ALTER TABLE `coaching_enrollments`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `coaching_orders`
+--
+ALTER TABLE `coaching_orders`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `template_id` (`template_id`),
+  ADD KEY `status` (`status`);
+
+--
+-- Indexes for table `coaching_program_slots`
+--
+ALTER TABLE `coaching_program_slots`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_template_time` (`template_id`,`start_time`);
+
+--
+-- Indexes for table `coaching_program_steps`
+--
+ALTER TABLE `coaching_program_steps`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `template_id` (`template_id`);
+
+--
+-- Indexes for table `coaching_program_templates`
+--
+ALTER TABLE `coaching_program_templates`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `slug` (`slug`);
+
+--
+-- Indexes for table `coaching_reminder_logs`
+--
+ALTER TABLE `coaching_reminder_logs`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_crl_type_ref` (`reminder_type`,`ref_id`),
+  ADD KEY `idx_crl_recipient` (`recipient_email`,`sent_at`);
+
+--
+-- Indexes for table `coaching_sessions`
+--
+ALTER TABLE `coaching_sessions`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uniq_enrollment_seq` (`enrollment_id`,`seq`),
+  ADD KEY `idx_enrollment` (`enrollment_id`);
+
+--
+-- Indexes for table `coaching_slot_holds`
+--
+ALTER TABLE `coaching_slot_holds`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uniq_hold` (`expert_id`,`start_time`,`end_time`);
+
+--
+-- Indexes for table `coaching_submissions`
+--
+ALTER TABLE `coaching_submissions`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `assignment_id` (`assignment_id`);
+
+--
+-- Indexes for table `coaching_template_categories`
+--
+ALTER TABLE `coaching_template_categories`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uniq_template_cat` (`template_id`,`category_id`),
+  ADD KEY `idx_template` (`template_id`),
+  ADD KEY `idx_category` (`category_id`);
+
+--
+-- Indexes for table `coaching_template_images`
+--
+ALTER TABLE `coaching_template_images`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `template_id` (`template_id`);
+
+--
+-- Indexes for table `coaching_template_steps`
+--
+ALTER TABLE `coaching_template_steps`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_template_seq` (`template_id`,`seq`);
+
+--
+-- Indexes for table `courses`
+--
+ALTER TABLE `courses`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `ux_courses_slug` (`slug`),
+  ADD KEY `created_by` (`created_by`),
+  ADD KEY `idx_courses_active_created` (`is_active`,`created_at`),
+  ADD KEY `idx_courses_status_created` (`status`,`created_at`),
+  ADD KEY `idx_courses_expert_created` (`expert_id`,`created_at`),
+  ADD KEY `idx_courses_price` (`price`),
+  ADD KEY `idx_courses_created` (`created_at`);
+ALTER TABLE `courses` ADD FULLTEXT KEY `ft_courses_title_desc` (`title`,`description`);
+
+--
+-- Indexes for table `course_categories`
+--
+ALTER TABLE `course_categories`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uq_course_category` (`course_id`,`category_id`),
+  ADD KEY `idx_cc_course` (`course_id`),
+  ADD KEY `idx_cc_category` (`category_id`);
+
+--
+-- Indexes for table `course_category_map`
+--
+ALTER TABLE `course_category_map`
+  ADD PRIMARY KEY (`course_id`,`category_id`),
+  ADD KEY `idx_ccm_category` (`category_id`);
+
+--
+-- Indexes for table `course_enrollments`
+--
+ALTER TABLE `course_enrollments`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `course_id` (`course_id`),
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `idx_enroll_course_created` (`course_id`,`enrolled_at`);
+
+--
+-- Indexes for table `course_features`
+--
+ALTER TABLE `course_features`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `course_id` (`course_id`);
+
+--
+-- Indexes for table `course_files`
+--
+ALTER TABLE `course_files`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `course_id` (`course_id`);
+
+--
+-- Indexes for table `course_lessons`
+--
+ALTER TABLE `course_lessons`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `course_id` (`course_id`,`order_no`);
+
+--
+-- Indexes for table `course_materials`
+--
+ALTER TABLE `course_materials`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `course_id` (`course_id`),
+  ADD KEY `lesson_id` (`lesson_id`);
+
+--
+-- Indexes for table `course_orders`
+--
+ALTER TABLE `course_orders`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uniq_user_course` (`user_id`,`course_id`),
+  ADD KEY `course_id` (`course_id`),
+  ADD KEY `idx_course_orders_provider_session` (`provider_session_id`);
+
+--
+-- Indexes for table `course_progress`
+--
+ALTER TABLE `course_progress`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uniq_progress` (`user_id`,`course_id`,`lesson_id`),
+  ADD KEY `course_id` (`course_id`),
+  ADD KEY `lesson_id` (`lesson_id`);
+
+--
+-- Indexes for table `course_reviews`
+--
+ALTER TABLE `course_reviews`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uniq_course_user` (`course_id`,`user_id`),
+  ADD KEY `course_id` (`course_id`),
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `idx_reviews_course_created` (`course_id`,`created_at`);
+
+--
+-- Indexes for table `expert_education`
+--
+ALTER TABLE `expert_education`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
+-- Indexes for table `expert_experiences`
+--
+ALTER TABLE `expert_experiences`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
+-- Indexes for table `expert_languages`
+--
+ALTER TABLE `expert_languages`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `expert_id` (`expert_id`);
+
+--
+-- Indexes for table `expert_profiles`
+--
+ALTER TABLE `expert_profiles`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `user_id` (`user_id`),
+  ADD UNIQUE KEY `public_url_slug` (`public_url_slug`),
+  ADD UNIQUE KEY `idx_expert_profiles_slug` (`public_url_slug`),
+  ADD KEY `idx_expert_profiles_public_profile_url` (`public_profile_url`);
+
+--
+-- Indexes for table `expert_reviews`
+--
+ALTER TABLE `expert_reviews`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_review` (`service_id`,`user_id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
+-- Indexes for table `expert_services`
+--
+ALTER TABLE `expert_services`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_es_id` (`id`);
+
+--
+-- Indexes for table `expert_service_categories`
+--
+ALTER TABLE `expert_service_categories`
+  ADD PRIMARY KEY (`service_id`,`category_id`),
+  ADD KEY `idx_esc_category` (`category_id`);
+
+--
+-- Indexes for table `expert_skills`
+--
+ALTER TABLE `expert_skills`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_skill_per_expert` (`expert_id`,`skill_id`),
+  ADD KEY `skill_id` (`skill_id`);
+
+--
+-- Indexes for table `expert_time_slots`
+--
+ALTER TABLE `expert_time_slots`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uq_expert_slot` (`expert_id`,`start_time`),
+  ADD UNIQUE KEY `uq_expert_start_end` (`expert_id`,`start_time`,`end_time`),
+  ADD KEY `idx_expert_time` (`expert_id`,`start_time`);
+
+--
+-- Indexes for table `expert_weekly_availability`
+--
+ALTER TABLE `expert_weekly_availability`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uq_expert_dow_window` (`expert_id`,`day_of_week`,`start_time`,`end_time`);
+
+--
+-- Indexes for table `expert_weekly_templates`
+--
+ALTER TABLE `expert_weekly_templates`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uq_template_hour` (`expert_id`,`day_of_week`,`start_time`,`end_time`),
+  ADD KEY `idx_expert_dow` (`expert_id`,`day_of_week`);
+
+--
+-- Indexes for table `general_profiles`
+--
+ALTER TABLE `general_profiles`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `user_id` (`user_id`);
+
+--
+-- Indexes for table `industries`
+--
+ALTER TABLE `industries`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `name` (`name`);
+
+--
+-- Indexes for table `meetings`
+--
+ALTER TABLE `meetings`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uq_order` (`order_id`),
+  ADD KEY `slot_id` (`slot_id`),
+  ADD KEY `idx_meeting_expert_time` (`expert_id`,`start_time`),
+  ADD KEY `idx_meetings_created_by` (`created_by`),
+  ADD KEY `idx_meeting_start` (`start_time`),
+  ADD KEY `idx_meetings_times` (`start_time`,`end_time`,`status`),
+  ADD KEY `idx_meetings_status_start` (`status`,`start_time`);
+
+--
+-- Indexes for table `meeting_attendance_sessions`
+--
+ALTER TABLE `meeting_attendance_sessions`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uniq_room_sid` (`room_name`,`participant_sid`),
+  ADD KEY `idx_meeting_room` (`meeting_id`,`room_name`),
+  ADD KEY `idx_user` (`user_id`),
+  ADD KEY `idx_user_joined` (`user_id`,`joined_at`),
+  ADD KEY `idx_meeting_joined` (`meeting_id`,`joined_at`),
+  ADD KEY `idx_room_sid` (`room_name`,`participant_sid`),
+  ADD KEY `idx_att_meeting_user` (`meeting_id`,`user_id`),
+  ADD KEY `idx_att_user_joined` (`user_id`,`joined_at`);
+
+--
+-- Indexes for table `meeting_messages`
+--
+ALTER TABLE `meeting_messages`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uniq_meeting_chat` (`meeting_id`,`room_name`,`msg_ts`,`sender_identity`,`text_hash`),
+  ADD KEY `idx_meeting_created` (`meeting_id`,`created_at`);
+
+--
+-- Indexes for table `meeting_participants`
+--
+ALTER TABLE `meeting_participants`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uq_meeting_user` (`meeting_id`,`user_id`),
+  ADD UNIQUE KEY `uniq_meeting_user` (`meeting_id`,`user_id`),
+  ADD KEY `idx_mp_meeting` (`meeting_id`),
+  ADD KEY `idx_mp_user` (`user_id`),
+  ADD KEY `idx_meeting` (`meeting_id`);
+
+--
+-- Indexes for table `meeting_reminders`
+--
+ALTER TABLE `meeting_reminders`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_mr_meeting_kind` (`meeting_id`,`kind`),
+  ADD KEY `idx_mr_user` (`user_id`);
+
+--
+-- Indexes for table `messages`
+--
+ALTER TABLE `messages`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_chat_created` (`chat_id`,`created_at`),
+  ADD KEY `idx_sender` (`sender_id`),
+  ADD KEY `idx_messages_chat_created` (`chat_id`,`created_at`),
+  ADD KEY `idx_messages_sender_created` (`sender_id`,`created_at`),
+  ADD KEY `idx_msg_chat_id_id` (`chat_id`,`id`),
+  ADD KEY `idx_msg_sender_created` (`sender_id`,`created_at`);
+
+--
+-- Indexes for table `message_reads`
+--
+ALTER TABLE `message_reads`
+  ADD PRIMARY KEY (`message_id`,`user_id`),
+  ADD KEY `fk_mread_user` (`user_id`);
+
+--
+-- Indexes for table `notifications`
+--
+ALTER TABLE `notifications`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_notif_user_created` (`user_id`,`created_at`),
+  ADD KEY `idx_notif_user_unread` (`user_id`,`is_read`);
+
+--
+-- Indexes for table `notification_settings`
+--
+ALTER TABLE `notification_settings`
+  ADD PRIMARY KEY (`user_id`);
+
+--
+-- Indexes for table `pages`
+--
+ALTER TABLE `pages`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_pages_path` (`path`),
+  ADD KEY `idx_pages_parent` (`parent_id`);
+
+--
+-- Indexes for table `password_reset_tokens`
+--
+ALTER TABLE `password_reset_tokens`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `token_hash` (`token_hash`),
+  ADD UNIQUE KEY `uq_prt_token` (`token_hash`),
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `idx_prt_expires` (`expires_at`);
+
+--
+-- Indexes for table `payment_webhook_events`
+--
+ALTER TABLE `payment_webhook_events`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `roles`
+--
+ALTER TABLE `roles`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `name` (`name`);
+
+--
+-- Indexes for table `role_page_permissions`
+--
+ALTER TABLE `role_page_permissions`
+  ADD PRIMARY KEY (`role_id`,`page_id`),
+  ADD KEY `fk_rpp_page` (`page_id`);
+
+--
+-- Indexes for table `service_orders`
+--
+ALTER TABLE `service_orders`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_user` (`user_id`),
+  ADD KEY `idx_expert` (`expert_id`),
+  ADD KEY `idx_status_created` (`status`,`created_at`),
+  ADD KEY `idx_service_orders_slot` (`slot_id`),
+  ADD KEY `idx_service_orders_payment_status` (`payment_status`),
+  ADD KEY `idx_service_orders_meeting_id` (`meeting_id`),
+  ADD KEY `idx_pending_lookup` (`user_id`,`expert_id`,`service_id`,`slot_id`,`status`),
+  ADD KEY `idx_so_meeting` (`meeting_id`,`created_at`);
+
+--
+-- Indexes for table `service_reviews`
+--
+ALTER TABLE `service_reviews`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_review` (`service_id`,`user_id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
+-- Indexes for table `skills`
+--
+ALTER TABLE `skills`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `name` (`name`);
+
+--
+-- Indexes for table `users`
+--
+ALTER TABLE `users`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `email` (`email`),
+  ADD UNIQUE KEY `uq_users_email` (`email`),
+  ADD UNIQUE KEY `uniq_users_public_slug` (`public_slug`),
+  ADD UNIQUE KEY `uq_users_public_slug` (`public_slug`),
+  ADD KEY `role_id` (`role_id`);
+
+--
+-- Indexes for table `user_connections`
+--
+ALTER TABLE `user_connections`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_connection` (`user_id`,`connected_user_id`),
+  ADD KEY `connected_user_id` (`connected_user_id`);
+
+--
+-- Indexes for table `user_industries`
+--
+ALTER TABLE `user_industries`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `industry_id` (`industry_id`);
+
+--
+-- Indexes for table `user_roles`
+--
+ALTER TABLE `user_roles`
+  ADD PRIMARY KEY (`user_id`,`role_id`),
+  ADD KEY `role_id` (`role_id`);
+
+--
+-- AUTO_INCREMENT for dumped tables
+--
+
+--
+-- AUTO_INCREMENT for table `auth_revoked_tokens`
+--
+ALTER TABLE `auth_revoked_tokens`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `categories`
+--
+ALTER TABLE `categories`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+
+--
+-- AUTO_INCREMENT for table `chats`
+--
+ALTER TABLE `chats`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT for table `coaching_assignments`
+--
+ALTER TABLE `coaching_assignments`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT for table `coaching_assignment_versions`
+--
+ALTER TABLE `coaching_assignment_versions`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `coaching_bookings`
+--
+ALTER TABLE `coaching_bookings`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT for table `coaching_enrollments`
+--
+ALTER TABLE `coaching_enrollments`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `coaching_orders`
+--
+ALTER TABLE `coaching_orders`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+
+--
+-- AUTO_INCREMENT for table `coaching_program_slots`
+--
+ALTER TABLE `coaching_program_slots`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `coaching_program_steps`
+--
+ALTER TABLE `coaching_program_steps`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT for table `coaching_program_templates`
+--
+ALTER TABLE `coaching_program_templates`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT for table `coaching_reminder_logs`
+--
+ALTER TABLE `coaching_reminder_logs`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `coaching_sessions`
+--
+ALTER TABLE `coaching_sessions`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `coaching_slot_holds`
+--
+ALTER TABLE `coaching_slot_holds`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `coaching_submissions`
+--
+ALTER TABLE `coaching_submissions`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `coaching_template_categories`
+--
+ALTER TABLE `coaching_template_categories`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
+
+--
+-- AUTO_INCREMENT for table `coaching_template_images`
+--
+ALTER TABLE `coaching_template_images`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `coaching_template_steps`
+--
+ALTER TABLE `coaching_template_steps`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+
+--
+-- AUTO_INCREMENT for table `courses`
+--
+ALTER TABLE `courses`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+
+--
+-- AUTO_INCREMENT for table `course_categories`
+--
+ALTER TABLE `course_categories`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT for table `course_enrollments`
+--
+ALTER TABLE `course_enrollments`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT for table `course_features`
+--
+ALTER TABLE `course_features`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT for table `course_files`
+--
+ALTER TABLE `course_files`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+
+--
+-- AUTO_INCREMENT for table `course_lessons`
+--
+ALTER TABLE `course_lessons`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
+
+--
+-- AUTO_INCREMENT for table `course_materials`
+--
+ALTER TABLE `course_materials`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `course_orders`
+--
+ALTER TABLE `course_orders`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT for table `course_progress`
+--
+ALTER TABLE `course_progress`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=101;
+
+--
+-- AUTO_INCREMENT for table `course_reviews`
+--
+ALTER TABLE `course_reviews`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `expert_education`
+--
+ALTER TABLE `expert_education`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `expert_experiences`
+--
+ALTER TABLE `expert_experiences`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `expert_languages`
+--
+ALTER TABLE `expert_languages`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
+
+--
+-- AUTO_INCREMENT for table `expert_profiles`
+--
+ALTER TABLE `expert_profiles`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=52;
+
+--
+-- AUTO_INCREMENT for table `expert_reviews`
+--
+ALTER TABLE `expert_reviews`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `expert_services`
+--
+ALTER TABLE `expert_services`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
+--
+-- AUTO_INCREMENT for table `expert_skills`
+--
+ALTER TABLE `expert_skills`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
+
+--
+-- AUTO_INCREMENT for table `expert_time_slots`
+--
+ALTER TABLE `expert_time_slots`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=195;
+
+--
+-- AUTO_INCREMENT for table `expert_weekly_availability`
+--
+ALTER TABLE `expert_weekly_availability`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT for table `expert_weekly_templates`
+--
+ALTER TABLE `expert_weekly_templates`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+
+--
+-- AUTO_INCREMENT for table `general_profiles`
+--
+ALTER TABLE `general_profiles`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `industries`
+--
+ALTER TABLE `industries`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT for table `meetings`
+--
+ALTER TABLE `meetings`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+
+--
+-- AUTO_INCREMENT for table `meeting_attendance_sessions`
+--
+ALTER TABLE `meeting_attendance_sessions`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
+--
+-- AUTO_INCREMENT for table `meeting_messages`
+--
+ALTER TABLE `meeting_messages`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `meeting_participants`
+--
+ALTER TABLE `meeting_participants`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+
+--
+-- AUTO_INCREMENT for table `meeting_reminders`
+--
+ALTER TABLE `meeting_reminders`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `messages`
+--
+ALTER TABLE `messages`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=38;
+
+--
+-- AUTO_INCREMENT for table `notifications`
+--
+ALTER TABLE `notifications`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT for table `pages`
+--
+ALTER TABLE `pages`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=47;
+
+--
+-- AUTO_INCREMENT for table `password_reset_tokens`
+--
+ALTER TABLE `password_reset_tokens`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `roles`
+--
+ALTER TABLE `roles`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
+--
+-- AUTO_INCREMENT for table `service_orders`
+--
+ALTER TABLE `service_orders`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=46;
+
+--
+-- AUTO_INCREMENT for table `service_reviews`
+--
+ALTER TABLE `service_reviews`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `skills`
+--
+ALTER TABLE `skills`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
+--
+-- AUTO_INCREMENT for table `users`
+--
+ALTER TABLE `users`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
+--
+-- AUTO_INCREMENT for table `user_connections`
+--
+ALTER TABLE `user_connections`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+
+--
+-- AUTO_INCREMENT for table `user_industries`
+--
+ALTER TABLE `user_industries`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
+
+--
+-- Constraints for dumped tables
+--
+
+--
+-- Constraints for table `chats`
+--
+ALTER TABLE `chats`
+  ADD CONSTRAINT `fk_chats_created_by_users` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `chat_participants`
+--
+ALTER TABLE `chat_participants`
+  ADD CONSTRAINT `fk_cp_chat` FOREIGN KEY (`chat_id`) REFERENCES `chats` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_cp_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `coaching_assignments`
+--
+ALTER TABLE `coaching_assignments`
+  ADD CONSTRAINT `coaching_assignments_ibfk_1` FOREIGN KEY (`enrollment_id`) REFERENCES `coaching_enrollments` (`id`);
+
+--
+-- Constraints for table `coaching_assignment_versions`
+--
+ALTER TABLE `coaching_assignment_versions`
+  ADD CONSTRAINT `fk_cav_assignment` FOREIGN KEY (`assignment_id`) REFERENCES `coaching_assignments` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_cav_user` FOREIGN KEY (`submitted_by`) REFERENCES `users` (`id`);
+
+--
+-- Constraints for table `coaching_bookings`
+--
+ALTER TABLE `coaching_bookings`
+  ADD CONSTRAINT `coaching_bookings_ibfk_1` FOREIGN KEY (`enrollment_id`) REFERENCES `coaching_enrollments` (`id`);
+
+--
+-- Constraints for table `coaching_program_slots`
+--
+ALTER TABLE `coaching_program_slots`
+  ADD CONSTRAINT `fk_cps_template` FOREIGN KEY (`template_id`) REFERENCES `coaching_program_templates` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `coaching_program_steps`
+--
+ALTER TABLE `coaching_program_steps`
+  ADD CONSTRAINT `coaching_program_steps_ibfk_1` FOREIGN KEY (`template_id`) REFERENCES `coaching_program_templates` (`id`);
+
+--
+-- Constraints for table `coaching_template_categories`
+--
+ALTER TABLE `coaching_template_categories`
+  ADD CONSTRAINT `fk_ctc_category` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_ctc_template` FOREIGN KEY (`template_id`) REFERENCES `coaching_program_templates` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `coaching_template_images`
+--
+ALTER TABLE `coaching_template_images`
+  ADD CONSTRAINT `coaching_template_images_ibfk_1` FOREIGN KEY (`template_id`) REFERENCES `coaching_program_templates` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `coaching_template_steps`
+--
+ALTER TABLE `coaching_template_steps`
+  ADD CONSTRAINT `fk_cts_template` FOREIGN KEY (`template_id`) REFERENCES `coaching_program_templates` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `courses`
+--
+ALTER TABLE `courses`
+  ADD CONSTRAINT `courses_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `course_categories`
+--
+ALTER TABLE `course_categories`
+  ADD CONSTRAINT `fk_cc_category` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_cc_course` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `course_category_map`
+--
+ALTER TABLE `course_category_map`
+  ADD CONSTRAINT `fk_ccm_category` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_ccm_course` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `course_enrollments`
+--
+ALTER TABLE `course_enrollments`
+  ADD CONSTRAINT `course_enrollments_ibfk_1` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `course_enrollments_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `course_features`
+--
+ALTER TABLE `course_features`
+  ADD CONSTRAINT `course_features_ibfk_1` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `course_lessons`
+--
+ALTER TABLE `course_lessons`
+  ADD CONSTRAINT `course_lessons_ibfk_1` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `course_materials`
+--
+ALTER TABLE `course_materials`
+  ADD CONSTRAINT `course_materials_ibfk_1` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `course_materials_ibfk_2` FOREIGN KEY (`lesson_id`) REFERENCES `course_lessons` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `course_orders`
+--
+ALTER TABLE `course_orders`
+  ADD CONSTRAINT `course_orders_ibfk_1` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `course_progress`
+--
+ALTER TABLE `course_progress`
+  ADD CONSTRAINT `course_progress_ibfk_1` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `course_progress_ibfk_2` FOREIGN KEY (`lesson_id`) REFERENCES `course_lessons` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `course_reviews`
+--
+ALTER TABLE `course_reviews`
+  ADD CONSTRAINT `course_reviews_ibfk_1` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `course_reviews_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `expert_education`
+--
+ALTER TABLE `expert_education`
+  ADD CONSTRAINT `expert_education_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `expert_experiences`
+--
+ALTER TABLE `expert_experiences`
+  ADD CONSTRAINT `expert_experiences_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `expert_languages`
+--
+ALTER TABLE `expert_languages`
+  ADD CONSTRAINT `expert_languages_ibfk_1` FOREIGN KEY (`expert_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `expert_profiles`
+--
+ALTER TABLE `expert_profiles`
+  ADD CONSTRAINT `expert_profiles_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `expert_reviews`
+--
+ALTER TABLE `expert_reviews`
+  ADD CONSTRAINT `expert_reviews_ibfk_1` FOREIGN KEY (`service_id`) REFERENCES `expert_services` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `expert_reviews_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `expert_service_categories`
+--
+ALTER TABLE `expert_service_categories`
+  ADD CONSTRAINT `fk_esc_category` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_esc_service` FOREIGN KEY (`service_id`) REFERENCES `expert_services` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `expert_skills`
+--
+ALTER TABLE `expert_skills`
+  ADD CONSTRAINT `expert_skills_ibfk_1` FOREIGN KEY (`expert_id`) REFERENCES `users` (`id`),
+  ADD CONSTRAINT `expert_skills_ibfk_2` FOREIGN KEY (`skill_id`) REFERENCES `skills` (`id`);
+
+--
+-- Constraints for table `expert_time_slots`
+--
+ALTER TABLE `expert_time_slots`
+  ADD CONSTRAINT `expert_time_slots_ibfk_1` FOREIGN KEY (`expert_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `expert_weekly_availability`
+--
+ALTER TABLE `expert_weekly_availability`
+  ADD CONSTRAINT `expert_weekly_availability_ibfk_1` FOREIGN KEY (`expert_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `expert_weekly_templates`
+--
+ALTER TABLE `expert_weekly_templates`
+  ADD CONSTRAINT `expert_weekly_templates_ibfk_1` FOREIGN KEY (`expert_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `general_profiles`
+--
+ALTER TABLE `general_profiles`
+  ADD CONSTRAINT `general_profiles_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `meetings`
+--
+ALTER TABLE `meetings`
+  ADD CONSTRAINT `fk_meetings_creator` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `meetings_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `service_orders` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `meetings_ibfk_2` FOREIGN KEY (`slot_id`) REFERENCES `expert_time_slots` (`id`);
+
+--
+-- Constraints for table `meeting_attendance_sessions`
+--
+ALTER TABLE `meeting_attendance_sessions`
+  ADD CONSTRAINT `fk_att_meeting` FOREIGN KEY (`meeting_id`) REFERENCES `meetings` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_att_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+--
+-- Constraints for table `meeting_participants`
+--
+ALTER TABLE `meeting_participants`
+  ADD CONSTRAINT `meeting_participants_ibfk_1` FOREIGN KEY (`meeting_id`) REFERENCES `meetings` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `meeting_participants_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `messages`
+--
+ALTER TABLE `messages`
+  ADD CONSTRAINT `fk_messages_chat` FOREIGN KEY (`chat_id`) REFERENCES `chats` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_messages_sender` FOREIGN KEY (`sender_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `message_reads`
+--
+ALTER TABLE `message_reads`
+  ADD CONSTRAINT `fk_mread_message` FOREIGN KEY (`message_id`) REFERENCES `messages` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_mread_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `notifications`
+--
+ALTER TABLE `notifications`
+  ADD CONSTRAINT `fk_n_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `notification_settings`
+--
+ALTER TABLE `notification_settings`
+  ADD CONSTRAINT `fk_ns_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `pages`
+--
+ALTER TABLE `pages`
+  ADD CONSTRAINT `fk_pages_parent` FOREIGN KEY (`parent_id`) REFERENCES `pages` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `password_reset_tokens`
+--
+ALTER TABLE `password_reset_tokens`
+  ADD CONSTRAINT `fk_prt_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `role_page_permissions`
+--
+ALTER TABLE `role_page_permissions`
+  ADD CONSTRAINT `fk_rpp_page` FOREIGN KEY (`page_id`) REFERENCES `pages` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_rpp_role` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `service_orders`
+--
+ALTER TABLE `service_orders`
+  ADD CONSTRAINT `service_orders_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `service_orders_ibfk_2` FOREIGN KEY (`expert_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `service_reviews`
+--
+ALTER TABLE `service_reviews`
+  ADD CONSTRAINT `service_reviews_ibfk_1` FOREIGN KEY (`service_id`) REFERENCES `expert_services` (`id`),
+  ADD CONSTRAINT `service_reviews_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`);
+
+--
+-- Constraints for table `users`
+--
+ALTER TABLE `users`
+  ADD CONSTRAINT `fk_users_role` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`),
+  ADD CONSTRAINT `users_ibfk_1` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`);
+
+--
+-- Constraints for table `user_connections`
+--
+ALTER TABLE `user_connections`
+  ADD CONSTRAINT `user_connections_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `user_connections_ibfk_2` FOREIGN KEY (`connected_user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `user_industries`
+--
+ALTER TABLE `user_industries`
+  ADD CONSTRAINT `user_industries_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `user_industries_ibfk_2` FOREIGN KEY (`industry_id`) REFERENCES `industries` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `user_roles`
+--
+ALTER TABLE `user_roles`
+  ADD CONSTRAINT `fk_user_roles_role` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE;
+COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
